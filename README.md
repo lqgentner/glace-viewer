@@ -66,8 +66,15 @@ between runs), converts `data/*.geojson` to archives, and uploads only the
 archives — never the GeoJSON they came from, which would double what a visitor
 could download for nothing.
 
-GitHub Pages needs this repository to be **public** on a free plan. Until it is,
-the build job runs but the deploy job cannot publish.
+Set **Settings -> Pages -> Source** to **GitHub Actions**, not "Deploy from a
+branch". The branch option publishes the repository as-is, which serves the
+committed `data/*.geojson` and none of the `.pmtiles` the page actually loads —
+the site comes up with every overlay 404ing.
+
+Until the GLACE archives are published, the deployed page has no `tiles/`, so
+`layers.json` 404s and the raster controls hide themselves. The basemap, the
+terrain hillshade and the three inventories all still work; point `?tiles=` at
+object storage to get the rest.
 
 ## Glacier inventory overlays
 
