@@ -121,6 +121,14 @@ const layerId = (layer) => `glace-${layer.id}`;
 
 /* Data sits above the basemap's land and water but below its labels, so place
  * every data layer before the first symbol layer. */
+/* Where a data layer goes: below the hillshade when there is one, and below the
+ * basemap's labels either way. Order-independent on purpose — ensureHillshade()
+ * runs before the manifest is fetched, so "whichever was added last ends up on
+ * top" is not a safe way to get shaded relief over the data. */
+function dataInsertPoint() {
+  return map.getLayer("hillshade") ? "hillshade" : firstSymbolLayer();
+}
+
 function firstSymbolLayer() {
   for (const layer of map.getStyle().layers) {
     if (layer.type === "symbol") return layer.id;
@@ -147,7 +155,7 @@ function ensureLayer(layer) {
       layout: { visibility: "none" },
       paint: { "raster-opacity": state.opacity, "raster-resampling": "nearest" },
     },
-    firstSymbolLayer(),
+    dataInsertPoint(),
   );
   state.added.add(layer.id);
 }
@@ -210,7 +218,8 @@ function hillshadePaint(strength) {
 function ensureHillshade() {
   if (map.getSource("terrain")) return;
   map.addSource("terrain", { type: "raster-dem", url: TERRAIN_TILEJSON });
-  // Above the data (added first), below the basemap's labels.
+  // Below the basemap's labels. Data layers place themselves below this one via
+  // dataInsertPoint(), so this does not depend on being added last.
   map.addLayer(
     {
       id: "hillshade",
