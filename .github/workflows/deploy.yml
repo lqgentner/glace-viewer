@@ -1,0 +1,78 @@
+name: Deploy to Pages
+
+# The repository stores the inventories as GeoJSON; the vector PMTiles the page
+# actually loads are built here, so the archives never enter git history.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time, but never cancel one in flight: a half-published site is
+# worse than a slightly stale one.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+env:
+  # Pinned rather than tracking main, so a rebuild of an old commit produces the
+  # same tiles. Bump deliberately.
+  TIPPECANOE_VERSION: "2.79.0"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Building tippecanoe takes ~90 s; the cache makes every later run instant.
+      # Keyed on the version, so bumping it rebuilds without a manual purge.
+      - name: Cache tippecanoe
+        id: cache-tippecanoe
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/bin/tippecanoe
+          key: tippecanoe-${{ runner.os }}-${{ env.TIPPECANOE_VERSION }}
+
+      - name: Build tippecanoe from source
+        if: steps.cache-tippecanoe.outputs.cache-hit != 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential libsqlite3-dev zlib1g-dev
+          git clone --depth 1 --branch "$TIPPECANOE_VERSION" https://github.com/felt/tippecanoe.git /tmp/tippecanoe
+          make -C /tmp/tippecanoe -j"$(nproc)"
+          mkdir -p ~/.local/bin
+          cp /tmp/tippecanoe/tippecanoe ~/.local/bin/
+
+      - name: Build vector tiles
+        run: |
+          chmod +x ~/.local/bin/tippecanoe
+          ~/.local/bin/tippecanoe --version
+          python3 scripts/build-tiles.py --tippecanoe ~/.local/bin/tippecanoe
+
+      # Only the archives are published, never the GeoJSON they were built from:
+      # shipping both would double what a visitor could download for no gain.
+      - name: Stage the site
+        run: |
+          mkdir -p _site/data
+          cp index.html app.js style.css _site/
+          cp data/*.pmtiles data/inventories.json _site/data/
+          du -sh _site
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

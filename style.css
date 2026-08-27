@@ -1,0 +1,308 @@
+:root {
+  --bg: #10141c;
+  --panel: rgba(17, 22, 32, 0.92);
+  --border: #2a3242;
+  --text: #e6eaf2;
+  --muted: #8b95a8;
+  --accent: #4da3ff;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+}
+
+#map { position: absolute; inset: 0; }
+
+#panel {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  width: 292px;
+  max-height: calc(100% - 24px);
+  overflow-y: auto;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+  z-index: 2;
+}
+
+#panel header { margin-bottom: 14px; }
+#panel h1 { margin: 0; font-size: 15px; letter-spacing: 0.02em; }
+#panel #subtitle { margin: 2px 0 0; font-size: 12px; color: var(--muted); }
+
+.control { margin-bottom: 14px; }
+.control > label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.control output { color: var(--text); font-variant-numeric: tabular-nums; }
+
+.control.checkbox { display: flex; align-items: center; gap: 8px; }
+.control.checkbox > label {
+  flex: 1;
+  margin: 0;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.segmented { display: flex; gap: 4px; }
+.segmented button {
+  flex: 1;
+  padding: 6px 4px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--muted);
+  background: #171d29;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.segmented button:hover:not(:disabled) { color: var(--text); border-color: #3c485c; }
+.segmented button[aria-checked="true"] {
+  color: #fff;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.segmented button:disabled { opacity: 0.35; cursor: not-allowed; }
+
+input[type="range"] { width: 100%; accent-color: var(--accent); }
+
+#panel hr {
+  height: 0;
+  margin: 16px 0 14px;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+
+#hillshade-strength-row { margin-top: -6px; padding-left: 22px; }
+
+.ticks {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+#legend-bar {
+  height: 10px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+}
+#legend-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+#panel footer { border-top: 1px solid var(--border); padding-top: 10px; }
+#panel footer p { margin: 0 0 6px; font-size: 11px; }
+#layer-info { color: var(--muted); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+
+#status {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  font-size: 13px;
+  z-index: 3;
+}
+
+.maplibregl-popup-content {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 12px;
+  /* MapLibre's default is 15px top and bottom, which leaves the first heading
+     and the last value floating. The close button sits in the right inset. */
+  padding: 9px 12px 10px;
+}
+/* Nudged in to match the tighter padding, and toned down so it does not read as
+   the loudest thing in the popup. */
+.maplibregl-popup-close-button {
+  top: 1px;
+  right: 3px;
+  color: var(--muted);
+  font-size: 15px;
+}
+.maplibregl-popup-close-button:hover { color: var(--text); background: transparent; }
+.maplibregl-popup-tip { border-top-color: var(--panel); border-bottom-color: var(--panel); }
+.maplibregl-ctrl-attrib { font-size: 10px; }
+
+@media (max-width: 640px) {
+  #panel { width: calc(100% - 24px); max-height: 46%; }
+}
+
+/* Inventory overlay toggles: a checkbox plus the colour its outlines draw in. */
+.inventory {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+/* Keep the checkbox and colour swatch aligned with the first line of the name. */
+.inventory input[type="checkbox"] { margin-top: 2px; }
+.inventory .swatch { margin-top: 7px; }
+.inventory label {
+  flex: 1;
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--text);
+  cursor: pointer;
+}
+.inventory .swatch {
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
+  flex: none;
+}
+/* The acquisition span reads as part of the name — same size, greyed — so it
+   sits well whether it lands on the same line or wraps onto the next. */
+.inventory .span {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Per-layer attribution: a small (c) beside the toggle it belongs to. */
+.credit {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+.credit:hover { color: var(--accent); }
+.inventory .credit { margin-top: 2px; }
+
+/* Detached from the panel (see app.js): fixed, so a long citation cannot put a
+   scrollbar on the sidebar, and free to be wider than it. */
+.credit-popover {
+  position: fixed;
+  z-index: 20;
+  width: 320px;
+  max-width: calc(100vw - 16px);
+  /* No overflow clipping: it would cut off the caret, which is drawn just
+     outside the box. The citations are a few lines at this width, so the box
+     sizes to content and the flip-below logic in app.js handles tight space. */
+  padding: 10px 12px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text);
+  background: #171d29;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.55);
+}
+.credit-popover a { color: var(--accent); }
+/* Same heading treatment as the map popups, so the two read as one family. */
+.credit-popover strong {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 11px;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+/* Caret pointing back at the info mark; --caret-x keeps it under the mark even
+   when the box was clamped against the edge of the viewport. */
+.credit-popover::after {
+  content: "";
+  position: absolute;
+  left: var(--caret-x, 50%);
+  margin-left: -6px;
+  border: 6px solid transparent;
+}
+.credit-popover:not(.below)::after {
+  top: 100%;
+  border-top-color: var(--border);
+}
+.credit-popover.below::after {
+  bottom: 100%;
+  border-bottom-color: var(--border);
+}
+
+.credit-popover .cite {
+  display: inline-block;
+  margin-bottom: 4px;
+  color: var(--text);
+}
+
+/* Collapsible section header, styled like the other section labels but clickable. */
+#inventories-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 0;
+  font: inherit;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+#inventories-toggle:hover { color: var(--text); }
+/* One glyph, flipped, so the two states cannot drift apart. */
+#inventories-toggle .chevron {
+  display: flex;
+  transition: transform 0.15s ease;
+}
+#inventories-toggle .chevron.up { transform: rotate(180deg); }
+
+.maplibregl-popup-content hr {
+  height: 0;
+  margin: 7px 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+
+/* Headings match the panel's field labels (PRODUCT, YEAR, ...) so a popup reads
+ * as the same kind of thing as the legend beside it. */
+.maplibregl-popup-content .pop-head {
+  margin-bottom: 4px;
+  font-size: 11px;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.maplibregl-popup-content .pk { color: var(--text); }
+.maplibregl-popup-content > div + .pop-head { margin-top: 7px; }
+/* Leave room for the close button on the first heading only. */
+.maplibregl-popup-content .pop-head:first-child { padding-right: 16px; }

@@ -1,0 +1,234 @@
+# glace-viewer
+
+Quick-look web viewer for **GLACE** — resolution-weighted Sentinel-1 coherence
+and backscatter composites of the European Alps.
+
+Everything on the map is a PMTiles archive read straight from object storage
+over HTTP range requests: the GLACE rasters, the [Protomaps](https://protomaps.com)
+basemap, the [Mapterhorn](https://mapterhorn.com) terrain and the glacier
+inventory overlays. There is no tile server anywhere in the stack, and the page
+is plain HTML/CSS/JS with no build step or framework.
+
+| | source |
+| --- | --- |
+| GLACE rasters | object storage, via `?tiles=<base-url>` (default `./tiles`) |
+| Basemap | Protomaps `grayscale`, from the free [Source Cooperative](https://source.coop/) mirror |
+| Terrain | Mapterhorn global DEM, terrarium-encoded |
+| Glacier inventories | built from `data/*.geojson` in this repo |
+
+The rasters are produced by [deep-glacier-mapping](https://github.com/lqgentner/deep-glacier-mapping),
+which also exports the inventory GeoJSON here. This repository holds only the
+page and its overlays.
+
+## Preview locally
+
+The inventory archives are build outputs, so build them first:
+
+```bash
+python scripts/build-tiles.py          # data/*.geojson -> data/*.pmtiles
+python scripts/serve.py                # -> http://127.0.0.1:8000/
+```
+
+`build-tiles.py` needs tippecanoe on `PATH`, or `--tippecanoe /path/to/binary`.
+It is a C++ program; build it from https://github.com/felt/tippecanoe.
+
+`http.server` cannot serve PMTiles — it ignores `Range` and returns whole files —
+which is why `serve.py` exists. It also sets caching per file type: the page
+shell is sent `no-store`, since a stale `app.js` leaves the page silently
+rendering the previous version, while the archives are cached normally.
+
+To see the GLACE rasters, either mount a local copy under `tiles/` or point the
+page at object storage:
+
+```
+http://127.0.0.1:8000/?tiles=https://data.source.coop/<org>/glace
+```
+
+That needs the bucket to allow anonymous reads **and** to send CORS headers with
+`ExposeHeaders` for `Content-Range`, `Content-Length`, `Accept-Ranges` and
+`ETag`. Without those the browser fetches the bytes but refuses to let the
+PMTiles client read the range metadata, which fails looking like a corrupt
+archive rather than a permissions problem.
+
+## Deploy
+
+`.github/workflows/deploy.yml` publishes to GitHub Pages on every push to
+`main`. It builds tippecanoe from source (pinned by `TIPPECANOE_VERSION`, cached
+between runs), converts `data/*.geojson` to archives, and uploads only the
+archives — never the GeoJSON they came from, which would double what a visitor
+could download for nothing.
+
+GitHub Pages needs this repository to be **public** on a free plan. Until it is,
+the build job runs but the deploy job cannot publish.
+
+## Glacier inventory overlays
+
+Three inventories ship with the page, each toggled independently and fetched only
+when first enabled:
+
+| id | inventory | features |
+| --- | --- | --- |
+| `sgi2016` | Swiss Glacier Inventory 2016 (2013–2018) | 1,400 |
+| `sgi2023` | Swiss Glacier Inventory 2023 (2021–2024) | 1,299 |
+| `pauletal2020` | Alpine Glacier Inventory (2015–2017) | 4,395 |
+
+They are third-party datasets, redistributed here in simplified form purely so
+the map has something to compare the imagery against. Each carries its own
+attribution, citation and licence in `data/inventories.json`, shown behind the
+info mark beside its toggle in the panel. All three are CC BY 4.0. The MIT
+licence in this repository covers the viewer code, not the inventory data.
+
+Each feature keeps `name` and `year` (plus `glacier_nr` for Paul et al., which
+ships no names); coordinates are simplified to 10 m in EPSG:3035 and rounded to
+five decimals. Note that tippecanoe drops null properties, so an unnamed feature
+has no `name` key at all rather than a null one — the viewer's fallback covers
+both.
+
+`inventories.json` records the `source_layer` each archive is built with (the
+inventory id), which the viewer passes to MapLibre as `source-layer`. A vector
+layer whose `source-layer` does not match renders nothing and reports no error.
+
+To regenerate the GeoJSON, run `scripts/stac/export-inventories.py` in
+deep-glacier-mapping — it needs that repository's dataset classes.
+
+
+### Why vector PMTiles and not GeoJSON
+
+Building all three with tippecanoe (`-Z4 -z14`, one layer per archive) against
+shipping them as gzipped GeoJSON:
+
+| | on disk | initial view (z6, whole Alps) | z8, whole Alps |
+| --- | --- | --- | --- |
+| GeoJSON, gzipped | 2.5 MB | 2.5 MB (all of it) | 2.5 MB |
+| vector PMTiles | 8.8 MB | **0.14 MB** | 0.43 MB |
+
+So it is not a storage saving — the opposite. The pyramid stores each geometry at
+eleven zoom levels, and even with tiles gzipped internally the archives come to
+3.5x the gzipped GeoJSON. Lowering the maximum zoom is the lever if that matters:
+z12 costs 4.8 MB and z13 6.4 MB, against 8.8 MB at z14.
+
+What it buys is transfer and latency. The opening view pulls **141 kB instead of
+2.5 MB**, and nothing is parsed up front, so an overlay appears as its first
+tiles land rather than after the whole inventory has been fetched. That
+responsiveness is why the overlays ship this way.
+
+It is also why the GeoJSON is what gets committed and the archives are built.
+Measured over two commits, with 5 % of features re-mapped between them:
+
+| committed as | first commit | second commit adds |
+| --- | --- | --- |
+| GeoJSON | 2,544 kB | **144 kB** |
+| PMTiles | 8,300 kB | 7,228 kB |
+
+Git zlib-compresses text on the way in and then deltas it against the previous
+version, so the 95 % of untouched features cost almost nothing. A gzipped archive
+avalanches on any change and stores a whole fresh copy — 50x more per update, and
+`git diff` can say nothing about it beyond "binary files differ".
+
+
+## Design notes
+
+### Basemap and terrain
+
+The basemap style is generated at runtime by `@protomaps/basemaps` (69 layers,
+13 of them labels) rather than hand-written, so the flavor decides every colour.
+`?flavor=` switches it (`grayscale`, `black`, `dark`, `light`, `white`) and
+`?basemap=` points at a different archive. The default reads Protomaps' daily
+planet build from Source Cooperative, which serves `Access-Control-Allow-Origin: *`
+and honours range requests, so it works cross-origin with no setup. Protomaps
+discourage hot-linking their own `maps.protomaps.com` builds; the Source
+Cooperative mirror is the sanctioned free option, and for production you would
+copy an extract to your own storage.
+
+Data layers are inserted below the basemap's first symbol layer, so labels stay
+readable on top of the imagery. The "Basemap labels" checkbox hides just those
+symbol layers.
+
+The Mapterhorn hillshade is optional (checkbox) and sits above the data but below
+the labels. **MapLibre has no layer blend modes**, so a literal `multiply` is not
+available; the equivalent for shaded relief is a hillshade with fully transparent
+highlights and black shadows — lit slopes leave the data untouched and shaded
+slopes darken it, which is what multiplying by a shading layer does. There is no
+`hillshade-opacity` property either, so the strength slider drives the alpha of
+the shadow and accent colours.
+
+
+### Value ranges and colour maps
+
+`DEFAULT_STYLES` in deep-glacier-mapping's `glacier_mapping/webmap.py` pins a
+**fixed** range per (product, polarization), baked into the archives at build
+time:
+
+| layer | range | colour map |
+| --- | --- | --- |
+| COH12 VV | `[0.10, 0.80]` | `cmc.lipari` |
+| COH12 VH | `[0.10, 0.60]` | `cmc.lipari` |
+| RTC VV | `[-18.5, -5]` dB | `cmc.navia` |
+| RTC VH | `[-26, -11]` dB | `cmc.navia` |
+
+The ramps are Crameri's perceptually uniform scientific colour maps, supplied by
+`cmcrameri`, which registers them with matplotlib under `cmc.*` when
+`cmcrameri.cm` is imported. `--cmap` overrides both.
+
+The legend records **17 colour stops** per layer. The page interpolates linearly
+in sRGB between them, which at the previous nine stops drifted up to 8/255 from
+the true ramp — visible as a tonal shift through lipari's warm midrange.
+Seventeen keeps it under 4/255. Re-running a build with `--skip-existing`
+rewrites `layers.json` with fresh legend colours without re-tiling anything.
+
+Ranges are fixed on purpose: a per-layer percentile stretch would give every year
+its own scale, so a real change in coherence between two years would show up as
+no visible change at all. `--percentile-stretch` opts into per-layer scaling when
+one layer's legibility matters more than comparability, and `--vmin` / `--vmax`
+override the range outright.
+
+
+### Resampling
+
+The tiler reprojects with **`bilinear`** by default. `--resampling` overrides.
+
+At the maximum zoom the tiles oversample 40 m data onto a 26.5 m grid, so the
+choice is between interpolating and replicating, not between sharp and blurry:
+
+- `bilinear` is smooth, and carries roughly half the high-frequency content of
+  the source.
+- `nearest` preserves every measured value, but the 1.5× ratio makes some source
+  pixels wider than others, which reads as blocky.
+
+Bilinear looks better on this source. **Neither recovers detail the source does
+not carry** — see the note below.
+
+For the record, the tile codec is not the limiting factor: checked against a
+PNG-lossless build of the same tile, WEBP at `--quality 80` reproduces its detail
+and contrast almost exactly (mean |Laplacian| 9.49 vs 9.33, σ 46.7 vs 46.8) at
+about a twelfth of the size. Nor is `--tile-size 256`; 512 px tiles simply
+oversample further.
+
+> **The real limit is the source, and fixing it is a larger change.** These tiles
+> come from the 40 m EPSG:3035 overview mosaics, so the pixels are resampled
+> twice: 10 m MGRS composites → 40 m EPSG:3035 → WebMercator. Tiling from the
+> 10 m composites directly — on a grid aligned to the tile scheme, e.g. 1 arcsec —
+> would remove the second hop and support a maximum zoom past z12 with real
+> detail behind it. It means mosaicking per tile inside the tiler rather than
+> reading one prepared overview, so it is a rework of `build_pmtiles`, not a flag.
+
+One thing to know if you retune the ranges: **percentiles must be measured at native
+resolution.** A decimated read averages SAR speckle away and reports a much
+narrower distribution than the max-zoom tiles are drawn from — for RTC VV the
+2–98 range narrows from ~14 dB to ~5 dB, and a stretch derived that way clipped
+13.6 % of the scene to a single flat colour. `estimate_stretch` therefore samples
+full-resolution windows rather than reading one decimated overview.
+
+
+### What the viewer shows
+
+Product (COH12 / RTC), polarization (VV / VH) and a year slider select one
+raster layer; combinations with no archive are disabled rather than hidden.
+Opacity, basemap (dark / light / OSM / none) and the tile-grid overlay are
+independent. The map position lives in the URL hash, so a view can be linked.
+
+The rasters are *pre-styled RGBA* — the colour ramp is baked in at build time
+and pixel values cannot be read back from the tiles. The legend reports the
+stretch each layer was built with (fixed 0–1 for coherence, a 2–98 % percentile
+stretch for backscatter in dB, both recorded in `layers.json`). For quantitative
+work, go to the COGs the STAC items point at.

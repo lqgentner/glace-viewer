@@ -1,0 +1,11 @@
+# Build outputs: generated from data/*.geojson by scripts/build-tiles.py, and by
+# the deploy workflow. Committing them would cost ~7 MB of history per update,
+# against ~144 kB for the GeoJSON they come from.
+data/*.pmtiles
+
+# Local copy of the GLACE raster archives, mounted by scripts/serve.py
+tiles/
+_site/
+
+__pycache__/
+.DS_Store

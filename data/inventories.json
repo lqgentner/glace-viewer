@@ -1,0 +1,76 @@
+{
+  "inventories": [
+    {
+      "id": "pauletal2020",
+      "title": "Alpine Glacier Inventory",
+      "span": "2015\u20132017",
+      "color": "#ff2d95",
+      "url": "pauletal2020.pmtiles",
+      "source_layer": "pauletal2020",
+      "min_zoom": 4,
+      "max_zoom": 14,
+      "features": 4395,
+      "simplify_m": 10.0,
+      "has_names": false,
+      "attribution": "Frank Paul et al.",
+      "citation": "Paul, F., Rastner, P., Azzoni, R. S., Diolaiuti, G., Fugazza, D., Le Bris, R., Nemec, J., Rabatel, A., Ramusovic, M., Schwaizer, G., & Smiraglia, C. (2020). Glacier shrinkage in the Alps continues unabated as revealed by a new glacier inventory from Sentinel-2. Earth System Science Data, 12(3), 1805\u20131821. https://doi.org/10.5194/essd-12-1805-2020",
+      "license": "CC BY 4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "version": "2.0",
+      "links": [
+        {
+          "label": "Dataset",
+          "url": "https://doi.org/10.1594/PANGAEA.909133"
+        }
+      ]
+    },
+    {
+      "id": "sgi2016",
+      "title": "Swiss Glacier Inventory 2016",
+      "span": "2013\u20132018",
+      "color": "#22d3ee",
+      "url": "sgi2016.pmtiles",
+      "source_layer": "sgi2016",
+      "min_zoom": 4,
+      "max_zoom": 14,
+      "features": 1400,
+      "simplify_m": 10.0,
+      "has_names": true,
+      "attribution": "Glacier Monitoring Switzerland (GLAMOS)",
+      "citation": "Linsbauer, A., Huss, M., Hodel, E., Bauder, A., Fischer, M., Weidmann, Y., B\u00e4rtschi, H., & Schmassmann, E. (2021). The New Swiss Glacier Inventory SGI2016: From a Topographical to a Glaciological Dataset. Frontiers in Earth Science, 9. https://doi.org/10.3389/feart.2021.704189",
+      "license": "CC BY 4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "version": "R2020",
+      "links": [
+        {
+          "label": "Dataset",
+          "url": "https://doi.glamos.ch/data/inventory/inventory_sgi2016_r2020.zip"
+        }
+      ]
+    },
+    {
+      "id": "sgi2023",
+      "title": "Swiss Glacier Inventory 2023",
+      "span": "2021\u20132024",
+      "color": "#facc15",
+      "url": "sgi2023.pmtiles",
+      "source_layer": "sgi2023",
+      "min_zoom": 4,
+      "max_zoom": 14,
+      "features": 1299,
+      "simplify_m": 10.0,
+      "has_names": true,
+      "attribution": "Glacier Monitoring Switzerland (GLAMOS)",
+      "citation": "GLAMOS-Glacier Monitoring Switzerland. (2026). Swiss Glacier Inventory 2023 [Dataset]. GLAMOS - Glacier Monitoring Switzerland; Laboratory of Hydraulics, Hydrology and Glaciology (VAW), Swiss Federal Institute of Technology Zurich (ETH Zurich); Department of Geosciences, University of Fribourg, Switzerland; Department of Geography, University of Z\u00fcrich, Switzerland. https://doi.org/10.18750/INVENTORY.SGI2023.R2026",
+      "license": "CC BY 4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "version": "R2026",
+      "links": [
+        {
+          "label": "Dataset",
+          "url": "https://doi.glamos.ch/data/inventory/inventory_sgi2023_r2026.zip"
+        }
+      ]
+    }
+  ]
+}
