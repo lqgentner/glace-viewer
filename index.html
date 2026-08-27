@@ -16,32 +16,36 @@
         <p id="subtitle">Sentinel-1 annual summer composites</p>
       </header>
 
-      <section class="control">
-        <label for="product">Product</label>
-        <div id="product" class="segmented" role="radiogroup" aria-label="Product"></div>
-      </section>
+      <!-- Everything that describes a raster layer. Hidden as a block when
+           layers.json cannot be reached, since none of it means anything then. -->
+      <div id="raster-controls">
+        <section class="control">
+          <label for="product">Product</label>
+          <div id="product" class="segmented" role="radiogroup" aria-label="Product"></div>
+        </section>
 
-      <section class="control">
-        <label for="pol">Polarization</label>
-        <div id="pol" class="segmented" role="radiogroup" aria-label="Polarization"></div>
-      </section>
+        <section class="control">
+          <label for="pol">Polarization</label>
+          <div id="pol" class="segmented" role="radiogroup" aria-label="Polarization"></div>
+        </section>
 
-      <section class="control">
-        <label for="year">Year <output id="year-value"></output></label>
-        <input type="range" id="year" step="1" />
-        <div id="year-ticks" class="ticks"></div>
-      </section>
+        <section class="control">
+          <label for="year">Year <output id="year-value"></output></label>
+          <input type="range" id="year" step="1" />
+          <div id="year-ticks" class="ticks"></div>
+        </section>
 
-      <section class="control">
-        <label for="opacity">Layer opacity <output id="opacity-value">100%</output></label>
-        <input type="range" id="opacity" min="0" max="100" value="100" step="1" />
-      </section>
+        <section class="control">
+          <label for="opacity">Layer opacity <output id="opacity-value">100%</output></label>
+          <input type="range" id="opacity" min="0" max="100" value="100" step="1" />
+        </section>
 
-      <section id="legend" class="control">
-        <label>Scale</label>
-        <div id="legend-bar"></div>
-        <div id="legend-labels"><span id="legend-min"></span><span id="legend-max"></span></div>
-      </section>
+        <section id="legend" class="control">
+          <label>Scale</label>
+          <div id="legend-bar"></div>
+          <div id="legend-labels"><span id="legend-min"></span><span id="legend-max"></span></div>
+        </section>
+      </div>
 
       <hr />
 

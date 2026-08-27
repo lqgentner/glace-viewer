@@ -273,6 +273,26 @@ function syncControls() {
   el("year").value = state.manifest.years.indexOf(state.year);
 }
 
+/* Wired before the manifest is fetched, and independent of it: the terrain, the
+ * basemap and the tile grid have nothing to do with which rasters exist. Keeping
+ * them here means a missing or unreachable layers.json costs only the raster
+ * layers, rather than leaving every control on the page inert. */
+function initStandaloneControls() {
+  el("hillshade-row").append(creditButton(TERRAIN_CREDIT.title, TERRAIN_CREDIT));
+  el("hillshade").addEventListener("change", (event) => {
+    state.hillshade = event.target.checked;
+    applyHillshade();
+  });
+  el("hillshade-strength").addEventListener("input", (event) => {
+    state.hillshadeStrength = Number(event.target.value) / 100;
+    el("hillshade-strength-value").textContent = `${event.target.value}%`;
+    applyHillshade();
+  });
+
+  el("basemap").addEventListener("change", (event) => toggleBasemapLabels(event.target.checked));
+  el("grid").addEventListener("change", (event) => toggleGrid(event.target.checked));
+}
+
 function initControls(manifest) {
   el("title").textContent = manifest.title;
   buildSegmented(el("product"), manifest.products, "product");
@@ -299,20 +319,6 @@ function initControls(manifest) {
     el("opacity-value").textContent = `${event.target.value}%`;
     render();
   });
-
-  el("hillshade-row").append(creditButton(TERRAIN_CREDIT.title, TERRAIN_CREDIT));
-  el("hillshade").addEventListener("change", (event) => {
-    state.hillshade = event.target.checked;
-    applyHillshade();
-  });
-  el("hillshade-strength").addEventListener("input", (event) => {
-    state.hillshadeStrength = Number(event.target.value) / 100;
-    el("hillshade-strength-value").textContent = `${event.target.value}%`;
-    applyHillshade();
-  });
-
-  el("basemap").addEventListener("change", (event) => toggleBasemapLabels(event.target.checked));
-  el("grid").addEventListener("change", (event) => toggleGrid(event.target.checked));
 }
 
 /* The basemap's symbol layers are the only ones that compete with the data for
@@ -736,7 +742,19 @@ function watchGridLoad() {
 
 /* ---------- boot ---------- */
 
+/* The rasters are the only part of the page that needs object storage. When the
+ * manifest cannot be reached, hide the controls that describe a raster layer and
+ * say so once, rather than leaving dead sliders behind an error message. */
+function noRasters(reason) {
+  el("raster-controls").hidden = true;
+  el("layer-info").textContent = "";
+  status(`No GLACE layers: ${reason}. Basemap, terrain and inventories still work.`);
+}
+
 async function boot() {
+  initStandaloneControls();
+  ensureHillshade();
+
   status("Loading layers…");
   let manifest;
   try {
@@ -744,11 +762,14 @@ async function boot() {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     manifest = await response.json();
   } catch (error) {
-    status(`Could not load ${TILES_BASE}/layers.json — ${error.message}`);
+    // The rasters are the one thing that needs object storage. Everything else —
+    // basemap, terrain, inventories — is already usable, so say what is missing
+    // and leave the rest of the page working.
+    noRasters(`${TILES_BASE}/layers.json — ${error.message}`);
     return;
   }
   if (!manifest.layers.length) {
-    status("The manifest holds no layers.");
+    noRasters("the manifest holds no layers");
     return;
   }
 
@@ -761,7 +782,6 @@ async function boot() {
 
   initControls(manifest);
   for (const layer of manifest.layers) ensureLayer(layer);
-  ensureHillshade();
   render();
 
   // Frame the data the first time the page is opened without a #hash.
