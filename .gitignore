@@ -3,9 +3,13 @@
 # against ~144 kB for the GeoJSON they come from.
 data/*.pmtiles
 
-# Local copy of the GLACE raster archives, mounted by scripts/serve.py
-tiles/
+# The GLACE raster archives, mounted by scripts/serve.py at ./tiles. No trailing
+# slash: this is usually a symlink to a local build, and git sees a symlink as a
+# file, so `tiles/` would not match it.
+tiles
 _site/
 
 __pycache__/
 .DS_Store
+
+.dmypy*.json

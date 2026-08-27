@@ -37,8 +37,16 @@ which is why `serve.py` exists. It also sets caching per file type: the page
 shell is sent `no-store`, since a stale `app.js` leaves the page silently
 rendering the previous version, while the archives are cached normally.
 
-To see the GLACE rasters, either mount a local copy under `tiles/` or point the
-page at object storage:
+To see the GLACE rasters, `serve.py` mounts `./tiles` under `/tiles`. Until the
+archives are published, point that at a local build in deep-glacier-mapping:
+
+```bash
+ln -s ../deep-glacier-mapping/cache/stac-dataloader/pmtiles tiles
+```
+
+`tiles` is gitignored (no trailing slash in the pattern — git sees a symlink as a
+file, so `tiles/` would not match it). Once the archives are on object storage,
+skip the symlink and point the page at them instead:
 
 ```
 http://127.0.0.1:8000/?tiles=https://data.source.coop/<org>/glace
