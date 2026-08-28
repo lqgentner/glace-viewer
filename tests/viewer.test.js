@@ -94,10 +94,70 @@ test("the viewer", async (t) => {
   });
 
   await t.test("only the selected raster is created", async () => {
-    // The first layer decides product and polarization, the newest year wins.
+    // The head of each axis decides product and polarization; newest year wins.
     assert.deepEqual(glaceLayers(map), ["glace-coh12_vv_2023"]);
     assert.ok(visible(map, "glace-coh12_vv_2023"));
     assert.equal(el("year-value").textContent, "2023");
+  });
+
+  await t.test("the panel opens on VV, and names the products in words", async () => {
+    const faces = (id) => [...el(id).children].map((b) => b.textContent);
+    assert.deepEqual(faces("product"), ["Coherence", "Backscatter"]);
+    // The manifest's own spelling stays on the button, so nothing downstream
+    // has to translate back.
+    assert.deepEqual(
+      [...el("product").children].map((b) => b.dataset.value),
+      ["COH12", "RTC"],
+    );
+
+    assert.deepEqual(faces("pol"), ["VV", "VH"], "VV is the left-hand button");
+    const checked = (id) =>
+      [...el(id).children].find((b) => b.getAttribute("aria-checked") === "true");
+    assert.equal(checked("pol").dataset.value, "VV", "and the one selected");
+    assert.equal(checked("product").dataset.value, "COH12");
+  });
+
+  await t.test("the description sits under the ramp and says what the layer is", async () => {
+    assert.deepEqual(
+      [...el("layer-info").children].map((line) => line.textContent),
+      ["Composite Coherence · 12-day baseline", "Locally resolution weighted median"],
+    );
+    // Under the colour ramp rather than in a footer: it describes what the
+    // controls above it just selected.
+    assert.ok(el("raster-controls").contains(el("layer-info")));
+    assert.ok(
+      el("legend").compareDocumentPosition(el("layer-info")) &
+        page.window.Node.DOCUMENT_POSITION_FOLLOWING,
+      "and after the legend, not before it",
+    );
+  });
+
+  await t.test("the scale carries the colour map's credit", async () => {
+    const credit = el("legend-credit").querySelector("button.credit");
+    assert.ok(credit, "an info mark beside the SCALE heading");
+
+    credit.click();
+    const popover = page.window.document.querySelector(".credit-popover");
+    assert.match(popover.textContent, /Colormap: lipari/, "cmc. prefix stripped");
+    assert.match(popover.textContent, /Fabio Crameri/);
+    assert.equal(
+      popover.querySelector("a").href,
+      "https://www.fabiocrameri.ch/colourmaps/",
+    );
+    credit.click();
+  });
+
+  await t.test("the additional layers start collapsed", async () => {
+    assert.equal(el("extras").hidden, true);
+    assert.equal(el("extras-toggle").getAttribute("aria-expanded"), "false");
+    // The toggles moved inside it, and still work from there.
+    assert.ok(el("extras").contains(el("hillshade-row")));
+    assert.ok(el("extras").contains(el("grid")));
+    assert.ok(el("extras").contains(el("basemap")));
+
+    el("extras-toggle").click();
+    assert.equal(el("extras").hidden, false);
+    assert.equal(el("extras-toggle").getAttribute("aria-expanded"), "true");
   });
 
   await t.test("each layer credits the source it is actually drawing", async () => {
@@ -163,7 +223,7 @@ test("the viewer", async (t) => {
     await settle();
 
     assert.equal(el("year-value").textContent, "2022");
-    assert.equal(el("status").textContent, "No RTC VH layer for 2022");
+    assert.equal(el("status").textContent, "No Backscatter VH layer for 2022");
     assert.equal(el("layer-info").textContent, "");
     assert.equal(
       glaceLayers(map).filter((id) => visible(map, id)).length,

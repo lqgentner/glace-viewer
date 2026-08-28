@@ -78,18 +78,46 @@ function paintStatus() {
 
 /* ---------- segmented controls ---------- */
 
-export function buildSegmented(node, values, onSelect) {
+/* Each entry is either a bare value, which is also its own label — years,
+ * polarizations — or a `{ value, label }` pair where the name on the button is
+ * not the name in the manifest, as for the products. `data-value` always
+ * carries the manifest's own spelling, so nothing downstream has to translate
+ * back. */
+export function buildSegmented(node, entries, onSelect) {
   node.replaceChildren(
-    ...values.map((value) =>
-      h("button", {
+    ...entries.map((entry) => {
+      const pair = entry !== null && typeof entry === "object";
+      const value = pair ? entry.value : entry;
+      return h("button", {
         type: "button",
         role: "radio",
-        textContent: String(value),
+        textContent: String(pair ? entry.label : entry),
         dataset: { value },
         onclick: () => onSelect(value),
-      }),
-    ),
+      });
+    }),
   );
+}
+
+/* ---------- collapsible sections ---------- */
+
+/* The panel's section headers: a button that shows and hides the block below
+ * it. Shared by the glacier inventories and the additional layers, so the two
+ * cannot drift apart in behaviour the way two hand-rolled copies would.
+ *
+ * The markup carries the starting state — `aria-expanded` on the button, the
+ * `hidden` attribute on the body and `up` on the chevron — so a section is
+ * collapsed before any of this runs. */
+export function collapsible(toggleId, bodyId) {
+  const toggle = el(toggleId);
+  const body = el(bodyId);
+  toggle.addEventListener("click", () => {
+    const open = toggle.getAttribute("aria-expanded") === "true";
+    toggle.setAttribute("aria-expanded", String(!open));
+    // `up` marks the collapsed state, here and on the panel's own toggle.
+    toggle.querySelector(".chevron").classList.toggle("up", open);
+    body.hidden = open;
+  });
 }
 
 /* ---------- attribution popover ---------- */

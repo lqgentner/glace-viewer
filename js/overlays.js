@@ -16,7 +16,7 @@ import {
   INVENTORY_INDEX_URL,
 } from "./config.js";
 import { map, styleReady } from "./map.js";
-import { clearStatus, creditButton, el, h, setStatus } from "./ui.js";
+import { clearStatus, collapsible, creditButton, el, h, setStatus } from "./ui.js";
 
 /* ---------- the shared lazy-source lifecycle ---------- */
 
@@ -196,13 +196,7 @@ export async function loadInventories() {
   }
   el("inventories-section").hidden = index.length === 0;
 
-  const toggle = el("inventories-toggle");
-  toggle.addEventListener("click", () => {
-    const open = toggle.getAttribute("aria-expanded") === "true";
-    toggle.setAttribute("aria-expanded", String(!open));
-    toggle.querySelector(".chevron").classList.toggle("up", open);
-    node.hidden = open;
-  });
+  collapsible("inventories-toggle", "inventories");
 }
 
 /* ---------- catalog tile grid ---------- */

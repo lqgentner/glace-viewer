@@ -12,7 +12,7 @@ import test from "node:test";
 import { captureWarnings, installBrowser, load, REPO } from "./helpers/browser.js";
 
 installBrowser();
-const { legendDetail, validateManifest } = await load("js/rasters.js");
+const { layerDetail, validateManifest } = await load("js/rasters.js");
 const { utmZone } = await load("js/overlays.js");
 
 const layer = (overrides = {}) => ({
@@ -35,7 +35,10 @@ test("the committed manifest is accepted whole", { skip: skipWithoutManifest() }
   const manifest = validateManifest(raw);
   assert.equal(manifest.layers.length, raw.layers.length);
   assert.deepEqual(manifest.products, raw.products);
-  assert.deepEqual(manifest.polarizations, raw.polarizations);
+  // The polarization axis is reordered rather than taken as declared, so that
+  // the page opens on VV. The set has to match; the order deliberately need not.
+  assert.deepEqual(manifest.polarizations, ["VV", "VH"]);
+  assert.deepEqual([...manifest.polarizations].sort(), [...raw.polarizations].sort());
 });
 
 test("a manifest with nothing usable in it is refused", async () => {
@@ -145,33 +148,46 @@ function skipWithoutManifest() {
     : "tiles/layers.json is absent (build or symlink ./tiles first)";
 }
 
-test("descriptive fields are optional, and cost only their own fragment", () => {
-  // size_bytes and cmap are captions: the layer draws identically without them,
-  // so a manifest that omits one must not lose the layer.
-  const bare = layer({ size_bytes: undefined, cmap: undefined });
-  assert.equal(validateManifest({ layers: [bare] }).layers.length, 1);
-  assert.equal(legendDetail(bare), "COH12 VV 2023 · z5–12");
+test("the description says what the product is and how it was composited", () => {
+  assert.deepEqual(layerDetail(layer()), [
+    "Composite Coherence · 12-day baseline",
+    "Locally resolution weighted median",
+  ]);
+  assert.deepEqual(layerDetail(layer({ product: "RTC" })), [
+    "Composite Backscatter · Radiometrically terrain flattened",
+    "Locally resolution weighted median",
+  ]);
 });
 
-test("a descriptive field that is present but unusable is dropped, not rendered", () => {
-  // The defect this replaces rendered "NaN MB · undefined" into the panel.
+test("the acquisition window is shown once the manifest carries it", () => {
+  // Not in layers.json yet: the mosaics upstream record it as
+  // COMPOSITE_START_DATE / COMPOSITE_END_DATE, but the manifest writer does not
+  // copy the tags through. The line appears the moment it does.
+  const dated = layer({ start_date: "2023-06-01", end_date: "2023-09-30" });
+  assert.deepEqual(layerDetail(dated).at(-1), "2023-06-01 to 2023-09-30");
+  assert.equal(validateManifest({ layers: [dated] }).layers.length, 1, "and is not required");
+});
+
+test("a half-written or malformed window is dropped, not rendered", () => {
+  // The manifest comes from wherever ?tiles= points; the defect this guards
+  // against is "undefined to 2023-09-30" printed under the ramp.
   for (const overrides of [
-    { size_bytes: undefined, cmap: undefined },
-    { size_bytes: null, cmap: null },
-    { size_bytes: "63916106", cmap: 42 },
-    { size_bytes: Number.NaN, cmap: "" },
-    { size_bytes: -1, cmap: undefined },
+    { start_date: "2023-06-01" },
+    { end_date: "2023-09-30" },
+    { start_date: null, end_date: null },
+    { start_date: "2023-6-1", end_date: "2023-09-30" },
+    { start_date: 20230601, end_date: 20230930 },
+    { start_date: "", end_date: "" },
   ]) {
-    const detail = legendDetail(layer(overrides));
-    assert.doesNotMatch(detail, /NaN|undefined|null/, JSON.stringify(overrides));
+    const detail = layerDetail(layer(overrides));
+    assert.equal(detail.length, 2, JSON.stringify(overrides));
+    assert.doesNotMatch(detail.join(" "), /NaN|undefined|null|to /, JSON.stringify(overrides));
   }
 });
 
-test("the legend line reads as one caption when everything is present", () => {
-  assert.equal(
-    legendDetail(layer({ size_bytes: 63_916_106, cmap: "cmc.lipari" })),
-    "COH12 VV 2023 · z5–12 · 63.9 MB · cmc.lipari",
-  );
-  // A zero-byte archive is a real number, not a missing one.
-  assert.match(legendDetail(layer({ size_bytes: 0 })), /0\.0 MB/);
+test("an unknown product still describes itself rather than going blank", () => {
+  assert.deepEqual(layerDetail(layer({ product: "COH6" })), [
+    "COH6 composite",
+    "Locally resolution weighted median",
+  ]);
 });

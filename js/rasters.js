@@ -11,9 +11,35 @@
 
 import { LAYER_MANIFEST_URL, TILES_BASE } from "./config.js";
 import { dataInsertPoint, map, styleReady } from "./map.js";
-import { buildSegmented, clearStatus, el, setStatus } from "./ui.js";
+import { buildSegmented, clearStatus, creditButton, el, h, setStatus } from "./ui.js";
 
 const STATUS_KEY = "rasters";
+
+/* The manifest names products the way the archives are named; the panel names
+ * them the way a reader would. `data-value` keeps the manifest's spelling, so
+ * only the button face changes. A product with no entry here falls back to its
+ * own name rather than vanishing. */
+const PRODUCT_LABELS = { COH12: "Coherence", RTC: "Backscatter" };
+const productLabel = (product) => PRODUCT_LABELS[product] ?? product;
+
+/* The first line under the ramp: what the selected product actually is. */
+const PRODUCT_DETAIL = {
+  COH12: "Composite Coherence · 12-day baseline",
+  RTC: "Composite Backscatter · Radiometrically terrain flattened",
+};
+
+/* How every GLACE layer is composited, which is the same for all of them. */
+const COMPOSITING_DETAIL = "Locally resolution weighted median";
+
+/* VV before VH wherever both exist, whatever order the manifest declares. */
+const POLARIZATION_ORDER = ["VV", "VH"];
+
+/* Crameri's scientific colour maps, which the manifest names as `cmc.<map>`.
+ * The credit is per-layer because the map is. */
+const COLOUR_MAP_CREDIT = {
+  citation: "© Fabio Crameri",
+  links: [{ label: "Scientific colour maps", url: "https://www.fabiocrameri.ch/colourmaps/" }],
+};
 
 const state = {
   manifest: null,
@@ -91,10 +117,19 @@ export function validateManifest(raw) {
     return kept.length === have.size ? kept : [...have];
   };
 
+  /* The axes are display order as well as content, so polarization is sorted
+   * rather than taken as declared: VV is the one to open on and belongs on the
+   * left. Anything not in POLARIZATION_ORDER keeps its manifest order behind
+   * the ones that are, since Array#sort is stable. */
+  const polRank = (pol) => {
+    const at = POLARIZATION_ORDER.indexOf(pol);
+    return at === -1 ? POLARIZATION_ORDER.length : at;
+  };
+
   return {
     layers,
     products: axis(raw.products, "product"),
-    polarizations: axis(raw.polarizations, "polarization"),
+    polarizations: axis(raw.polarizations, "polarization").sort((a, b) => polRank(a) - polRank(b)),
     years: axis(raw.years, "year").sort((a, b) => a - b),
   };
 }
@@ -140,8 +175,12 @@ function render() {
     updateLegend(active);
     clearStatus(STATUS_KEY);
   } else {
-    el("layer-info").textContent = "";
-    setStatus(STATUS_KEY, `No ${state.product} ${state.pol} layer for ${state.year}`, "info");
+    el("layer-info").replaceChildren();
+    setStatus(
+      STATUS_KEY,
+      `No ${productLabel(state.product)} ${state.pol} layer for ${state.year}`,
+      "info",
+    );
   }
   syncControls();
   showOnMap(active);
@@ -169,24 +208,49 @@ function updateLegend(layer) {
   const digits = Math.abs(layer.vmax - layer.vmin) < 5 ? 2 : 1;
   el("legend-min").textContent = layer.vmin.toFixed(digits) + unit;
   el("legend-max").textContent = layer.vmax.toFixed(digits) + unit;
-  el("layer-info").textContent = legendDetail(layer);
+  updateColourMapCredit(layer);
+  el("layer-info").replaceChildren(...layerDetail(layer).map((line) => h("div", { textContent: line })));
 }
 
-/* The line under the legend, from whichever fields the manifest actually
- * carries. `size_bytes` and `cmap` are descriptive rather than structural — the
- * layer draws identically without them — so a manifest that omits one loses a
- * fragment of this line instead of losing the layer. Validating them as
- * required would cost a real data layer over a caption. */
-export function legendDetail(layer) {
-  const parts = [
-    `${layer.product} ${layer.polarization} ${layer.year}`,
-    `z${layer.min_zoom}–${layer.max_zoom}`,
-  ];
-  if (isFiniteNumber(layer.size_bytes) && layer.size_bytes >= 0) {
-    parts.push(`${(layer.size_bytes / 1e6).toFixed(1)} MB`);
+/* An ISO date as the manifest would carry it. Checked rather than trusted: the
+ * manifest comes from wherever ?tiles= points, and a half-written date would
+ * otherwise print as-is under the ramp. */
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const isDate = (value) => isNonEmptyString(value) && ISO_DATE.test(value);
+
+/* What sits under the colour ramp: what the layer is, how it was composited,
+ * and the window it covers.
+ *
+ * The acquisition window is the one part the manifest may not carry. The
+ * mosaics upstream record it as COMPOSITE_START_DATE / COMPOSITE_END_DATE
+ * GeoTIFF tags, but the manifest writer does not copy them through yet, so the
+ * line appears on its own once `start_date` and `end_date` are there and is
+ * silently skipped until then. Descriptive rather than structural, like
+ * `cmap` — the layer draws identically without it, so it is not something
+ * validLayer() should reject a real data layer over. */
+export function layerDetail(layer) {
+  const lines = [PRODUCT_DETAIL[layer.product] ?? `${productLabel(layer.product)} composite`];
+  lines.push(COMPOSITING_DETAIL);
+  if (isDate(layer.start_date) && isDate(layer.end_date)) {
+    lines.push(`${layer.start_date} to ${layer.end_date}`);
   }
-  if (isNonEmptyString(layer.cmap)) parts.push(layer.cmap);
-  return parts.join(" · ");
+  return lines;
+}
+
+/* Rebuilt only when the colour map changes rather than on every render: the
+ * button owns a hover popover, and replacing it under the pointer would drop
+ * the box the reader is reading. */
+let shownColourMap = null;
+
+function updateColourMapCredit(layer) {
+  const cmap = isNonEmptyString(layer.cmap) ? layer.cmap.replace(/^cmc\./, "") : "";
+  if (cmap === shownColourMap) return;
+  shownColourMap = cmap;
+  el("legend-credit").replaceChildren(
+    ...(cmap
+      ? [creditButton("Colour map", { ...COLOUR_MAP_CREDIT, title: `Colormap: ${cmap}` })]
+      : []),
+  );
 }
 
 /* ---------- controls ---------- */
@@ -218,7 +282,11 @@ function initControls(manifest) {
     state[field] = value;
     render();
   };
-  buildSegmented(el("product"), manifest.products, select("product"));
+  buildSegmented(
+    el("product"),
+    manifest.products.map((product) => ({ value: product, label: productLabel(product) })),
+    select("product"),
+  );
   buildSegmented(el("pol"), manifest.polarizations, select("pol"));
 
   const years = manifest.years;
@@ -253,7 +321,7 @@ function initControls(manifest) {
  * behind an error message. */
 function noRasters(reason) {
   el("raster-controls").hidden = true;
-  el("layer-info").textContent = "";
+  el("layer-info").replaceChildren();
   setStatus(
     STATUS_KEY,
     `No GLACE layers: ${reason}. Basemap, terrain and inventories still work.`,
@@ -278,11 +346,22 @@ export async function loadRasters() {
     manifest.layers.map((layer) => [key(layer.product, layer.polarization, layer.year), layer]),
   );
 
-  const first = manifest.layers[0];
-  state.product = first.product;
-  state.pol = first.polarization;
+  /* The head of each axis rather than whatever the first layer happens to be,
+   * so the page opens on the leftmost button of each control — VV included.
+   * If that combination has no archive, fall back to one that does rather than
+   * opening on an empty map. */
+  state.product = manifest.products[0];
+  state.pol = manifest.polarizations[0];
   state.year = manifest.years[manifest.years.length - 1];
-  if (!findLayer(state.product, state.pol, state.year)) state.year = first.year;
+  if (!findLayer(state.product, state.pol, state.year)) {
+    const fallback =
+      manifest.layers.find(
+        (layer) => layer.product === state.product && layer.polarization === state.pol,
+      ) ?? manifest.layers[0];
+    state.product = fallback.product;
+    state.pol = fallback.polarization;
+    state.year = fallback.year;
+  }
 
   initControls(manifest);
   render();

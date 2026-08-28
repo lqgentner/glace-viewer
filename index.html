@@ -54,34 +54,22 @@
           </section>
 
           <section id="legend" class="control">
-            <label>Scale</label>
+            <div class="control-head">
+              <label>Scale</label>
+              <!-- Colour-map credit, appended by js/rasters.js: which map it is
+                   depends on the layer, so the button is rebuilt when it changes. -->
+              <span id="legend-credit"></span>
+            </div>
             <div id="legend-bar"></div>
             <div id="legend-labels"><span id="legend-min"></span><span id="legend-max"></span></div>
           </section>
+
+          <!-- What the selected layer is. Sits under the ramp rather than in a
+               footer: it describes the thing the controls above just chose. -->
+          <p id="layer-info"></p>
         </div>
 
         <hr />
-
-        <section class="control checkbox" id="hillshade-row">
-          <input type="checkbox" id="hillshade" />
-          <label for="hillshade">Hillshade</label>
-        </section>
-        <section class="control" id="hillshade-strength-row" hidden>
-          <label for="hillshade-strength">
-            Hillshade strength <output id="hillshade-strength-value">55%</output>
-          </label>
-          <input type="range" id="hillshade-strength" min="0" max="100" value="55" step="1" />
-        </section>
-
-        <section class="control checkbox">
-          <input type="checkbox" id="grid" />
-          <label for="grid">Catalog tile grid</label>
-        </section>
-
-        <section class="control checkbox">
-          <input type="checkbox" id="basemap" checked />
-          <label for="basemap">Basemap labels</label>
-        </section>
 
         <section class="control" id="inventories-section" hidden>
           <!-- Starts collapsed: three overlays that are all off by default do not
@@ -97,12 +85,39 @@
           <div id="inventories" hidden></div>
         </section>
 
-        <footer>
-          <p id="layer-info"></p>
-          <p class="muted">
-            Experimental quick-look of the 40 m overview mosaics.
-          </p>
-        </footer>
+        <section class="control" id="extras-section">
+          <!-- Same reasoning as the inventories above: everything in here is off
+               by default (bar the basemap labels) and nobody needs it on arrival. -->
+          <button type="button" id="extras-toggle" aria-expanded="false" aria-controls="extras">
+            <span>Additional layers</span><span class="chevron up" aria-hidden="true"
+                  ><svg viewBox="0 0 12 12" width="12" height="12" fill="none"
+                        stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                        stroke-linejoin="round"><path d="M2.5 4.5 6 8 9.5 4.5" /></svg
+                ></span>
+          </button>
+          <div id="extras" hidden>
+            <section class="control checkbox" id="hillshade-row">
+              <input type="checkbox" id="hillshade" />
+              <label for="hillshade">Hillshade</label>
+            </section>
+            <section class="control" id="hillshade-strength-row" hidden>
+              <label for="hillshade-strength">
+                Hillshade strength <output id="hillshade-strength-value">55%</output>
+              </label>
+              <input type="range" id="hillshade-strength" min="0" max="100" value="55" step="1" />
+            </section>
+
+            <section class="control checkbox">
+              <input type="checkbox" id="grid" />
+              <label for="grid">Catalog tile grid</label>
+            </section>
+
+            <section class="control checkbox">
+              <input type="checkbox" id="basemap" checked />
+              <label for="basemap">Basemap labels</label>
+            </section>
+          </div>
+        </section>
       </div>
     </aside>
 

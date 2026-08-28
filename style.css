@@ -73,7 +73,8 @@ html, body {
 #panel-toggle:hover { color: var(--text); }
 
 .control { margin-bottom: 14px; }
-.control > label {
+.control > label,
+.control-head > label {
   display: block;
   margin-bottom: 6px;
   font-size: 11px;
@@ -82,6 +83,17 @@ html, body {
   color: var(--muted);
 }
 .control output { color: var(--text); font-variant-numeric: tabular-nums; }
+
+/* A section label with something beside it — currently the colour-map credit
+   next to SCALE. The row carries the label's bottom margin so the two stay on
+   one baseline. */
+.control-head {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-bottom: 6px;
+}
+.control-head > label { margin-bottom: 0; }
 
 .control.checkbox { display: flex; align-items: center; gap: 8px; }
 .control.checkbox > label {
@@ -160,9 +172,16 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
   font-variant-numeric: tabular-nums;
 }
 
-#panel footer { border-top: 1px solid var(--border); padding-top: 10px; }
-#panel footer p { margin: 0 0 6px; font-size: 11px; }
-#layer-info { color: var(--muted); font-variant-numeric: tabular-nums; }
+/* Sits under the colour ramp, one fact per line. Tabular figures so the date
+   window does not jitter as the year changes. */
+#layer-info {
+  margin: 10px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+#layer-info:empty { margin: 0; }
 .muted { color: var(--muted); }
 
 #status {
@@ -319,7 +338,8 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 }
 
 /* Collapsible section header, styled like the other section labels but clickable. */
-#inventories-toggle {
+#inventories-toggle,
+#extras-toggle {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -335,7 +355,13 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
   border: 0;
   cursor: pointer;
 }
-#inventories-toggle:hover { color: var(--text); }
+#inventories-toggle:hover,
+#extras-toggle:hover { color: var(--text); }
+
+/* The last toggle in a collapsed-by-default block should not leave a gap above
+   whatever follows it. */
+#extras .control:last-child { margin-bottom: 0; }
+#extras-section { margin-bottom: 0; }
 
 .maplibregl-popup-content hr {
   height: 0;

@@ -16,7 +16,7 @@ import { TERRAIN_CREDIT } from "./config.js";
 import { map, setHillshade, setHillshadeStrength, toggleBasemapLabels } from "./map.js";
 import { grid, loadInventories } from "./overlays.js";
 import { loadRasters, manifestBounds } from "./rasters.js";
-import { creditButton, el } from "./ui.js";
+import { collapsible, creditButton, el } from "./ui.js";
 
 /* The panel covers most of a phone screen, so on a narrow viewport it opens
  * collapsed to its title bar and the reader taps to open it. Wide viewports open
@@ -59,6 +59,7 @@ function initControls() {
 
   el("basemap").addEventListener("change", (event) => toggleBasemapLabels(event.target.checked));
   el("grid").addEventListener("change", (event) => grid.setEnabled(event.target.checked));
+  collapsible("extras-toggle", "extras");
 }
 
 async function boot() {

@@ -208,6 +208,48 @@ Anything that reaches the page from a manifest or a vector tile — a glacier
 name, a citation, a licence link — is built as DOM nodes rather than as an HTML
 string, so a value containing markup stays a value.
 
+### The panel
+
+Top to bottom: the raster controls (product, polarization, year, opacity, the
+colour ramp and the description of what is selected), then the glacier
+inventories, then **Additional layers** — hillshade, catalog tile grid, basemap
+labels. The last two are collapsed by default; between them they are seven
+controls that are off on arrival, and the panel is shorter without them.
+
+The panel names products the way a reader would rather than the way the archives
+are named — `COH12` reads as **Coherence**, `RTC` as **Backscatter** — while
+`data-value` keeps the manifest's own spelling, so nothing downstream has to
+translate back. A product with no entry in `PRODUCT_LABELS` falls back to its own
+name rather than vanishing.
+
+The polarization axis is **sorted rather than taken as declared**, so VV is the
+left-hand button and the one the page opens on; the manifest currently declares
+`["VH", "VV"]`. The opening selection is the head of each ordered axis with the
+newest year, falling back to a combination that has an archive if that one does
+not.
+
+Under the ramp sits the description of the selected layer:
+
+```
+Composite Coherence · 12-day baseline
+Locally resolution weighted median
+2023-06-01 to 2023-09-30
+```
+
+The first line is per product, the second is how every GLACE layer is
+composited. **The third is not shown yet.** The mosaics upstream record the
+window as `COMPOSITE_START_DATE` / `COMPOSITE_END_DATE` GeoTIFF tags (see
+`_TAG_FIELDS` in deep-glacier-mapping's `glacier_mapping/stac.py`), but
+`write_manifest` does not copy them into `layers.json`. The line appears on its
+own once each layer carries `start_date` and `end_date` as `YYYY-MM-DD`; a
+half-written or malformed pair is dropped rather than printed. Like `cmap`, it is
+descriptive rather than structural, so `validLayer()` does not reject a layer for
+missing it.
+
+The `SCALE` heading carries an info mark with the colour map's credit, rebuilt
+only when the map actually changes — the button owns a hover popover, and
+replacing it under the pointer would drop the box being read.
+
 ### Small screens
 
 Below 640px the panel is capped at 46% of the viewport, which still leaves it
