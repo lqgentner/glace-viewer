@@ -143,6 +143,31 @@ avalanches on any change and stores a whole fresh copy — 50x more per update, 
 
 ## Design notes
 
+### Page structure
+
+No build step and no framework: `index.html`, `style.css` and native ES modules
+under `js/`, loaded straight by the browser.
+
+| module | owns |
+| --- | --- |
+| `config.js` | archive locations, basemap build, terrain endpoint |
+| `map.js` | the map, layer ordering, basemap labels, hillshade |
+| `rasters.js` | the `layers.json` manifest, layer selection, legend |
+| `overlays.js` | glacier inventories, catalog tile grid, popups |
+| `ui.js` | status line, attribution popovers, safe DOM helpers |
+| `app.js` | control wiring and startup |
+
+Nothing on the map is created until something asks for it: a raster source
+appears the first time its year is selected, the terrain the first time the
+hillshade is ticked, an inventory the first time its box is. Every control is
+wired before anything has loaded and every handler that touches the map awaits
+`style.load`, so a box ticked while the basemap is still streaming is honoured
+when the style arrives rather than dropped.
+
+Anything that reaches the page from a manifest or a vector tile — a glacier
+name, a citation, a licence link — is built as DOM nodes rather than as an HTML
+string, so a value containing markup stays a value.
+
 ### Basemap and terrain
 
 The basemap style is generated at runtime by `@protomaps/basemaps` (69 layers,
@@ -239,11 +264,13 @@ full-resolution windows rather than reading one decimated overview.
 
 Product (COH12 / RTC), polarization (VV / VH) and a year slider select one
 raster layer; combinations with no archive are disabled rather than hidden.
-Opacity, basemap (dark / light / OSM / none) and the tile-grid overlay are
-independent. The map position lives in the URL hash, so a view can be linked.
+Layer opacity, shaded relief, the basemap labels, the catalog tile grid and the
+glacier inventories are independent of that choice and of each other. The map
+position lives in the URL hash, so a view can be linked.
 
 The rasters are *pre-styled RGBA* — the colour ramp is baked in at build time
 and pixel values cannot be read back from the tiles. The legend reports the
-stretch each layer was built with (fixed 0–1 for coherence, a 2–98 % percentile
-stretch for backscatter in dB, both recorded in `layers.json`). For quantitative
-work, go to the COGs the STAC items point at.
+stretch each layer was built with, which is the fixed range from the table above
+unless the build opted into `--percentile-stretch`; either way it is recorded
+per layer in `layers.json`. For quantitative work, go to the COGs the STAC items
+point at.
