@@ -2,9 +2,12 @@
  * The map itself: the basemap style, layer ordering, and the two things layered
  * onto the basemap that are not data — the label toggle and the shaded relief.
  *
- * Everything on the map is a PMTiles archive read straight from object storage
- * over HTTP range requests — the GLACE rasters, the Protomaps basemap and the
- * Mapterhorn terrain. There is no tile server anywhere in the stack.
+ * The data and the basemap are PMTiles archives read straight from object
+ * storage over HTTP range requests — the GLACE rasters and the Protomaps
+ * basemap. The terrain is the exception: Mapterhorn publishes PMTiles too, but
+ * only up to z12 in one archive, and its download server answers ranges
+ * uncached. Its zxy endpoint covers every zoom and is edge-cached, so the
+ * hillshade reads that instead.
  */
 
 import {

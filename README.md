@@ -3,17 +3,18 @@
 Quick-look web viewer for **GLACE** — resolution-weighted Sentinel-1 coherence
 and backscatter composites of the European Alps.
 
-Everything on the map is a PMTiles archive read straight from object storage
-over HTTP range requests: the GLACE rasters, the [Protomaps](https://protomaps.com)
-basemap, the [Mapterhorn](https://mapterhorn.com) terrain and the glacier
-inventory overlays. There is no tile server anywhere in the stack, and the page
+Almost everything on the map is a PMTiles archive read straight from object
+storage over HTTP range requests: the GLACE rasters, the
+[Protomaps](https://protomaps.com) basemap and the glacier inventory overlays.
+The [Mapterhorn](https://mapterhorn.com) terrain is the one exception and comes
+from a tile endpoint — see [Basemap and terrain](#basemap-and-terrain). The page
 is plain HTML/CSS/JS with no build step or framework.
 
 | | source |
 | --- | --- |
 | GLACE rasters | object storage, via `?tiles=<base-url>` (default `./tiles`) |
 | Basemap | Protomaps `grayscale`, from the free [Source Cooperative](https://source.coop/) mirror |
-| Terrain | Mapterhorn global DEM, terrarium-encoded |
+| Terrain | Mapterhorn global DEM, terrarium-encoded, from their `{z}/{x}/{y}` endpoint |
 | Glacier inventories | built from `data/*.geojson` in this repo |
 
 The rasters are produced by [deep-glacier-mapping](https://github.com/lqgentner/deep-glacier-mapping),
@@ -254,8 +255,19 @@ Data layers are inserted below the basemap's first symbol layer, so labels stay
 readable on top of the imagery. The "Basemap labels" checkbox hides just those
 symbol layers.
 
-The Mapterhorn hillshade is optional (checkbox) and sits above the data but below
-the labels. **MapLibre has no layer blend modes**, so a literal `multiply` is not
+The Mapterhorn terrain is the only layer that is *not* a PMTiles archive, which
+is deliberate. Mapterhorn publishes PMTiles as well, but the split does not suit
+a web map: `planet.pmtiles` stops at z12 while the viewer opens to z14, and
+everything above z12 lives in one archive per z6 tile (the Alps ones are several
+hundred GB each), so a PMTiles hillshade needs a custom protocol that routes by
+zoom across archives — which is what [Mapterhorn's own PMTiles example](https://github.com/mapterhorn/mapterhorn/blob/main/website/examples/pmtiles/example.html)
+does. Worse, their download server answers range requests uncached
+(`cf-cache-status: DYNAMIC`, no `Cache-Control`), while `tiles.mapterhorn.com`
+is edge-cached for a week and measurably faster. The endpoint is the path they
+maintain for live map serving; the archives are for bulk extracts.
+
+The hillshade is optional (checkbox) and sits above the data but below the
+labels. **MapLibre has no layer blend modes**, so a literal `multiply` is not
 available; the equivalent for shaded relief is a hillshade with fully transparent
 highlights and black shadows — lit slopes leave the data untouched and shaded
 slopes darken it, which is what multiplying by a shading layer does. There is no
