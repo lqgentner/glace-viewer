@@ -212,9 +212,13 @@ string, so a value containing markup stays a value.
 
 Top to bottom: the raster controls (product, polarization, year, opacity, the
 colour ramp and the description of what is selected), then the glacier
-inventories, then **Additional layers** — hillshade, catalog tile grid, basemap
+inventories, then **Map options** — hillshade, catalog tile grid, basemap
 labels. The last two are collapsed by default; between them they are seven
 controls that are off on arrival, and the panel is shorter without them.
+
+"Map options" rather than "Additional layers" because only two of the three are
+layers: the basemap labels toggle is a visibility switch on the basemap that is
+already drawn.
 
 The panel names products the way a reader would rather than the way the archives
 are named — `COH12` reads as **Coherence**, `RTC` as **Backscatter** — while
