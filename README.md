@@ -305,6 +305,20 @@ pitch is non-zero — without moving the camera, since easing to 60° would roun
 every shared link off to the same view.
 
 
+### Globe
+
+The style sets `projection: { type: "globe" }`, which MapLibre 5 expands into a
+zoom interpolation rather than a permanent globe: `vertical-perspective` at z11,
+`mercator` from z12, blended between. So the earth is round while the whole arc
+is in view and flat by the time anyone is reading a glacier. The page opens
+around z6, inside the round part.
+
+It costs the 3D button nothing — the shaders carry combined `GLOBE`/`TERRAIN3D`
+paths, so terrain renders under either projection. Two MapLibre features are not
+supported on a globe: fog matrices, which this style does not use, and easing
+around a point, which downgrades zoom-toward-the-cursor to zoom-toward-the-centre
+while the globe is on screen.
+
 ### Attribution
 
 The line in the bottom-right corner is MapLibre's own `AttributionControl`, fed

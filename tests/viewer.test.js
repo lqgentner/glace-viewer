@@ -34,6 +34,13 @@ test("the viewer", async (t) => {
   const { map } = page;
   await settle();
 
+  await t.test("the style asks for a globe that flattens as you zoom in", async () => {
+    // The bare `globe` type is a zoom interpolation, not a permanent globe:
+    // MapLibre expands it to vertical-perspective at z11 and mercator at z12.
+    assert.deepEqual(map.options.style.projection, { type: "globe" });
+    assert.ok(map.options.zoom < 11, "the opening view is inside the round part");
+  });
+
   await t.test("controls answer before the style has loaded", async () => {
     assert.equal(map.getLayer("hillshade"), undefined, "terrain is not fetched up front");
 

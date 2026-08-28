@@ -28,6 +28,18 @@ maplibregl.addProtocol("pmtiles", protocol.tile);
 const flavor = basemaps.namedFlavor(BASEMAP_FLAVOR);
 const style = {
   version: 8,
+  /* `globe` is not "always a globe": MapLibre expands the bare type into a zoom
+   * interpolation — vertical-perspective at z11, mercator from z12 — so the
+   * earth is round while the whole arc is in view and flat by the time anyone
+   * is reading a glacier. The page opens around z6, so that is the state a
+   * first visit lands in.
+   *
+   * Terrain is supported under it (the shaders carry combined GLOBE/TERRAIN3D
+   * paths), so this does not cost the 3D button anything. Two things are not:
+   * fog matrices, which the style does not use, and easing around a point,
+   * which downgrades zoom-toward-the-cursor to zoom-toward-the-centre while the
+   * globe is on screen. */
+  projection: { type: "globe" },
   glyphs: `${BASEMAP_ASSETS}/fonts/{fontstack}/{range}.pbf`,
   sprite: `${BASEMAP_ASSETS}/sprites/v4/${BASEMAP_FLAVOR}`,
   sources: {
