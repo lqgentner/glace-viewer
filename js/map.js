@@ -1,13 +1,14 @@
 /*
- * The map itself: the basemap style, layer ordering, and the two things layered
- * onto the basemap that are not data — the label toggle and the shaded relief.
+ * The map itself: the basemap style, layer ordering, and the three things
+ * layered onto the basemap that are not data — the label toggle, the shaded
+ * relief and the 3D view.
  *
  * The data and the basemap are PMTiles archives read straight from object
  * storage over HTTP range requests — the GLACE rasters and the Protomaps
  * basemap. The terrain is the exception: Mapterhorn publishes PMTiles too, but
  * only up to z12 in one archive, and its download server answers ranges
  * uncached. Its zxy endpoint covers every zoom and is edge-cached, so the
- * hillshade reads that instead.
+ * hillshade and the 3D mesh read that instead, from one shared source.
  */
 
 import {
@@ -103,12 +104,24 @@ export async function toggleBasemapLabels(on) {
   }
 }
 
+/* ---------- terrain ---------- */
+
+/* One `raster-dem` source feeds both the shaded relief and the 3D mesh, so
+ * whichever is switched on first pays for the tilejson and the tiles and the
+ * other rides along. Created on first use rather than at startup: it is a
+ * network cost nobody who leaves both switched off should pay. */
+const TERRAIN_SOURCE = "terrain";
+
+function ensureTerrainSource() {
+  if (map.getSource(TERRAIN_SOURCE)) return;
+  map.addSource(TERRAIN_SOURCE, { type: "raster-dem", url: TERRAIN_TILEJSON });
+}
+
 /* ---------- hillshade ---------- */
 
 const HILLSHADE_LAYER = "hillshade";
-const TERRAIN_SOURCE = "terrain";
 
-const terrain = { on: false, strength: 0.55 };
+const hillshade = { on: false, strength: 0.55 };
 
 /* MapLibre has no layer blend modes, so a literal "multiply" is not available.
  * The equivalent for shaded relief is a hillshade whose highlights are fully
@@ -119,48 +132,127 @@ const terrain = { on: false, strength: 0.55 };
 function hillshadePaint(strength) {
   return {
     "hillshade-method": "igor",
-    "hillshade-exaggeration": 0.9,
+    "hillshade-illumination-direction": 315,
+    "hillshade-exaggeration": 0.5,
     "hillshade-highlight-color": "rgba(255, 255, 255, 0)",
     "hillshade-shadow-color": `rgba(0, 0, 0, ${strength.toFixed(3)})`,
     "hillshade-accent-color": `rgba(0, 0, 0, ${(strength * 0.5).toFixed(3)})`,
   };
 }
 
-/* Created on first use rather than at startup: the terrain tilejson and its
- * tiles are a network cost nobody who leaves the box unticked should pay. */
 function ensureHillshade() {
-  if (map.getSource(TERRAIN_SOURCE)) return;
-  map.addSource(TERRAIN_SOURCE, { type: "raster-dem", url: TERRAIN_TILEJSON });
+  if (map.getLayer(HILLSHADE_LAYER)) return;
+  ensureTerrainSource();
   map.addLayer(
     {
       id: HILLSHADE_LAYER,
       type: "hillshade",
       source: TERRAIN_SOURCE,
       layout: { visibility: "none" },
-      paint: hillshadePaint(terrain.strength),
+      paint: hillshadePaint(hillshade.strength),
     },
     firstSymbolLayer(),
   );
 }
 
 export async function setHillshade(on) {
-  terrain.on = on;
+  hillshade.on = on;
   await applyHillshade();
 }
 
 export async function setHillshadeStrength(strength) {
-  terrain.strength = strength;
+  hillshade.strength = strength;
   await applyHillshade();
 }
 
 async function applyHillshade() {
   await styleReady;
   // Nothing to create while the box has never been ticked, and nothing to
-  // update either — the strength is read when the layer is finally built.
-  if (!terrain.on && !map.getLayer(HILLSHADE_LAYER)) return;
+  // update either — the paint is read when the layer is finally built.
+  if (!hillshade.on && !map.getLayer(HILLSHADE_LAYER)) return;
   ensureHillshade();
-  map.setLayoutProperty(HILLSHADE_LAYER, "visibility", terrain.on ? "visible" : "none");
-  for (const [property, value] of Object.entries(hillshadePaint(terrain.strength))) {
+  map.setLayoutProperty(HILLSHADE_LAYER, "visibility", hillshade.on ? "visible" : "none");
+  for (const [property, value] of Object.entries(hillshadePaint(hillshade.strength))) {
     map.setPaintProperty(HILLSHADE_LAYER, property, value);
   }
 }
+
+/* ---------- 3D ---------- */
+
+/* Enabling 3D drapes the map over the DEM and tilts the camera in one gesture,
+ * and disabling it puts the camera back flat — the behaviour the button
+ * promises, rather than terrain quietly switched on under an unchanged
+ * overhead view where it would be invisible. The tilt is animated because the
+ * jump reads as the page reloading.
+ *
+ * 60° is MapLibre's default `maxPitch`, so the slant does not need the map to
+ * be constructed with a raised limit. */
+const THREE_D_PITCH = 60;
+const THREE_D_DURATION_MS = 600;
+const TERRAIN_EXAGGERATION = 1;
+
+const view = { threeD: false };
+let threeDButton = null;
+
+/* `tilt: false` switches the mesh without moving the camera, which is what the
+ * restore at the bottom of this file needs: the pitch is already where the
+ * #hash put it, and easing to 60° would round every shared link off to the
+ * same view. Pressing the button always tilts. */
+export async function setThreeD(on, { tilt = true } = {}) {
+  view.threeD = on;
+  syncThreeDButton();
+  await styleReady;
+  if (on) {
+    ensureTerrainSource();
+    map.setTerrain({ source: TERRAIN_SOURCE, exaggeration: TERRAIN_EXAGGERATION });
+  } else {
+    // Terrain is dropped, but the source stays for the hillshade and for the
+    // next time the button is pressed.
+    map.setTerrain(null);
+  }
+  // The mesh is raised before the camera moves, so the tilt does not play out
+  // over a surface that is still flat.
+  if (tilt) map.easeTo({ pitch: on ? THREE_D_PITCH : 0, duration: THREE_D_DURATION_MS });
+}
+
+/* MapLibre ships a `TerrainControl`, but it draws a mountain glyph and only
+ * flips `setTerrain`. This is the same button with the label the design asks
+ * for and the camera move above. It borrows MapLibre's own control classes, so
+ * it renders as one more button in the stack under the navigation control
+ * rather than as something bolted beside it. */
+class ThreeDControl {
+  onAdd() {
+    this.container = document.createElement("div");
+    this.container.className = "maplibregl-ctrl maplibregl-ctrl-group";
+    threeDButton = document.createElement("button");
+    threeDButton.type = "button";
+    threeDButton.className = "maplibregl-ctrl-3d";
+    threeDButton.addEventListener("click", () => setThreeD(!view.threeD));
+    this.container.append(threeDButton);
+    syncThreeDButton();
+    return this.container;
+  }
+
+  onRemove() {
+    this.container.remove();
+    threeDButton = null;
+  }
+}
+
+/* The button names what the next press does, not the state it is in: "3D"
+ * while the map is flat, "2D" once it is tilted. */
+function syncThreeDButton() {
+  if (!threeDButton) return;
+  const action = view.threeD ? "Show the map flat" : "Tilt the map over the terrain";
+  threeDButton.textContent = view.threeD ? "2D" : "3D";
+  threeDButton.title = action;
+  threeDButton.setAttribute("aria-label", action);
+  threeDButton.setAttribute("aria-pressed", String(view.threeD));
+}
+
+map.addControl(new ThreeDControl(), "top-right");
+
+/* The view lives in the #hash, pitch included, so a link copied while tilted
+ * comes back tilted. Terrain is not in the hash, so without this the recipient
+ * would get the slant with a flat surface under it. */
+if (map.getPitch() > 0) setThreeD(true, { tilt: false });

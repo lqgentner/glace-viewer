@@ -28,6 +28,9 @@ export const BASEMAP_LAYERS = [
  * time — so the fake records each instance and the harness hands the test the
  * one the modules are actually using. */
 let created = [];
+/* What the #hash would have restored. Module-level because the page never
+ * passes a pitch to the constructor — the real map reads it from the URL. */
+let initialPitch = 0;
 
 class FakeMap {
   constructor(options) {
@@ -39,13 +42,45 @@ class FakeMap {
     this.handlers = {};
     this.hits = [];
     this.calls = [];
+    this.controlNodes = [];
+    this.terrain = null;
+    this.pitch = initialPitch;
     for (const layer of options.style.layers) {
       this.layers.set(layer.id, structuredClone(layer));
       this.order.push(layer.id);
     }
   }
 
-  addControl() {}
+  /* Custom controls are built rather than ignored: the 3D button is DOM the
+   * page owns, so a test has to be able to press it. MapLibre's own controls
+   * are stubs with no `onAdd` and contribute nothing. */
+  addControl(control) {
+    // Deliberately not recorded in `calls`: that log is what the tests read to
+    // assert nothing has been added to the *map* yet, and controls are attached
+    // at construction time rather than in response to anything a reader did.
+    if (typeof control.onAdd === "function") this.controlNodes.push(control.onAdd(this));
+  }
+
+  setTerrain(spec) {
+    if (spec && !this.sources.has(spec.source)) {
+      throw new Error(`terrain names missing source '${spec.source}'`);
+    }
+    this.terrain = spec ?? null;
+    this.calls.push(spec ? "+terrain" : "-terrain");
+  }
+
+  getTerrain() {
+    return this.terrain;
+  }
+
+  getPitch() {
+    return this.pitch;
+  }
+
+  easeTo(options) {
+    if (options.pitch !== undefined) this.pitch = options.pitch;
+    this.calls.push(`easeTo pitch=${this.pitch}`);
+  }
 
   on(event, fn) {
     (this.handlers[event] ??= []).push(fn);
@@ -153,9 +188,11 @@ class FakeMap {
  * @param {string} [options.search]  query string, e.g. "?flavor=dark"
  * @param {object} [options.site]    the object site-config.js would set
  * @param {Record<string, string>} [options.files]  URL -> path for fetch()
+ * @param {number} [options.pitch]   the pitch a #hash would have restored
  */
-export function installBrowser({ search = "", site, files = {} } = {}) {
+export function installBrowser({ search = "", site, files = {}, pitch = 0 } = {}) {
   created = [];
+  initialPitch = pitch;
   const dom = new JSDOM(fs.readFileSync(path.join(REPO, "index.html"), "utf8"), {
     url: `http://localhost/${search}`,
     runScripts: "outside-only",
@@ -213,6 +250,14 @@ export function installBrowser({ search = "", site, files = {} } = {}) {
       return created.at(-1);
     },
     el: (id) => window.document.getElementById(id),
+    /** An element inside one of the custom map controls, by CSS selector. */
+    control(selector) {
+      for (const node of created.at(-1).controlNodes) {
+        const found = node.matches(selector) ? node : node.querySelector(selector);
+        if (found) return found;
+      }
+      return null;
+    },
     /** Tick or untick a checkbox the way a click would. */
     change(node, checked) {
       node.checked = checked;

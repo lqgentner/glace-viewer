@@ -129,6 +129,43 @@ test("the viewer", async (t) => {
     assert.equal(el("status").hidden, true, "the message clears once a layer exists again");
   });
 
+  await t.test("the strength slider drives the shadow alpha", async () => {
+    input(el("hillshade-strength"), "20");
+    await settle();
+    assert.equal(map.getLayer("hillshade").paint["hillshade-shadow-color"], "rgba(0, 0, 0, 0.200)");
+    assert.equal(el("hillshade-strength-value").textContent, "20%");
+  });
+
+  await t.test("the shading is neutral, so the colour ramp keeps its hue", async () => {
+    // A hue of its own would shift the colour map underneath it — a brown
+    // shadow over cmc.lipari is no longer cmc.lipari.
+    const grey = /^(#(?:0{6}|F{6})|rgba\((\d+), \2, \2, [\d.]+\))$/i;
+    for (const property of ["shadow", "highlight", "accent"]) {
+      const colour = map.getLayer("hillshade").paint[`hillshade-${property}-color`];
+      assert.match(colour, grey, `${property} is off-grey: ${colour}`);
+    }
+  });
+
+  await t.test("3D tilts the camera and drapes the map over the shared DEM", async () => {
+    const threeD = page.control(".maplibregl-ctrl-3d");
+    assert.equal(threeD.textContent, "3D", "the button names what the next press does");
+    assert.equal(map.getTerrain(), null);
+
+    threeD.click();
+    await settle();
+    assert.deepEqual(map.getTerrain(), { source: "terrain", exaggeration: 1 });
+    assert.equal(map.pitch, 60, "enabling 3D slants the view");
+    assert.equal(threeD.textContent, "2D");
+    assert.equal(threeD.getAttribute("aria-pressed"), "true");
+
+    threeD.click();
+    await settle();
+    assert.equal(map.getTerrain(), null);
+    assert.equal(map.pitch, 0, "disabling reverts to the overhead view");
+    assert.equal(threeD.textContent, "3D");
+    assert.ok(map.getSource("terrain"), "the DEM stays for the hillshade");
+  });
+
   await t.test("unticking the hillshade hides it rather than tearing it down", async () => {
     change(el("hillshade"), false);
     await settle();

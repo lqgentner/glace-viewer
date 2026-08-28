@@ -191,15 +191,15 @@ under `js/`, loaded straight by the browser.
 | module | owns |
 | --- | --- |
 | `config.js` | resolves the settings below into archive locations and endpoints |
-| `map.js` | the map, layer ordering, basemap labels, hillshade |
+| `map.js` | the map, layer ordering, basemap labels, hillshade, 3D terrain |
 | `rasters.js` | the `layers.json` manifest, layer selection, legend |
 | `overlays.js` | glacier inventories, catalog tile grid, popups |
 | `ui.js` | status line, attribution popovers, safe DOM helpers |
 | `app.js` | control wiring and startup |
 
 Nothing on the map is created until something asks for it: a raster source
-appears the first time its year is selected, the terrain the first time the
-hillshade is ticked, an inventory the first time its box is. Every control is
+appears the first time its year is selected, the DEM the first time either the
+hillshade or 3D is switched on, an inventory the first time its box is ticked. Every control is
 wired before anything has loaded and every handler that touches the map awaits
 `style.load`, so a box ticked while the basemap is still streaming is honoured
 when the style arrives rather than dropped.
@@ -266,6 +266,10 @@ does. Worse, their download server answers range requests uncached
 is edge-cached for a week and measurably faster. The endpoint is the path they
 maintain for live map serving; the archives are for bulk extracts.
 
+One `raster-dem` source feeds both the shaded relief and the 3D mesh, so
+whichever is switched on first pays for the tilejson and the tiles and the other
+rides along.
+
 The hillshade is optional (checkbox) and sits above the data but below the
 labels. **MapLibre has no layer blend modes**, so a literal `multiply` is not
 available; the equivalent for shaded relief is a hillshade with fully transparent
@@ -273,6 +277,32 @@ highlights and black shadows — lit slopes leave the data untouched and shaded
 slopes darken it, which is what multiplying by a shading layer does. There is no
 `hillshade-opacity` property either, so the strength slider drives the alpha of
 the shadow and accent colours.
+
+Every colour in that paint is neutral. Shading in a hue of its own would shift
+the colour map underneath it — a warm shadow over `cmc.lipari` is no longer
+`cmc.lipari` — so the relief moves lightness only and leaves the ramp's hue
+where the build put it. A test asserts it rather than trusting the constants.
+
+### 3D
+
+The **3D** button sits under the navigation control, top right, and reads as
+what the next press does — `3D` while the map is flat, `2D` once it is tilted.
+It is not MapLibre's `TerrainControl`, which draws a mountain glyph and only
+flips `setTerrain`; this one carries a text label and moves the camera too,
+easing to 60° on and back to 0° off, so the button reads as a view mode rather
+than a data toggle. 60° is MapLibre's default `maxPitch`, so the slant needs no
+raised limit on the map.
+
+The hillshade is left alone when 3D comes on. Shaded relief over terrain is the
+normal pairing — [MapLibre's own 3D terrain example](https://maplibre.org/maplibre-gl-js/docs/examples/3d-terrain)
+runs both off one DEM — and unticking a box the reader ticked would be a
+surprise worth avoiding; the strength slider is there if the combination reads
+too dark.
+
+Pitch is part of the `#hash`, so a link copied while tilted comes back tilted.
+Terrain is not, so the page switches it back on at startup when the incoming
+pitch is non-zero — without moving the camera, since easing to 60° would round
+every shared link off to the same view.
 
 
 ### Value ranges and colour maps

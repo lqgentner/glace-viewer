@@ -91,6 +91,15 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 
 #hillshade-strength-row { margin-top: -6px; padding-left: 22px; }
 
+/* The 3D/2D switch under the navigation control. MapLibre's own buttons carry a
+   background-image glyph and no text styling, so the label needs its own; the
+   colour matches the icons beside it rather than the panel's light-on-dark. */
+.maplibregl-ctrl-3d {
+  font: 600 11px/1 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  letter-spacing: 0.04em;
+  color: #333;
+}
+
 .ticks {
   display: flex;
   justify-content: space-between;
