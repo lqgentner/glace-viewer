@@ -24,7 +24,13 @@ env:
   TIPPECANOE_VERSION: "2.79.0"
 
 jobs:
+  # The same suites the pull request ran, re-run against the commit that is
+  # about to be published: a red build must not reach Pages.
+  test:
+    uses: ./.github/workflows/test.yml
+
   build:
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

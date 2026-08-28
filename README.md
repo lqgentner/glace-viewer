@@ -65,8 +65,9 @@ python -m unittest discover -s tests   # the two scripts
 npm install && npm test                # the page
 ```
 
-`.github/workflows/test.yml` runs both on every push and pull request. Neither
-suite builds anything: the Python side is stdlib only, and the JavaScript side
+`.github/workflows/test.yml` runs both on every pull request, and the deploy
+workflow calls it before staging the site — so a red suite cannot reach Pages.
+Neither suite builds anything: the Python side is stdlib only, and the JavaScript side
 needs `jsdom` and nothing else. **`node_modules` is development-only** — the
 page has no runtime dependencies and nothing is ever bundled.
 

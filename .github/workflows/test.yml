@@ -3,10 +3,13 @@ name: Tests
 # The page has no build step, so nothing here compiles anything: the Python
 # tests drive scripts/serve.py over a socket, and the JavaScript tests run the
 # modules under js/ against a jsdom document and a fake MapLibre.
+#
+# No `push` trigger on main: the deploy workflow calls this one and will not
+# publish unless it passes, so a push there would otherwise run both suites
+# twice for the same commit.
 on:
-  push:
-    branches: [main]
   pull_request:
+  workflow_call:
   workflow_dispatch:
 
 permissions:
