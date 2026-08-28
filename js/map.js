@@ -11,6 +11,7 @@ import {
   BASEMAP_ASSETS,
   BASEMAP_FLAVOR,
   BASEMAP_URL,
+  INITIAL_VIEW,
   TERRAIN_TILEJSON,
 } from "./config.js";
 
@@ -39,9 +40,10 @@ const style = {
 export const map = new maplibregl.Map({
   container: "map",
   style,
-  center: [10.4, 46.5],
-  zoom: 6.2,
-  maxZoom: 14,
+  center: INITIAL_VIEW.center,
+  zoom: INITIAL_VIEW.zoom,
+  maxZoom: INITIAL_VIEW.maxZoom,
+  // The view lives in the URL, so a hash overrides the opening view above.
   hash: true,
   attributionControl: false,
 });

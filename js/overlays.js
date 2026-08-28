@@ -9,7 +9,12 @@
  * say when they cannot be reached.
  */
 
-import { INVENTORY_BASE, INVENTORY_INDEX_URL, TILES_BASE } from "./config.js";
+import {
+  GRID_ARCHIVE_URL,
+  GRID_SOURCE_LAYER,
+  INVENTORY_BASE,
+  INVENTORY_INDEX_URL,
+} from "./config.js";
 import { map, styleReady } from "./map.js";
 import { clearStatus, creditButton, el, h, setStatus } from "./ui.js";
 
@@ -203,9 +208,6 @@ export async function loadInventories() {
 /* ---------- catalog tile grid ---------- */
 
 const GRID_LAYER = "grid-fill";
-// Layer name inside tile-grid.pmtiles, set by webmap.TILE_GRID_LAYER. A vector
-// layer whose `source-layer` does not match renders nothing and says nothing.
-const GRID_SOURCE_LAYER = "grid";
 
 export const grid = new LazyOverlay({
   sourceId: "grid",
@@ -217,10 +219,7 @@ export const grid = new LazyOverlay({
     /* Built only to z10 — the footprints are 110 km squares, and MapLibre
      * overzooms a vector source past its maximum for hit-testing as well as for
      * drawing. */
-    map.addSource(this.sourceId, {
-      type: "vector",
-      url: `pmtiles://${TILES_BASE}/tile-grid.pmtiles`,
-    });
+    map.addSource(this.sourceId, { type: "vector", url: `pmtiles://${GRID_ARCHIVE_URL}` });
     map.addLayer({
       id: GRID_LAYER,
       type: "fill",

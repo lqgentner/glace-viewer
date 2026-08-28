@@ -150,7 +150,7 @@ under `js/`, loaded straight by the browser.
 
 | module | owns |
 | --- | --- |
-| `config.js` | archive locations, basemap build, terrain endpoint |
+| `config.js` | resolves the settings below into archive locations and endpoints |
 | `map.js` | the map, layer ordering, basemap labels, hillshade |
 | `rasters.js` | the `layers.json` manifest, layer selection, legend |
 | `overlays.js` | glacier inventories, catalog tile grid, popups |
@@ -167,6 +167,37 @@ when the style arrives rather than dropped.
 Anything that reaches the page from a manifest or a vector tile — a glacier
 name, a citation, a licence link — is built as DOM nodes rather than as an HTML
 string, so a value containing markup stays a value.
+
+### Configuration
+
+Settings resolve in three layers, each overriding the one before:
+
+1. the built-in defaults in `js/config.js`;
+2. `site-config.js`, an optional file beside `index.html` that a deployment
+   owns — the committed copy is an empty template;
+3. the query parameters `?tiles=`, `?basemap=` and `?flavor=`.
+
+```js
+// site-config.js
+window.GLACE_CONFIG = {
+  tilesBase: "https://data.source.coop/your-org/glace",
+  initialView: { center: [7.66, 45.98], zoom: 8 },
+};
+```
+
+`site-config.js` is a plain script rather than another fetched JSON file on
+purpose: repointing the archives must not introduce a second way for startup to
+fail asynchronously. It is either loaded before the modules run or it is not.
+`initialView` and `terrainCredit` merge key by key, so naming just `zoom` keeps
+the default centre; an unrecognised key warns to the console rather than being
+silently ignored. Only the three settings above are reachable from the address
+bar — the rest are deployment decisions, not viewing ones.
+
+What is deliberately *not* configurable: paint expressions, the click radius,
+DOM ids, and the `fitBounds` padding, which is `#panel`'s width from `style.css`
+and would drift from it the moment it became a knob. Control defaults live in
+`index.html` (`value="100"` on opacity, `value="55"` on hillshade strength) and
+are mirrored in the modules that own that state.
 
 ### Basemap and terrain
 
