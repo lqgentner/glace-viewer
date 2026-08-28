@@ -150,12 +150,14 @@ function skipWithoutManifest() {
 
 test("the description says what the product is and how it was composited", () => {
   assert.deepEqual(layerDetail(layer()), [
-    "Composite Coherence · 12-day baseline",
-    "Locally resolution weighted median",
+    "Composite Coherence",
+    "12-day baseline",
+    "Local resolution weighted median",
   ]);
   assert.deepEqual(layerDetail(layer({ product: "RTC" })), [
-    "Composite Backscatter · Radiometrically terrain flattened",
-    "Locally resolution weighted median",
+    "Composite Backscatter",
+    "Radiometrically terrain corrected",
+    "Local resolution weighted median",
   ]);
 });
 
@@ -180,7 +182,7 @@ test("a half-written or malformed window is dropped, not rendered", () => {
     { start_date: "", end_date: "" },
   ]) {
     const detail = layerDetail(layer(overrides));
-    assert.equal(detail.length, 2, JSON.stringify(overrides));
+    assert.equal(detail.length, 3, JSON.stringify(overrides));
     assert.doesNotMatch(detail.join(" "), /NaN|undefined|null|to /, JSON.stringify(overrides));
   }
 });
@@ -188,6 +190,6 @@ test("a half-written or malformed window is dropped, not rendered", () => {
 test("an unknown product still describes itself rather than going blank", () => {
   assert.deepEqual(layerDetail(layer({ product: "COH6" })), [
     "COH6 composite",
-    "Locally resolution weighted median",
+    "Local resolution weighted median",
   ]);
 });

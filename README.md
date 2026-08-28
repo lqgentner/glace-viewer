@@ -231,20 +231,24 @@ not.
 Under the ramp sits the description of the selected layer:
 
 ```
-Composite Coherence · 12-day baseline
-Locally resolution weighted median
+Composite Coherence
+12-day baseline
+Local resolution weighted median
 2023-06-01 to 2023-09-30
 ```
 
-The first line is per product, the second is how every GLACE layer is
-composited. **The third is not shown yet.** The mosaics upstream record the
-window as `COMPOSITE_START_DATE` / `COMPOSITE_END_DATE` GeoTIFF tags (see
-`_TAG_FIELDS` in deep-glacier-mapping's `glacier_mapping/stac.py`), but
-`write_manifest` does not copy them into `layers.json`. The line appears on its
-own once each layer carries `start_date` and `end_date` as `YYYY-MM-DD`; a
-half-written or malformed pair is dropped rather than printed. Like `cmap`, it is
-descriptive rather than structural, so `validLayer()` does not reject a layer for
-missing it.
+The first two lines are per product — the qualifier gets its own line because at
+this width it wraps anyway — and the third is how every GLACE layer is
+composited.
+
+The window comes from `start_date` and `end_date` on the manifest entry, as
+`YYYY-MM-DD`, and the line is skipped when they are absent or malformed. Like
+`cmap` it is descriptive rather than structural, so `validLayer()` does not
+reject a layer for missing it. Upstream, the composite records the window as
+`COMPOSITE_START_DATE` / `COMPOSITE_END_DATE` GeoTIFF tags; `build_overview`
+carries them onto the 40 m overview (which is written from merged arrays, so
+nothing survives unless it is passed through) and `build_pmtiles` reads them
+into the manifest.
 
 The `SCALE` heading carries an info mark with the colour map's credit, rebuilt
 only when the map actually changes — the button owns a hover popover, and

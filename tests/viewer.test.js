@@ -120,7 +120,7 @@ test("the viewer", async (t) => {
   await t.test("the description sits under the ramp and says what the layer is", async () => {
     assert.deepEqual(
       [...el("layer-info").children].map((line) => line.textContent),
-      ["Composite Coherence · 12-day baseline", "Locally resolution weighted median"],
+      ["Composite Coherence", "12-day baseline", "Local resolution weighted median"],
     );
     // Under the colour ramp rather than in a footer: it describes what the
     // controls above it just selected.

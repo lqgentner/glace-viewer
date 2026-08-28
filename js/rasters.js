@@ -22,14 +22,16 @@ const STATUS_KEY = "rasters";
 const PRODUCT_LABELS = { COH12: "Coherence", RTC: "Backscatter" };
 const productLabel = (product) => PRODUCT_LABELS[product] ?? product;
 
-/* The first line under the ramp: what the selected product actually is. */
+/* What the selected product is, and the qualifier that goes with it. Two lines
+ * rather than one joined by a separator: at the panel's width the qualifier
+ * wraps anyway, so it may as well break where it means to. */
 const PRODUCT_DETAIL = {
-  COH12: "Composite Coherence · 12-day baseline",
-  RTC: "Composite Backscatter · Radiometrically terrain flattened",
+  COH12: ["Composite Coherence", "12-day baseline"],
+  RTC: ["Composite Backscatter", "Radiometrically terrain corrected"],
 };
 
 /* How every GLACE layer is composited, which is the same for all of them. */
-const COMPOSITING_DETAIL = "Locally resolution weighted median";
+const COMPOSITING_DETAIL = "Local resolution weighted median";
 
 /* VV before VH wherever both exist, whatever order the manifest declares. */
 const POLARIZATION_ORDER = ["VV", "VH"];
@@ -229,7 +231,7 @@ const isDate = (value) => isNonEmptyString(value) && ISO_DATE.test(value);
  * `cmap` — the layer draws identically without it, so it is not something
  * validLayer() should reject a real data layer over. */
 export function layerDetail(layer) {
-  const lines = [PRODUCT_DETAIL[layer.product] ?? `${productLabel(layer.product)} composite`];
+  const lines = [...(PRODUCT_DETAIL[layer.product] ?? [`${productLabel(layer.product)} composite`])];
   lines.push(COMPOSITING_DETAIL);
   if (isDate(layer.start_date) && isDate(layer.end_date)) {
     lines.push(`${layer.start_date} to ${layer.end_date}`);
