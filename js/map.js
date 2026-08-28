@@ -272,7 +272,7 @@ class ThreeDControl {
  * while the map is flat, "2D" once it is tilted. */
 function syncThreeDButton() {
   if (!threeDButton) return;
-  const action = view.threeD ? "Show the map flat" : "Tilt the map over the terrain";
+  const action = view.threeD ? "Disable 3D terrain" : "Enable 3D terrain";
   threeDButton.textContent = view.threeD ? "2D" : "3D";
   threeDButton.title = action;
   threeDButton.setAttribute("aria-label", action);
