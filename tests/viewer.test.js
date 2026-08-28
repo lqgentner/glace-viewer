@@ -58,6 +58,19 @@ test("the viewer", async (t) => {
     assert.ok(el("panel").classList.contains("expanded"));
   });
 
+  await t.test("the basemap's labels are taken from the darker flavor", async () => {
+    // Grayscale's labels are dark text on a light halo, which vanishes into the
+    // dark end of every GLACE ramp. Both flavors emit the same layer ids, so
+    // the symbol layers are substituted one for one.
+    const layers = map.options.style.layers;
+    assert.ok(layers.some((layer) => layer.type === "symbol"));
+    for (const layer of layers) {
+      assert.equal(layer.flavor, layer.type === "symbol" ? "black" : "grayscale", layer.id);
+    }
+    // Sprite icons are drawn only by symbol layers, so it follows the labels.
+    assert.match(map.options.style.sprite, /\/black$/);
+  });
+
   await t.test("the style asks for a globe that flattens as you zoom in", async () => {
     // The bare `globe` type is a zoom interpolation, not a permanent globe:
     // MapLibre expands it to vertical-perspective at z11 and mercator at z12.
@@ -186,6 +199,10 @@ test("the viewer", async (t) => {
   await t.test("data draws under the hillshade, and both under the labels", async () => {
     assert.ok(map.indexOf("glace-coh12_vv_2023") < map.indexOf("hillshade"));
     assert.ok(map.indexOf("hillshade") < map.indexOf("places"));
+    // The grid was ticked before the style loaded, so it was created before the
+    // hillshade; it still has to end up above it and below the labels.
+    assert.ok(map.indexOf("hillshade") < map.indexOf("grid-fill"), "overlays sit above relief");
+    assert.ok(map.indexOf("grid-line") < map.indexOf("places"), "and under the basemap labels");
   });
 
   await t.test("the view is framed to the union of the archives", async () => {
@@ -298,6 +315,10 @@ test("the viewer", async (t) => {
     await settle();
     assert.ok(map.getSource("inv-sgi2023"));
     assert.ok(map.getLayer("inv-line-sgi2023-casing") && map.getLayer("inv-line-sgi2023"));
+    // Added last of all, and still under the labels rather than on top of them.
+    assert.ok(map.indexOf("inv-line-sgi2023") < map.indexOf("places"));
+    assert.ok(map.indexOf("inv-line-sgi2023-casing") < map.indexOf("inv-line-sgi2023"));
+    assert.ok(map.indexOf("hillshade") < map.indexOf("inv-line-sgi2023-casing"));
 
     assert.ok(el("status").textContent.includes("Swiss Glacier Inventory 2023"));
     map.settle();

@@ -140,6 +140,9 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
   border: 0;
   border-top: 1px solid var(--border);
 }
+/* The rule belongs to the section above it: with no inventories to separate,
+   it would sit directly under the one that closes the raster controls. */
+#inventories-section[hidden] + #inventories-rule { display: none; }
 
 #hillshade-strength-row { margin-top: -6px; padding-left: 22px; }
 

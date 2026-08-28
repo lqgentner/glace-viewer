@@ -15,7 +15,7 @@ import {
   INVENTORY_BASE,
   INVENTORY_INDEX_URL,
 } from "./config.js";
-import { map, styleReady } from "./map.js";
+import { addStacked, map, styleReady } from "./map.js";
 import { clearStatus, collapsible, creditButton, el, h, setStatus } from "./ui.js";
 
 /* ---------- the shared lazy-source lifecycle ---------- */
@@ -135,14 +135,14 @@ function inventoryOverlay(entry) {
        * be compared against. The dark casing keeps them legible over both the
        * pale and the dark end of the colour ramps. `source-layer` must match
        * the layer name tippecanoe was given. */
-      map.addLayer({
+      addStacked("overlay", {
         id: `${lineId}-casing`,
         type: "line",
         source: this.sourceId,
         "source-layer": sourceLayer,
         paint: { "line-color": "rgba(0,0,0,0.55)", "line-width": 2.6, "line-opacity": 0.8 },
       });
-      map.addLayer({
+      addStacked("overlay", {
         id: lineId,
         type: "line",
         source: this.sourceId,
@@ -214,7 +214,7 @@ export const grid = new LazyOverlay({
      * overzooms a vector source past its maximum for hit-testing as well as for
      * drawing. */
     map.addSource(this.sourceId, { type: "vector", url: `pmtiles://${GRID_ARCHIVE_URL}` });
-    map.addLayer({
+    addStacked("overlay", {
       id: GRID_LAYER,
       type: "fill",
       source: this.sourceId,
@@ -233,7 +233,7 @@ export const grid = new LazyOverlay({
         ],
       },
     });
-    map.addLayer({
+    addStacked("overlay", {
       id: "grid-line",
       type: "line",
       source: this.sourceId,

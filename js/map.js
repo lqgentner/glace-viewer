@@ -14,6 +14,7 @@
 import {
   BASEMAP_ASSETS,
   BASEMAP_FLAVOR,
+  BASEMAP_LABEL_FLAVOR,
   BASEMAP_URL,
   INITIAL_VIEW,
   TERRAIN_TILEJSON,
@@ -26,6 +27,27 @@ maplibregl.addProtocol("pmtiles", protocol.tile);
  * it is ~100 layers, and the flavor decides all of their colours. Data layers are
  * appended after it, so they draw on top. */
 const flavor = basemaps.namedFlavor(BASEMAP_FLAVOR);
+
+/* The labels come from a second flavor. Grayscale's are dark text on a light
+ * halo, which disappears into the dark end of every GLACE ramp; black's are
+ * light text on a near-black halo, which reads over the data and over the grey
+ * basemap beside it.
+ *
+ * Only the symbol layers are swapped, by id — both flavors generate the same
+ * 69 layers with the same ids, so this is a substitution rather than a merge.
+ * The sprite follows the label flavor too: three symbol layers draw sprite
+ * icons (town spots, road shields, one-way arrows) and nothing else in the
+ * style uses one, so the icons stay in step with the text beside them. */
+const labelLayers = new Map(
+  basemaps
+    .layers("protomaps", basemaps.namedFlavor(BASEMAP_LABEL_FLAVOR), { lang: "en" })
+    .map((layer) => [layer.id, layer]),
+);
+
+const styleLayers = basemaps
+  .layers("protomaps", flavor, { lang: "en" })
+  .map((layer) => (layer.type === "symbol" ? (labelLayers.get(layer.id) ?? layer) : layer));
+
 const style = {
   version: 8,
   /* `globe` is not "always a globe": MapLibre expands the bare type into a zoom
@@ -41,7 +63,7 @@ const style = {
    * globe is on screen. */
   projection: { type: "globe" },
   glyphs: `${BASEMAP_ASSETS}/fonts/{fontstack}/{range}.pbf`,
-  sprite: `${BASEMAP_ASSETS}/sprites/v4/${BASEMAP_FLAVOR}`,
+  sprite: `${BASEMAP_ASSETS}/sprites/v4/${BASEMAP_LABEL_FLAVOR}`,
   sources: {
     protomaps: {
       type: "vector",
@@ -59,7 +81,7 @@ const style = {
         ' | <a href="https://maplibre.org">MapLibre</a>',
     },
   },
-  layers: basemaps.layers("protomaps", flavor, { lang: "en" }),
+  layers: styleLayers,
 };
 
 export const map = new maplibregl.Map({
@@ -101,15 +123,33 @@ function firstSymbolLayer() {
   return undefined;
 }
 
-/* Where a data layer goes: below the hillshade when there is one, and below the
- * basemap's labels either way. Order-independent on purpose — the hillshade is
- * created whenever it is first switched on, which may be before or after the
- * data layers exist, so "whichever was added last ends up on top" is not a safe
- * way to get shaded relief over the data. Inserting the hillshade before the
- * first symbol layer puts it above data layers that already exist; this puts
- * later data layers below a hillshade that already exists. */
-export function dataInsertPoint() {
-  return map.getLayer(HILLSHADE_LAYER) ? HILLSHADE_LAYER : firstSymbolLayer();
+/* Draw order, bottom to top:
+ *
+ *   basemap fills · GLACE rasters · hillshade · vector overlays · basemap labels
+ *
+ * Everything above the basemap is created lazily, the first time its control is
+ * switched on, so the layers arrive in whatever order the reader clicks. That
+ * makes "whichever was added last ends up on top" useless as a stacking rule:
+ * shaded relief has to sit over the data whether the box was ticked before or
+ * after a year was chosen, and glacier outlines have to sit over the relief.
+ *
+ * So each layer says what kind it is instead, and is inserted before the lowest
+ * layer already on the map that must stay above it — falling through to the
+ * basemap's first symbol layer, which is what keeps the labels on top of all of
+ * it. */
+const STACK = ["data", "hillshade", "overlay"];
+
+/* Layer id -> kind. Entries for removed layers are left behind rather than
+ * swept: the lookup only ever asks about ids the style still has. */
+const layerKinds = new Map();
+
+export function addStacked(kind, layer) {
+  const above = STACK.slice(STACK.indexOf(kind) + 1);
+  const before =
+    map.getStyle().layers.find((other) => above.includes(layerKinds.get(other.id)))?.id ??
+    firstSymbolLayer();
+  map.addLayer(layer, before);
+  layerKinds.set(layer.id, kind);
 }
 
 /* ---------- basemap labels ---------- */
@@ -172,16 +212,13 @@ function hillshadePaint(strength) {
 function ensureHillshade() {
   if (map.getLayer(HILLSHADE_LAYER)) return;
   ensureTerrainSource();
-  map.addLayer(
-    {
-      id: HILLSHADE_LAYER,
-      type: "hillshade",
-      source: TERRAIN_SOURCE,
-      layout: { visibility: "none" },
-      paint: hillshadePaint(hillshade.strength),
-    },
-    firstSymbolLayer(),
-  );
+  addStacked("hillshade", {
+    id: HILLSHADE_LAYER,
+    type: "hillshade",
+    source: TERRAIN_SOURCE,
+    layout: { visibility: "none" },
+    paint: hillshadePaint(hillshade.strength),
+  });
 }
 
 export async function setHillshade(on) {

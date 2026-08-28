@@ -85,6 +85,10 @@
           <div id="inventories" hidden></div>
         </section>
 
+        <!-- Hidden along with the inventories above it, so a page with no
+             inventory index does not show two rules in a row. -->
+        <hr id="inventories-rule" />
+
         <section class="control" id="extras-section">
           <!-- Same reasoning as the inventories above: everything in here is off
                by default (bar the basemap labels) and nobody needs it on arrival. -->

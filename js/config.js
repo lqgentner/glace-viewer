@@ -31,6 +31,11 @@ const DEFAULTS = {
    * Serves CORS `*` and honours range requests, so it can be read cross-origin. */
   basemapUrl: "https://data.source.coop/protomaps/openstreetmap/v4.pmtiles",
   basemapFlavor: "grayscale",
+  /* The basemap's labels are taken from a second flavor, because the GLACE
+   * rasters are far darker than the basemap under them and grayscale's labels
+   * are dark text on a light halo. `black` inverts that — light text, near-black
+   * halo — which reads over the data and over the grey basemap beside it. */
+  basemapLabelFlavor: "black",
   basemapAssets: "https://protomaps.github.io/basemaps-assets",
 
   /* Mapterhorn global terrain, terrarium-encoded, 512 px WEBP tiles. */
@@ -89,6 +94,7 @@ export const GRID_SOURCE_LAYER = settings.gridSourceLayer;
 
 export const BASEMAP_URL = settings.basemapUrl;
 export const BASEMAP_FLAVOR = settings.basemapFlavor;
+export const BASEMAP_LABEL_FLAVOR = settings.basemapLabelFlavor;
 export const BASEMAP_ASSETS = settings.basemapAssets;
 
 export const TERRAIN_TILEJSON = settings.terrainTilejson;

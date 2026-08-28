@@ -248,9 +248,13 @@ export function installBrowser({ search = "", site, files = {}, pitch = 0, narro
     },
   };
   globalThis.pmtiles = { Protocol: class { tile() {} } };
+  /* Flavors are opaque to the page — it only passes them back to `layers()` —
+   * so the fake makes the name the flavor, and stamps it on every layer it
+   * generates. That is what lets a test see which flavor each layer came from. */
   globalThis.basemaps = {
-    namedFlavor: () => ({}),
-    layers: () => structuredClone(BASEMAP_LAYERS),
+    namedFlavor: (name) => ({ name }),
+    layers: (_source, flavor) =>
+      BASEMAP_LAYERS.map((layer) => ({ ...layer, flavor: flavor.name })),
   };
 
   globalThis.fetch = async (url) =>

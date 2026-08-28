@@ -334,6 +334,29 @@ Data layers are inserted below the basemap's first symbol layer, so labels stay
 readable on top of the imagery. The "Basemap labels" checkbox hides just those
 symbol layers.
 
+**The labels come from a second flavor.** Grayscale's are dark text on a light
+halo, which disappears into the dark end of every GLACE ramp; `black`'s are light
+text on a near-black halo, which reads over the data and over the grey basemap
+beside it. Both flavors generate the same 69 layers with the same ids, so the
+symbol layers are substituted one for one rather than merged, and the sprite
+follows the label flavor — three symbol layers draw sprite icons (town spots,
+road shields, one-way arrows) and nothing else in the style uses one. It is
+`basemapLabelFlavor` in the settings.
+
+### Draw order
+
+Bottom to top: basemap fills, GLACE rasters, hillshade, vector overlays (glacier
+inventories, catalog tile grid), basemap labels.
+
+Everything above the basemap is created lazily, the first time its control is
+switched on, so the layers arrive in whatever order the reader clicks. "Whichever
+was added last ends up on top" is therefore not a stacking rule: shaded relief
+has to sit over the data whether the box was ticked before or after a year was
+chosen, and glacier outlines have to sit over the relief. So each layer declares
+its kind to `addStacked()` in `js/map.js` and is inserted before the lowest layer
+already present that must stay above it, falling through to the basemap's first
+symbol layer — which is what keeps the labels on top of all of it.
+
 The Mapterhorn terrain is the only layer that is *not* a PMTiles archive, which
 is deliberate. Mapterhorn publishes PMTiles as well, but the split does not suit
 a web map: `planet.pmtiles` stops at z12 while the viewer opens to z14, and

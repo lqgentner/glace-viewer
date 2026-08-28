@@ -10,7 +10,7 @@
  */
 
 import { LAYER_MANIFEST_URL, TILES_BASE } from "./config.js";
-import { dataInsertPoint, map, styleReady } from "./map.js";
+import { addStacked, map, styleReady } from "./map.js";
 import { buildSegmented, clearStatus, creditButton, el, h, setStatus } from "./ui.js";
 
 const STATUS_KEY = "rasters";
@@ -155,16 +155,13 @@ function ensureLayer(layer) {
      * finite number. */
     attribution: `<a href="https://www.copernicus.eu/">Contains modified Copernicus Sentinel data ${layer.year}</a>`,
   });
-  map.addLayer(
-    {
-      id: layerId(layer),
-      type: "raster",
-      source: layerId(layer),
-      layout: { visibility: "none" },
-      paint: { "raster-opacity": state.opacity, "raster-resampling": "nearest" },
-    },
-    dataInsertPoint(),
-  );
+  addStacked("data", {
+    id: layerId(layer),
+    type: "raster",
+    source: layerId(layer),
+    layout: { visibility: "none" },
+    paint: { "raster-opacity": state.opacity, "raster-resampling": "nearest" },
+  });
   state.added.add(layer.id);
 }
 
