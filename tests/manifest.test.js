@@ -12,7 +12,7 @@ import test from "node:test";
 import { captureWarnings, installBrowser, load, REPO } from "./helpers/browser.js";
 
 installBrowser();
-const { validateManifest } = await load("js/rasters.js");
+const { legendDetail, validateManifest } = await load("js/rasters.js");
 const { utmZone } = await load("js/overlays.js");
 
 const layer = (overrides = {}) => ({
@@ -58,11 +58,13 @@ test("a malformed entry is dropped, not fatal", async () => {
   assert.match(warnings[0], /skipping malformed entry/);
 });
 
-test("every field the page reads is checked", async () => {
+test("every structural field the page reads is checked", async () => {
   const broken = {
     "missing id": { id: undefined },
     "empty id": { id: "" },
     "missing url": { url: undefined },
+    "missing product": { product: undefined },
+    "missing polarization": { polarization: undefined },
     "year as a string": { year: "2023" },
     "non-finite vmin": { vmin: Number.NaN },
     "bounds too short": { bounds: [1, 2, 3] },
@@ -70,6 +72,11 @@ test("every field the page reads is checked", async () => {
     "no colours": { colors: [] },
     "colours not strings": { colors: [1, 2] },
     "zoom as a string": { min_zoom: "5" },
+    // A source with these inverted cannot draw, and a degenerate or backwards
+    // stretch would render the ramp meaninglessly.
+    "inverted zoom range": { min_zoom: 12, max_zoom: 5 },
+    "inverted value range": { vmin: 0.8, vmax: 0.1 },
+    "empty value range": { vmin: 0.5, vmax: 0.5 },
   };
   for (const [name, overrides] of Object.entries(broken)) {
     await captureWarnings(() => {
@@ -137,3 +144,34 @@ function skipWithoutManifest() {
     ? false
     : "tiles/layers.json is absent (build or symlink ./tiles first)";
 }
+
+test("descriptive fields are optional, and cost only their own fragment", () => {
+  // size_bytes and cmap are captions: the layer draws identically without them,
+  // so a manifest that omits one must not lose the layer.
+  const bare = layer({ size_bytes: undefined, cmap: undefined });
+  assert.equal(validateManifest({ layers: [bare] }).layers.length, 1);
+  assert.equal(legendDetail(bare), "COH12 VV 2023 · z5–12");
+});
+
+test("a descriptive field that is present but unusable is dropped, not rendered", () => {
+  // The defect this replaces rendered "NaN MB · undefined" into the panel.
+  for (const overrides of [
+    { size_bytes: undefined, cmap: undefined },
+    { size_bytes: null, cmap: null },
+    { size_bytes: "63916106", cmap: 42 },
+    { size_bytes: Number.NaN, cmap: "" },
+    { size_bytes: -1, cmap: undefined },
+  ]) {
+    const detail = legendDetail(layer(overrides));
+    assert.doesNotMatch(detail, /NaN|undefined|null/, JSON.stringify(overrides));
+  }
+});
+
+test("the legend line reads as one caption when everything is present", () => {
+  assert.equal(
+    legendDetail(layer({ size_bytes: 63_916_106, cmap: "cmc.lipari" })),
+    "COH12 VV 2023 · z5–12 · 63.9 MB · cmc.lipari",
+  );
+  // A zero-byte archive is a real number, not a missing one.
+  assert.match(legendDetail(layer({ size_bytes: 0 })), /0\.0 MB/);
+});

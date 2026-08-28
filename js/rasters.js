@@ -56,6 +56,10 @@ function validLayer(layer) {
     isFiniteNumber(layer.max_zoom) &&
     isFiniteNumber(layer.vmin) &&
     isFiniteNumber(layer.vmax) &&
+    // A source whose zooms are inverted cannot draw, and a stretch whose ends
+    // are equal or backwards would render the ramp meaninglessly.
+    layer.min_zoom <= layer.max_zoom &&
+    layer.vmin < layer.vmax &&
     Array.isArray(layer.bounds) &&
     layer.bounds.length === 4 &&
     layer.bounds.every(isFiniteNumber) &&
@@ -155,13 +159,28 @@ async function showOnMap(active) {
 
 function updateLegend(layer) {
   el("legend-bar").style.background = `linear-gradient(to right, ${layer.colors.join(", ")})`;
-  const unit = layer.units ? ` ${layer.units}` : "";
+  const unit = typeof layer.units === "string" && layer.units ? ` ${layer.units}` : "";
   const digits = Math.abs(layer.vmax - layer.vmin) < 5 ? 2 : 1;
   el("legend-min").textContent = layer.vmin.toFixed(digits) + unit;
   el("legend-max").textContent = layer.vmax.toFixed(digits) + unit;
-  el("layer-info").textContent =
-    `${layer.product} ${layer.polarization} ${layer.year} · ` +
-    `z${layer.min_zoom}–${layer.max_zoom} · ${(layer.size_bytes / 1e6).toFixed(1)} MB · ${layer.cmap}`;
+  el("layer-info").textContent = legendDetail(layer);
+}
+
+/* The line under the legend, from whichever fields the manifest actually
+ * carries. `size_bytes` and `cmap` are descriptive rather than structural — the
+ * layer draws identically without them — so a manifest that omits one loses a
+ * fragment of this line instead of losing the layer. Validating them as
+ * required would cost a real data layer over a caption. */
+export function legendDetail(layer) {
+  const parts = [
+    `${layer.product} ${layer.polarization} ${layer.year}`,
+    `z${layer.min_zoom}–${layer.max_zoom}`,
+  ];
+  if (isFiniteNumber(layer.size_bytes) && layer.size_bytes >= 0) {
+    parts.push(`${(layer.size_bytes / 1e6).toFixed(1)} MB`);
+  }
+  if (isNonEmptyString(layer.cmap)) parts.push(layer.cmap);
+  return parts.join(" · ");
 }
 
 /* ---------- controls ---------- */
