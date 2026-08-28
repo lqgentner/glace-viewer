@@ -34,8 +34,17 @@ const style = {
     protomaps: {
       type: "vector",
       url: `pmtiles://${BASEMAP_URL}`,
+      /* The basemap is always on the map, so this is the attribution that is
+       * always shown, and the three credits that are not tied to a toggle ride
+       * along in it. They stay in one string deliberately: MapLibre sorts
+       * attributions by length before joining them, so three separate entries
+       * would be scattered through the line, while one entry keeps its own
+       * order. MapLibre credits the renderer rather than a source, but there is
+       * no other entry guaranteed to be present. */
       attribution:
-        '<a href="https://protomaps.com">Protomaps</a> © <a href="https://openstreetmap.org">OpenStreetMap</a>',
+        '<a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors</a>' +
+        ' | <a href="https://protomaps.com">Protomaps</a>' +
+        ' | <a href="https://maplibre.org">MapLibre</a>',
     },
   },
   layers: basemaps.layers("protomaps", flavor, { lang: "en" }),
@@ -114,7 +123,15 @@ const TERRAIN_SOURCE = "terrain";
 
 function ensureTerrainSource() {
   if (map.getSource(TERRAIN_SOURCE)) return;
-  map.addSource(TERRAIN_SOURCE, { type: "raster-dem", url: TERRAIN_TILEJSON });
+  map.addSource(TERRAIN_SOURCE, {
+    type: "raster-dem",
+    url: TERRAIN_TILEJSON,
+    /* Shown while the DEM is actually being drawn — MapLibre credits a source
+     * when a visible layer uses it (the hillshade) or when it carries the
+     * terrain (3D), so this appears for either and goes away when both are
+     * off, without the page having to track it. */
+    attribution: '© <a href="https://mapterhorn.com/attribution/">Mapterhorn</a>',
+  });
 }
 
 /* ---------- hillshade ---------- */

@@ -69,6 +69,29 @@ test("the viewer", async (t) => {
     assert.equal(el("year-value").textContent, "2023");
   });
 
+  await t.test("each layer credits the source it is actually drawing", async () => {
+    // MapLibre shows a source's attribution only while a visible layer uses it
+    // (or, for the DEM, while it carries the terrain), so the conditions asked
+    // for — Copernicus only with GLACE on screen, Mapterhorn with the hillshade
+    // or 3D — are the strings being on the right sources.
+    assert.match(
+      map.getSource("glace-coh12_vv_2023").attribution,
+      /Contains modified Copernicus Sentinel data 2023/,
+      "the year credited is the year on screen",
+    );
+    assert.match(map.getSource("glace-coh12_vv_2023").attribution, /copernicus\.eu/);
+    assert.match(map.getSource("terrain").attribution, /Mapterhorn/);
+
+    // These three ride in one string so the length sort cannot scatter them.
+    const basemap = map.getSource("protomaps").attribution;
+    assert.match(basemap, /openstreetmap\.org\/copyright.*OpenStreetMap contributors/);
+    assert.ok(
+      basemap.indexOf("OpenStreetMap") < basemap.indexOf("Protomaps"),
+      "OpenStreetMap, then Protomaps, then MapLibre",
+    );
+    assert.ok(basemap.indexOf("Protomaps") < basemap.indexOf("MapLibre"));
+  });
+
   await t.test("data draws under the hillshade, and both under the labels", async () => {
     assert.ok(map.indexOf("glace-coh12_vv_2023") < map.indexOf("hillshade"));
     assert.ok(map.indexOf("hillshade") < map.indexOf("places"));

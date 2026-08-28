@@ -305,6 +305,30 @@ pitch is non-zero — without moving the camera, since easing to 60° would roun
 every shared link off to the same view.
 
 
+### Attribution
+
+The line in the bottom-right corner is MapLibre's own `AttributionControl`, fed
+from the `attribution` field of each source. That is what makes it conditional
+for free: MapLibre credits a source only while a visible layer is using it, or —
+for the DEM — while it is carrying the terrain. So
+
+- **Copernicus** appears only when a GLACE raster is on screen, and names that
+  layer's year, because every year is its own source;
+- **Mapterhorn** appears when the hillshade is ticked *or* 3D is on, and goes
+  away when both are off;
+- **OpenStreetMap, Protomaps and MapLibre** are always shown, riding on the
+  basemap source, which is always present.
+
+Those last three share one string on purpose. MapLibre sorts attributions by
+**string length** before joining them with `|`, so three separate entries would
+be scattered through the line at lengths nobody controls, while one entry keeps
+its own internal order. The same sort is why Mapterhorn prints ahead of
+Copernicus: its string is shorter. Ordering the line by hand would mean
+replacing the control rather than configuring it.
+
+Per-layer credits are a separate thing — see the info marks in the panel, which
+carry each inventory's citation and licence.
+
 ### Value ranges and colour maps
 
 `DEFAULT_STYLES` in deep-glacier-mapping's `glacier_mapping/webmap.py` pins a

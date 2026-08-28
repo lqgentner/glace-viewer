@@ -110,7 +110,13 @@ function ensureLayer(layer) {
     minzoom: layer.min_zoom,
     maxzoom: layer.max_zoom,
     bounds: layer.bounds,
-    attribution: "GLACE / Copernicus Sentinel-1",
+    /* The wording the Copernicus terms ask for. It is per-year because each
+     * year is its own source, and MapLibre only credits a source a visible
+     * layer is using — so the line names the year on screen and disappears
+     * when no GLACE layer is shown. `layer.year` is interpolated into markup,
+     * which is safe only because validLayer() has already required it to be a
+     * finite number. */
+    attribution: `<a href="https://www.copernicus.eu/">Contains modified Copernicus Sentinel data ${layer.year}</a>`,
   });
   map.addLayer(
     {
