@@ -14,7 +14,6 @@
 import {
   BASEMAP_ASSETS,
   BASEMAP_FLAVOR,
-  BASEMAP_LABEL_FLAVOR,
   BASEMAP_URL,
   INITIAL_VIEW,
   TERRAIN_TILEJSON,
@@ -27,27 +26,6 @@ maplibregl.addProtocol("pmtiles", protocol.tile);
  * it is ~100 layers, and the flavor decides all of their colours. Data layers are
  * appended after it, so they draw on top. */
 const flavor = basemaps.namedFlavor(BASEMAP_FLAVOR);
-
-/* The labels come from a second flavor. Grayscale's are dark text on a light
- * halo, which disappears into the dark end of every GLACE ramp; black's are
- * light text on a near-black halo, which reads over the data and over the grey
- * basemap beside it.
- *
- * Only the symbol layers are swapped, by id — both flavors generate the same
- * 69 layers with the same ids, so this is a substitution rather than a merge.
- * The sprite follows the label flavor too: three symbol layers draw sprite
- * icons (town spots, road shields, one-way arrows) and nothing else in the
- * style uses one, so the icons stay in step with the text beside them. */
-const labelLayers = new Map(
-  basemaps
-    .layers("protomaps", basemaps.namedFlavor(BASEMAP_LABEL_FLAVOR), { lang: "en" })
-    .map((layer) => [layer.id, layer]),
-);
-
-const styleLayers = basemaps
-  .layers("protomaps", flavor, { lang: "en" })
-  .map((layer) => (layer.type === "symbol" ? (labelLayers.get(layer.id) ?? layer) : layer));
-
 const style = {
   version: 8,
   /* `globe` is not "always a globe": MapLibre expands the bare type into a zoom
@@ -63,7 +41,7 @@ const style = {
    * globe is on screen. */
   projection: { type: "globe" },
   glyphs: `${BASEMAP_ASSETS}/fonts/{fontstack}/{range}.pbf`,
-  sprite: `${BASEMAP_ASSETS}/sprites/v4/${BASEMAP_LABEL_FLAVOR}`,
+  sprite: `${BASEMAP_ASSETS}/sprites/v4/${BASEMAP_FLAVOR}`,
   sources: {
     protomaps: {
       type: "vector",
@@ -81,7 +59,7 @@ const style = {
         ' | <a href="https://maplibre.org">MapLibre</a>',
     },
   },
-  layers: styleLayers,
+  layers: basemaps.layers("protomaps", flavor, { lang: "en" }),
 };
 
 export const map = new maplibregl.Map({

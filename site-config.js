@@ -19,7 +19,6 @@
  *   gridSourceLayer  "grid"         layer name inside it (webmap.TILE_GRID_LAYER)
  *   basemapUrl       Protomaps' daily planet build on Source Cooperative
  *   basemapFlavor    "grayscale"    grayscale | black | dark | light | white
- *   basemapLabelFlavor "black"      flavor the basemap's labels are taken from
  *   basemapAssets    Protomaps' fonts and sprites endpoint
  *   terrainTilejson  Mapterhorn's global terrain
  *   terrainCredit    { title, citation, links } shown behind the hillshade's info mark

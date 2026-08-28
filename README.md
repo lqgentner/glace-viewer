@@ -334,15 +334,6 @@ Data layers are inserted below the basemap's first symbol layer, so labels stay
 readable on top of the imagery. The "Basemap labels" checkbox hides just those
 symbol layers.
 
-**The labels come from a second flavor.** Grayscale's are dark text on a light
-halo, which disappears into the dark end of every GLACE ramp; `black`'s are light
-text on a near-black halo, which reads over the data and over the grey basemap
-beside it. Both flavors generate the same 69 layers with the same ids, so the
-symbol layers are substituted one for one rather than merged, and the sprite
-follows the label flavor — three symbol layers draw sprite icons (town spots,
-road shields, one-way arrows) and nothing else in the style uses one. It is
-`basemapLabelFlavor` in the settings.
-
 ### Draw order
 
 Bottom to top: basemap fills, GLACE rasters, hillshade, vector overlays (glacier

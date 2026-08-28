@@ -58,19 +58,6 @@ test("the viewer", async (t) => {
     assert.ok(el("panel").classList.contains("expanded"));
   });
 
-  await t.test("the basemap's labels are taken from the darker flavor", async () => {
-    // Grayscale's labels are dark text on a light halo, which vanishes into the
-    // dark end of every GLACE ramp. Both flavors emit the same layer ids, so
-    // the symbol layers are substituted one for one.
-    const layers = map.options.style.layers;
-    assert.ok(layers.some((layer) => layer.type === "symbol"));
-    for (const layer of layers) {
-      assert.equal(layer.flavor, layer.type === "symbol" ? "black" : "grayscale", layer.id);
-    }
-    // Sprite icons are drawn only by symbol layers, so it follows the labels.
-    assert.match(map.options.style.sprite, /\/black$/);
-  });
-
   await t.test("the style asks for a globe that flattens as you zoom in", async () => {
     // The bare `globe` type is a zoom interpolation, not a permanent globe:
     // MapLibre expands it to vertical-perspective at z11 and mercator at z12.
