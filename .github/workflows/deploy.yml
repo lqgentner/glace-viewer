@@ -59,7 +59,8 @@ jobs:
       - name: Stage the site
         run: |
           mkdir -p _site/data
-          cp index.html app.js style.css _site/
+          cp index.html style.css _site/
+          cp -r js _site/
           cp data/*.pmtiles data/inventories.json _site/data/
           du -sh _site
 

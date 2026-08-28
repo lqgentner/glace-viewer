@@ -34,7 +34,7 @@ It is a C++ program; build it from https://github.com/felt/tippecanoe.
 
 `http.server` cannot serve PMTiles — it ignores `Range` and returns whole files —
 which is why `serve.py` exists. It also sets caching per file type: the page
-shell is sent `no-store`, since a stale `app.js` leaves the page silently
+shell is sent `no-store`, since a stale `js/app.js` leaves the page silently
 rendering the previous version, while the archives are cached normally.
 
 To see the GLACE rasters, `serve.py` mounts `./tiles` under `/tiles`. Until the
