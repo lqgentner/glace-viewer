@@ -35,24 +35,27 @@ test("the viewer", async (t) => {
   await settle();
 
   await t.test("a wide viewport opens with the panel expanded", async () => {
-    assert.equal(el("panel-body").hidden, false);
+    const collapsed = () => el("panel").classList.contains("collapsed");
+    assert.equal(collapsed(), false);
+    assert.equal(el("panel").classList.contains("expanded"), true);
     assert.equal(el("panel-toggle").getAttribute("aria-expanded"), "true");
 
     el("panel-toggle").click();
-    assert.equal(el("panel-body").hidden, true, "and can still be collapsed by hand");
+    assert.equal(collapsed(), true, "and can still be collapsed by hand");
+    assert.equal(el("panel").classList.contains("expanded"), false);
     assert.equal(el("panel-toggle").getAttribute("aria-expanded"), "false");
     // `up` marks the collapsed state here as it does on the inventories toggle.
     assert.ok(el("panel-toggle").querySelector(".chevron").classList.contains("up"));
 
     el("panel-toggle").click();
-    assert.equal(el("panel-body").hidden, false);
+    assert.equal(collapsed(), false);
   });
 
   await t.test("rotating onto a narrow screen collapses it again", async () => {
     page.setNarrow(true);
-    assert.equal(el("panel-body").hidden, true, "the default for the new width wins");
+    assert.ok(el("panel").classList.contains("collapsed"), "the new width's default wins");
     page.setNarrow(false);
-    assert.equal(el("panel-body").hidden, false);
+    assert.ok(el("panel").classList.contains("expanded"));
   });
 
   await t.test("the style asks for a globe that flattens as you zoom in", async () => {

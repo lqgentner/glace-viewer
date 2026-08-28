@@ -210,12 +210,26 @@ string, so a value containing markup stays a value.
 
 ### Small screens
 
-Below 640px the panel goes full width and is capped at 46% of the viewport,
-which still leaves it covering most of a phone. So on a narrow viewport it opens
-**collapsed to its title bar** and a tap on the chevron opens it; wide viewports
-open expanded, and can be collapsed by hand. Crossing the breakpoint — a
-rotation, usually — re-applies the default for the new width rather than
-carrying over a choice made for a different screen.
+Below 640px the panel is capped at 46% of the viewport, which still leaves it
+covering most of a phone. So on a narrow viewport it opens **collapsed to its
+title bar** and a tap on the chevron opens it; wide viewports open expanded, and
+can be collapsed by hand. Crossing the breakpoint — a rotation, usually —
+re-applies the default for the new width rather than carrying over a choice made
+for a different screen.
+
+It also stops 52px short of the right edge rather than running the full width. A
+MapLibre control group is 29px wide inside a 10px margin, so a panel reaching the
+edge sits on top of the zoom buttons and the 3D toggle.
+
+**The collapsed state is a class on `#panel`, not `hidden` on the body**, and the
+narrow default is a stylesheet rule rather than something the script applies.
+`js/app.js` is a deferred module, so it runs after layout: setting `hidden` from
+there showed the full-height panel for a frame before it snapped shut. CSS
+collapses a narrow panel until `expanded` appears and expands a wide one until
+`collapsed` does, and the script sets both classes explicitly so the state is
+unambiguous on either side of the breakpoint. A test in
+`tests/viewer-narrow.test.js` guards the stylesheet, since no DOM assertion can
+see the frame that was the bug.
 
 The breakpoint lives in two places that have to agree: the media query in
 `style.css` and the `matchMedia` call in `js/app.js`. The collapse itself is the

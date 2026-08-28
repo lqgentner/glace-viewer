@@ -26,7 +26,11 @@ import { creditButton, el } from "./ui.js";
 const NARROW_VIEWPORT = window.matchMedia("(max-width: 640px)");
 
 function setPanelOpen(open) {
-  el("panel-body").hidden = !open;
+  // Both classes are always set, so the state is explicit on either side of the
+  // breakpoint: style.css collapses a narrow panel until `expanded` appears,
+  // and expands a wide one until `collapsed` does.
+  el("panel").classList.toggle("expanded", open);
+  el("panel").classList.toggle("collapsed", !open);
   const toggle = el("panel-toggle");
   toggle.setAttribute("aria-expanded", String(open));
   const action = open ? "Hide the controls" : "Show the controls";
@@ -37,7 +41,9 @@ function setPanelOpen(open) {
 }
 
 function initControls() {
-  el("panel-toggle").addEventListener("click", () => setPanelOpen(el("panel-body").hidden));
+  el("panel-toggle").addEventListener("click", (event) => {
+    setPanelOpen(event.currentTarget.getAttribute("aria-expanded") !== "true");
+  });
   NARROW_VIEWPORT.addEventListener("change", (event) => setPanelOpen(!event.matches));
   setPanelOpen(!NARROW_VIEWPORT.matches);
 

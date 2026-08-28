@@ -45,6 +45,14 @@ html, body {
   gap: 8px;
 }
 #panel-body { margin-top: 14px; }
+
+/* Collapsing is a class on the panel rather than `hidden` on the body, so that
+   a phone-sized screen is already collapsed on the very first paint. The script
+   that decides it is a deferred module: setting `hidden` from there runs after
+   layout, which showed the full-height panel for a frame before it snapped
+   shut. Neither class is present until the script runs, which is what the
+   narrow-screen default below is for. */
+#panel.collapsed #panel-body { display: none; }
 #panel h1 { margin: 0; font-size: 15px; letter-spacing: 0.02em; }
 #panel #subtitle { margin: 2px 0 0; font-size: 12px; color: var(--muted); }
 
@@ -193,7 +201,18 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .maplibregl-ctrl-attrib { font-size: 10px; }
 
 @media (max-width: 640px) {
-  #panel { width: calc(100% - 24px); max-height: 46%; }
+  #panel {
+    /* Stops clear of the map controls instead of running the full width: a
+       MapLibre control group is 29px wide inside a 10px margin, so a panel
+       reaching the right edge sits on top of the zoom buttons. */
+    right: 52px;
+    width: auto;
+    max-height: 46%;
+  }
+  /* The pre-script default here, overridden by `.expanded` once the script has
+     run or the reader has tapped. On wide screens neither class is present and
+     the body is simply visible. */
+  #panel:not(.expanded) #panel-body { display: none; }
 }
 
 /* Inventory overlay toggles: a checkbox plus the colour its outlines draw in. */
