@@ -52,6 +52,38 @@ def build(
     return archive.stat().st_size
 
 
+# What the build reads out of each index entry. The viewer needs more than this,
+# but a missing key here fails as a KeyError halfway through a tippecanoe run
+# rather than as a sentence naming the entry, which is why it is checked up
+# front for every entry before any of them is built.
+REQUIRED = {
+    "id": str,
+    "url": str,
+    "source_layer": str,
+    "min_zoom": int,
+    "max_zoom": int,
+}
+
+
+def validate(index: object) -> list[dict]:
+    """Return the inventory entries, or raise ``ValueError`` naming the problem."""
+    if not isinstance(index, dict) or not isinstance(index.get("inventories"), list):
+        raise ValueError("no 'inventories' array")
+    entries = index["inventories"]
+    for position, entry in enumerate(entries):
+        if not isinstance(entry, dict):
+            raise ValueError(f"entry {position} is not an object")
+        name = entry.get("id", f"entry {position}")
+        for field, kind in REQUIRED.items():
+            if field not in entry:
+                raise ValueError(f"{name}: missing '{field}'")
+            if not isinstance(entry[field], kind) or isinstance(entry[field], bool):
+                raise ValueError(f"{name}: '{field}' must be a {kind.__name__}")
+        if entry["min_zoom"] > entry["max_zoom"]:
+            raise ValueError(f"{name}: min_zoom is above max_zoom")
+    return entries
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data-dir", type=Path, default=REPO / "data")
@@ -59,7 +91,7 @@ def main() -> int:
     parser.add_argument(
         "--skip-existing",
         action="store_true",
-        help="leave archives that are already newer than their GeoJSON",
+        help="leave archives already newer than their GeoJSON and the index",
     )
     args = parser.parse_args()
 
@@ -73,8 +105,20 @@ def main() -> int:
 
     index_path = args.data_dir / "inventories.json"
     index = json.loads(index_path.read_text())
+    try:
+        entries = validate(index)
+    except ValueError as error:
+        print(f"{index_path}: {error}", file=sys.stderr)
+        return 1
 
-    for entry in index["inventories"]:
+    # The index decides the layer name and the zoom range tippecanoe is given,
+    # so an archive built before it was edited is stale even though its GeoJSON
+    # has not moved. Comparing against the newer of the two catches a retuned
+    # `max_zoom` or a renamed `source_layer`; it still cannot catch a tippecanoe
+    # upgrade, which needs a full rebuild.
+    index_mtime = index_path.stat().st_mtime
+
+    for entry in entries:
         # `url` names what the viewer loads; the GeoJSON beside it is the source.
         archive = args.data_dir / entry["url"]
         geojson = archive.with_suffix(".geojson")
@@ -84,7 +128,7 @@ def main() -> int:
         if (
             args.skip_existing
             and archive.is_file()
-            and archive.stat().st_mtime >= geojson.stat().st_mtime
+            and archive.stat().st_mtime >= max(geojson.stat().st_mtime, index_mtime)
         ):
             print(f"  {archive.name}: up to date")
             continue
