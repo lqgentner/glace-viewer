@@ -65,7 +65,7 @@ function validLayer(layer) {
   );
 }
 
-function validateManifest(raw) {
+export function validateManifest(raw) {
   if (raw === null || typeof raw !== "object" || !Array.isArray(raw.layers)) {
     throw new Error("no layers array");
   }

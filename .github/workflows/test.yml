@@ -1,0 +1,40 @@
+name: Tests
+
+# The page has no build step, so nothing here compiles anything: the Python
+# tests drive scripts/serve.py over a socket, and the JavaScript tests run the
+# modules under js/ against a jsdom document and a fake MapLibre.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # No dependencies: serve.py and build-tiles.py are stdlib only, and so are
+      # their tests.
+      - run: python -m unittest discover -s tests -v
+
+  javascript:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      # jsdom is the only dependency, and it is dev-only; nothing is bundled or
+      # published. `npm ci` so the lockfile decides the version.
+      - run: npm ci
+      # The raster manifest is a local build artefact, so the cases that need
+      # tiles/layers.json skip themselves here rather than failing.
+      - run: npm test

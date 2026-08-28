@@ -9,6 +9,10 @@ data/*.pmtiles
 tiles
 _site/
 
+# Dev-only: the page loads js/ directly and has no runtime dependencies.
+# `npm install` is needed for `npm test` and nothing else.
+node_modules/
+
 __pycache__/
 .DS_Store
 

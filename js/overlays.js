@@ -301,7 +301,7 @@ function inventoryRow(feature) {
 /* The tile name is a UTM zone, a latitude band and the 100 km square, e.g.
  * 31TFJ68 — so the zone the tile is projected in can be read straight off it.
  * Bands C-M are the southern hemisphere, N-X the northern. */
-function utmZone(tile) {
+export function utmZone(tile) {
   const match = /^(\d{1,2})([C-HJ-NP-X])/.exec(tile || "");
   if (!match) return null;
   return `${Number(match[1])}${match[2] >= "N" ? "N" : "S"}`;

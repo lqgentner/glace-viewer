@@ -1,0 +1,14 @@
+{
+  "name": "glace-viewer",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Development-only tooling for the GLACE viewer. The page itself has no build step and no runtime dependencies: index.html loads the modules under js/ directly, and nothing here is ever published.",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test tests/"
+  },
+  "devDependencies": {
+    "jsdom": "^28.0.0"
+  }
+}

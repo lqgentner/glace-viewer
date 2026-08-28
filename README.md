@@ -58,6 +58,44 @@ That needs the bucket to allow anonymous reads **and** to send CORS headers with
 PMTiles client read the range metadata, which fails looking like a corrupt
 archive rather than a permissions problem.
 
+## Tests
+
+```bash
+python -m unittest discover -s tests   # the two scripts
+npm install && npm test                # the page
+```
+
+`.github/workflows/test.yml` runs both on every push and pull request. Neither
+suite builds anything: the Python side is stdlib only, and the JavaScript side
+needs `jsdom` and nothing else. **`node_modules` is development-only** — the
+page has no runtime dependencies and nothing is ever bundled.
+
+| file | covers |
+| --- | --- |
+| `tests/test_serve.py` | range boundaries, suffix and invalid ranges, `/tiles` containment, cache headers |
+| `tests/test_build_tiles.py` | inventory index validation |
+| `tests/config.test.js` | the defaults -> `site-config.js` -> query precedence chain |
+| `tests/manifest.test.js` | `layers.json` validation, MGRS/UTM parsing |
+| `tests/ui.test.js` | status priority and keying, escaping in the credit popover |
+| `tests/viewer.test.js` | the page end to end against a fake MapLibre |
+| `tests/viewer-degraded.test.js` | the page with no reachable `layers.json` |
+
+The path and range cases are written to a socket by hand: `http.client` and
+`curl` both normalise `a/../b` before sending it, which is the case under test.
+
+`tests/helpers/browser.js` supplies a jsdom document and a fake MapLibre. The
+fake is deliberately strict — adding a layer twice, naming a source that does
+not exist, or setting a property on a layer that was never added all throw —
+because MapLibre answers each of those with a console warning the page would
+otherwise sail past.
+
+`viewer.test.js` runs against `tests/fixtures/layers.json` rather than a real
+build, so it covers the same ground in CI as it does locally. The fixture holds
+one combination that exists in only one of its two years, which is what makes
+the disabled-button and no-layer-for-this-year paths reachable. The one case
+that reads the real `tiles/layers.json` skips itself when the directory is
+absent.
+
 ## Deploy
 
 `.github/workflows/deploy.yml` publishes to GitHub Pages on every push to
