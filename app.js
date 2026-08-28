@@ -303,7 +303,6 @@ function initStandaloneControls() {
 }
 
 function initControls(manifest) {
-  el("title").textContent = manifest.title;
   buildSegmented(el("product"), manifest.products, "product");
   buildSegmented(el("pol"), manifest.polarizations, "pol");
 
