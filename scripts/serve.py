@@ -29,6 +29,7 @@ from pathlib import Path
 import re
 import sys
 from typing import IO
+from urllib.parse import unquote
 
 RANGE_RE = re.compile(r"^bytes=(\d*)-(\d*)$")
 # Page-shell files and the small manifests are re-read on every reload; tiles
@@ -48,19 +49,46 @@ class RangeRequestHandler(SimpleHTTPRequestHandler):
 
     tiles_dir: Path
 
+    @staticmethod
+    def _request_path(path: str) -> str:
+        """The path component of a request line, without the query or fragment."""
+        return path.split("?", 1)[0].split("#", 1)[0]
+
+    def _tiles_target(self, clean: str) -> Path | None:
+        """Resolve a ``/tiles/...`` request, or ``None`` if it escapes ``tiles_dir``.
+
+        Normalising the relative part is not enough on its own: ``..`` survives
+        ``normpath`` when it is already leading, so ``/tiles/../../etc/passwd``
+        used to resolve outside the mount. Harmless behind the localhost
+        default, but this server takes ``--bind``. Resolve the whole path and
+        require the result to still be inside the directory.
+        """
+        target = (self.tiles_dir / unquote(clean.removeprefix("/tiles/")).lstrip("/")).resolve()
+        return target if target.is_relative_to(self.tiles_dir) else None
+
     def translate_path(self, path: str) -> str:
         """Map ``/tiles/...`` onto the tile directory, everything else onto the web root."""
-        clean = path.split("?", 1)[0].split("#", 1)[0]
+        clean = self._request_path(path)
         if clean.startswith("/tiles/"):
-            relative = clean.removeprefix("/tiles/").lstrip("/")
-            return str(self.tiles_dir / os.path.normpath(relative).lstrip(os.sep))
+            target = self._tiles_target(clean)
+            # send_head() rejects an escaping path before it gets this far; the
+            # fallback keeps a caller that did not go through it inside the mount.
+            return str(target if target is not None else self.tiles_dir)
         return super().translate_path(path)
 
     def send_head(self) -> _Slice | IO[bytes] | None:
         """Answer a byte-range request, falling back to the full-body handler."""
+        clean = self._request_path(self.path)
+        if clean.startswith("/tiles/") and self._tiles_target(clean) is None:
+            self.send_error(HTTPStatus.NOT_FOUND, "File not found")
+            return None
+
         header = self.headers.get("Range")
         match = RANGE_RE.match(header) if header else None
-        if match is None:
+        # ``bytes=-`` matches the grammar but names neither end of a range.
+        # RFC 9110 says to ignore a Range header that cannot be satisfied, which
+        # is also what the full-body handler does.
+        if match is None or not (match.group(1) or match.group(2)):
             return super().send_head()
 
         path = self.translate_path(self.path)
@@ -101,7 +129,7 @@ class RangeRequestHandler(SimpleHTTPRequestHandler):
         """Advertise range support, and set caching to match how each file changes.
 
         The archives are immutable once built and worth caching, but ``index.html``,
-        ``app.js`` and ``style.css`` are edited between reloads. Without ``no-store``
+        ``js/app.js`` and ``style.css`` are edited between reloads. Without ``no-store``
         the browser reuses a stale script and the page silently keeps rendering the
         previous version.
 
