@@ -12,84 +12,98 @@
 
     <aside id="panel">
       <header>
-        <h1 id="title">GLACE</h1>
-        <p id="subtitle">Sentinel-1 annual summer composites of the European Alps</p>
-      </header>
-
-      <!-- Everything that describes a raster layer. Hidden as a block when
-           layers.json cannot be reached, since none of it means anything then. -->
-      <div id="raster-controls">
-        <section class="control">
-          <label for="product">Product</label>
-          <div id="product" class="segmented" role="radiogroup" aria-label="Product"></div>
-        </section>
-
-        <section class="control">
-          <label for="pol">Polarization</label>
-          <div id="pol" class="segmented" role="radiogroup" aria-label="Polarization"></div>
-        </section>
-
-        <section class="control">
-          <label for="year">Year <output id="year-value"></output></label>
-          <input type="range" id="year" step="1" />
-          <div id="year-ticks" class="ticks"></div>
-        </section>
-
-        <section class="control">
-          <label for="opacity">Layer opacity <output id="opacity-value">100%</output></label>
-          <input type="range" id="opacity" min="0" max="100" value="100" step="1" />
-        </section>
-
-        <section id="legend" class="control">
-          <label>Scale</label>
-          <div id="legend-bar"></div>
-          <div id="legend-labels"><span id="legend-min"></span><span id="legend-max"></span></div>
-        </section>
-      </div>
-
-      <hr />
-
-      <section class="control checkbox" id="hillshade-row">
-        <input type="checkbox" id="hillshade" />
-        <label for="hillshade">Hillshade</label>
-      </section>
-      <section class="control" id="hillshade-strength-row" hidden>
-        <label for="hillshade-strength">
-          Hillshade strength <output id="hillshade-strength-value">55%</output>
-        </label>
-        <input type="range" id="hillshade-strength" min="0" max="100" value="55" step="1" />
-      </section>
-
-      <section class="control checkbox">
-        <input type="checkbox" id="grid" />
-        <label for="grid">Catalog tile grid</label>
-      </section>
-
-      <section class="control checkbox">
-        <input type="checkbox" id="basemap" checked />
-        <label for="basemap">Basemap labels</label>
-      </section>
-
-      <section class="control" id="inventories-section" hidden>
-        <!-- Starts collapsed: three overlays that are all off by default do not
-             need to take up the panel before anyone asks for them. -->
-        <button type="button" id="inventories-toggle" aria-expanded="false"
-                aria-controls="inventories">
-          <span>Glacier inventories</span><span class="chevron up" aria-hidden="true"
+        <div>
+          <h1 id="title">GLACE</h1>
+          <p id="subtitle">Sentinel-1 annual summer composites of the European Alps</p>
+        </div>
+        <!-- Collapses everything below the title. The panel covers most of a
+             phone screen, so there it opens collapsed — see js/app.js. -->
+        <button type="button" id="panel-toggle" aria-expanded="true" aria-controls="panel-body">
+          <span class="chevron" aria-hidden="true"
                 ><svg viewBox="0 0 12 12" width="12" height="12" fill="none"
                       stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
                       stroke-linejoin="round"><path d="M2.5 4.5 6 8 9.5 4.5" /></svg
               ></span>
         </button>
-        <div id="inventories" hidden></div>
-      </section>
+      </header>
 
-      <footer>
-        <p id="layer-info"></p>
-        <p class="muted">
-          Experimental quick-look of the 40 m overview mosaics.
-        </p>
-      </footer>
+      <div id="panel-body">
+
+        <!-- Everything that describes a raster layer. Hidden as a block when
+             layers.json cannot be reached, since none of it means anything then. -->
+        <div id="raster-controls">
+          <section class="control">
+            <label for="product">Product</label>
+            <div id="product" class="segmented" role="radiogroup" aria-label="Product"></div>
+          </section>
+
+          <section class="control">
+            <label for="pol">Polarization</label>
+            <div id="pol" class="segmented" role="radiogroup" aria-label="Polarization"></div>
+          </section>
+
+          <section class="control">
+            <label for="year">Year <output id="year-value"></output></label>
+            <input type="range" id="year" step="1" />
+            <div id="year-ticks" class="ticks"></div>
+          </section>
+
+          <section class="control">
+            <label for="opacity">Layer opacity <output id="opacity-value">100%</output></label>
+            <input type="range" id="opacity" min="0" max="100" value="100" step="1" />
+          </section>
+
+          <section id="legend" class="control">
+            <label>Scale</label>
+            <div id="legend-bar"></div>
+            <div id="legend-labels"><span id="legend-min"></span><span id="legend-max"></span></div>
+          </section>
+        </div>
+
+        <hr />
+
+        <section class="control checkbox" id="hillshade-row">
+          <input type="checkbox" id="hillshade" />
+          <label for="hillshade">Hillshade</label>
+        </section>
+        <section class="control" id="hillshade-strength-row" hidden>
+          <label for="hillshade-strength">
+            Hillshade strength <output id="hillshade-strength-value">55%</output>
+          </label>
+          <input type="range" id="hillshade-strength" min="0" max="100" value="55" step="1" />
+        </section>
+
+        <section class="control checkbox">
+          <input type="checkbox" id="grid" />
+          <label for="grid">Catalog tile grid</label>
+        </section>
+
+        <section class="control checkbox">
+          <input type="checkbox" id="basemap" checked />
+          <label for="basemap">Basemap labels</label>
+        </section>
+
+        <section class="control" id="inventories-section" hidden>
+          <!-- Starts collapsed: three overlays that are all off by default do not
+               need to take up the panel before anyone asks for them. -->
+          <button type="button" id="inventories-toggle" aria-expanded="false"
+                  aria-controls="inventories">
+            <span>Glacier inventories</span><span class="chevron up" aria-hidden="true"
+                  ><svg viewBox="0 0 12 12" width="12" height="12" fill="none"
+                        stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                        stroke-linejoin="round"><path d="M2.5 4.5 6 8 9.5 4.5" /></svg
+                ></span>
+          </button>
+          <div id="inventories" hidden></div>
+        </section>
+
+        <footer>
+          <p id="layer-info"></p>
+          <p class="muted">
+            Experimental quick-look of the 40 m overview mosaics.
+          </p>
+        </footer>
+      </div>
     </aside>
 
     <div id="status" hidden></div>

@@ -208,6 +208,21 @@ Anything that reaches the page from a manifest or a vector tile — a glacier
 name, a citation, a licence link — is built as DOM nodes rather than as an HTML
 string, so a value containing markup stays a value.
 
+### Small screens
+
+Below 640px the panel goes full width and is capped at 46% of the viewport,
+which still leaves it covering most of a phone. So on a narrow viewport it opens
+**collapsed to its title bar** and a tap on the chevron opens it; wide viewports
+open expanded, and can be collapsed by hand. Crossing the breakpoint — a
+rotation, usually — re-applies the default for the new width rather than
+carrying over a choice made for a different screen.
+
+The breakpoint lives in two places that have to agree: the media query in
+`style.css` and the `matchMedia` call in `js/app.js`. The collapse itself is the
+same idiom as the glacier inventories section — a button carrying
+`aria-expanded` and `aria-controls`, and one chevron glyph rotated by an `up`
+class that marks the collapsed state.
+
 ### Configuration
 
 Settings resolve in three layers, each overriding the one before:

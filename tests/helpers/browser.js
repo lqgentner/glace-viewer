@@ -189,8 +189,9 @@ class FakeMap {
  * @param {object} [options.site]    the object site-config.js would set
  * @param {Record<string, string>} [options.files]  URL -> path for fetch()
  * @param {number} [options.pitch]   the pitch a #hash would have restored
+ * @param {boolean} [options.narrow] whether the viewport is phone-sized
  */
-export function installBrowser({ search = "", site, files = {}, pitch = 0 } = {}) {
+export function installBrowser({ search = "", site, files = {}, pitch = 0, narrow = false } = {}) {
   created = [];
   initialPitch = pitch;
   const dom = new JSDOM(fs.readFileSync(path.join(REPO, "index.html"), "utf8"), {
@@ -209,6 +210,21 @@ export function installBrowser({ search = "", site, files = {}, pitch = 0 } = {}
 
   if (site === undefined) delete globalThis.GLACE_CONFIG;
   else globalThis.GLACE_CONFIG = site;
+
+  /* jsdom has no matchMedia, and the page asks for one at boot to decide
+   * whether the panel starts collapsed. The page only ever asks the one
+   * question — is this viewport narrow — so the stub answers every query the
+   * same way rather than parsing them. */
+  const mediaListeners = new Set();
+  let narrowViewport = narrow;
+  window.matchMedia = (media) => ({
+    media,
+    get matches() {
+      return narrowViewport;
+    },
+    addEventListener: (_event, fn) => mediaListeners.add(fn),
+    removeEventListener: (_event, fn) => mediaListeners.delete(fn),
+  });
 
   const popups = [];
   globalThis.maplibregl = {
@@ -250,6 +266,11 @@ export function installBrowser({ search = "", site, files = {}, pitch = 0 } = {}
       return created.at(-1);
     },
     el: (id) => window.document.getElementById(id),
+    /** Cross the CSS breakpoint, as a rotation would. */
+    setNarrow(value) {
+      narrowViewport = value;
+      for (const fn of mediaListeners) fn({ matches: value });
+    },
     /** An element inside one of the custom map controls, by CSS selector. */
     control(selector) {
       for (const node of created.at(-1).controlNodes) {

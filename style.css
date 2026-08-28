@@ -35,9 +35,34 @@ html, body {
   z-index: 2;
 }
 
-#panel header { margin-bottom: 14px; }
+/* The title bar stays put and everything else collapses under it, so the
+   spacing belongs to the body rather than the header — collapsed, the panel is
+   the title alone with no gap hanging off the bottom. */
+#panel header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+#panel-body { margin-top: 14px; }
 #panel h1 { margin: 0; font-size: 15px; letter-spacing: 0.02em; }
 #panel #subtitle { margin: 2px 0 0; font-size: 12px; color: var(--muted); }
+
+#panel-toggle {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin: -2px -4px 0 0;
+  padding: 0;
+  color: var(--muted);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+#panel-toggle:hover { color: var(--text); }
 
 .control { margin-bottom: 14px; }
 .control > label {
@@ -81,6 +106,11 @@ html, body {
 .segmented button:disabled { opacity: 0.35; cursor: not-allowed; }
 
 input[type="range"] { width: 100%; accent-color: var(--accent); }
+
+/* Shared by the panel and the inventories toggle: one glyph, flipped, so the
+   two states cannot drift apart. `up` marks the collapsed one. */
+.chevron { display: flex; transition: transform 0.15s ease; }
+.chevron.up { transform: rotate(180deg); }
 
 #panel hr {
   height: 0;
@@ -287,12 +317,6 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
   cursor: pointer;
 }
 #inventories-toggle:hover { color: var(--text); }
-/* One glyph, flipped, so the two states cannot drift apart. */
-#inventories-toggle .chevron {
-  display: flex;
-  transition: transform 0.15s ease;
-}
-#inventories-toggle .chevron.up { transform: rotate(180deg); }
 
 .maplibregl-popup-content hr {
   height: 0;

@@ -18,7 +18,29 @@ import { grid, loadInventories } from "./overlays.js";
 import { loadRasters, manifestBounds } from "./rasters.js";
 import { creditButton, el } from "./ui.js";
 
+/* The panel covers most of a phone screen, so on a narrow viewport it opens
+ * collapsed to its title bar and the reader taps to open it. Wide viewports open
+ * as before. Crossing the breakpoint — a rotation, usually — re-applies the
+ * default for the new width rather than carrying over a choice made for a
+ * different screen. The query matches the one in style.css. */
+const NARROW_VIEWPORT = window.matchMedia("(max-width: 640px)");
+
+function setPanelOpen(open) {
+  el("panel-body").hidden = !open;
+  const toggle = el("panel-toggle");
+  toggle.setAttribute("aria-expanded", String(open));
+  const action = open ? "Hide the controls" : "Show the controls";
+  toggle.title = action;
+  toggle.setAttribute("aria-label", action);
+  // `up` marks the collapsed state, as it does on the inventories toggle.
+  toggle.querySelector(".chevron").classList.toggle("up", !open);
+}
+
 function initControls() {
+  el("panel-toggle").addEventListener("click", () => setPanelOpen(el("panel-body").hidden));
+  NARROW_VIEWPORT.addEventListener("change", (event) => setPanelOpen(!event.matches));
+  setPanelOpen(!NARROW_VIEWPORT.matches);
+
   el("hillshade-row").append(creditButton(TERRAIN_CREDIT.title, TERRAIN_CREDIT));
   el("hillshade").addEventListener("change", (event) => {
     el("hillshade-strength-row").hidden = !event.target.checked;
