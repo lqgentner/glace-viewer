@@ -5,6 +5,10 @@
   --text: #e6eaf2;
   --muted: #8b95a8;
   --accent: #4da3ff;
+  /* The same blue, darkened for text on a white fill. --accent on white is
+     2.6:1, which fails AA at any size; this is 4.7:1 and still reads as the
+     accent beside it. */
+  --accent-ink: #1f74d0;
 }
 
 * { box-sizing: border-box; }
@@ -19,20 +23,112 @@ html, body {
 
 #map { position: absolute; inset: 0; }
 
-#panel {
+/* Frosted glass, following joshwcomeau.com/css/backdrop-filter: a translucent
+   tint sitting on a blurred copy of whatever the panel covers. Blurring drains
+   saturation and lifts brightness, so `saturate` puts the colour back and
+   `brightness` darkens the result again — without that, a snow-bright composite
+   passing under the panel washes out the muted field labels. Those values are
+   the only knobs, and they are custom properties so a variant can retune the
+   glass without restating the rule. */
+#panel-shell {
+  --glass-blur: 16px;
+  --glass-saturate: 150%;
+  --glass-brightness: 72%;
+  --glass-alpha: 0.62;
+  /* How far the pane below overhangs the panel. A Gaussian blur pulls in
+     detail from well beyond its radius, so one radius of overhang still leaves
+     the outermost pixels short of neighbours; two covers it. */
+  --glass-reach: calc(var(--glass-blur) * 2);
+
   position: absolute;
   top: 12px;
   left: 12px;
   width: 292px;
   max-height: calc(100% - 24px);
+  /* A column, so the panel can be capped by the shell's max-height and scroll
+     inside it rather than growing past the bottom of the map. */
+  display: flex;
+  flex-direction: column;
+  border-radius: 10px;
+  /* Cuts the pane's overhang back to the panel's own outline. */
+  overflow: hidden;
+  /* The shadow belongs out here: on the panel it would fall inside the clip
+     above and never be drawn. */
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+  z-index: 2;
+}
+
+/* `backdrop-filter` samples only the pixels directly behind the element it is
+   set on. On a panel-sized box that leaves the blur with nothing past its own
+   edge to mix in, so the glass stops answering to whatever it is sitting next
+   to — a label or a bright tongue of ice just outside never reaches it. This is
+   the article's fix, with a clip in place of its mask: the filter runs on a box
+   that overhangs the panel on every side, and the shell above crops the
+   overhang away.
+
+   A sibling rather than a child of the panel, because the panel scrolls: an
+   absolutely positioned child of a scroll container travels with the content,
+   and the pane would slide out from under the controls it backs. */
+#panel-glass {
+  position: absolute;
+  inset: calc(-1 * var(--glass-reach));
+  pointer-events: none;
+}
+
+#panel {
+  /* Positioned, so it paints over the pane behind it: within one stacking
+     context every positioned element outranks its unpositioned siblings, and
+     an unpositioned panel would sit *under* the glass and be blurred by it. */
+  position: relative;
+  /* min-height lets the flex item shrink past its content, which is what makes
+     the overflow below scroll instead of the shell simply growing. */
+  min-height: 0;
   overflow-y: auto;
   padding: 16px;
   border: 1px solid var(--border);
   border-radius: 10px;
+  /* Near-opaque, for the browsers that skip the @supports block below: at the
+     glass alpha alone the map would read straight through an unblurred panel. */
   background: var(--panel);
-  backdrop-filter: blur(8px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
-  z-index: 2;
+
+  /* The platform scrollbar is an opaque grey slab against a pane of glass. The
+     two standard properties below are the whole fix on anything current —
+     Firefox 64+, Chrome 121+, Safari 18.2+ — and they leave the scrollbar a
+     real scrollbar: the OS keeps its sizing, its click-and-drag and its
+     reduced-motion behaviour, which a div-and-JS reimplementation gives up.
+     `thin` and a transparent track reduce it to a translucent thumb. */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.28) transparent;
+}
+
+/* The same thing for WebKit before 18.2, which ignores the pair above. Chrome
+   drops these the moment `scrollbar-color` is understood, so the two never
+   both apply. The transparent border plus content-box clip is what insets the
+   thumb from the panel edge — a margin is not available here. */
+#panel::-webkit-scrollbar { width: 10px; }
+#panel::-webkit-scrollbar-track { background: transparent; }
+#panel::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.28);
+  background-clip: content-box;
+  border: 3px solid transparent;
+  border-radius: 5px;
+}
+#panel::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.45); background-clip: content-box; }
+
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  #panel-glass {
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
+      brightness(var(--glass-brightness));
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
+      brightness(var(--glass-brightness));
+  }
+  #panel {
+    background: hsl(222 31% 10% / var(--glass-alpha));
+    /* A light rim rather than the flat --border: on glass the outline reads as
+       the lit edge of the pane, and the inset line is its top bevel. */
+    border-color: rgba(255, 255, 255, 0.14);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09);
+  }
 }
 
 /* The title bar stays put and everything else collapses under it, so the
@@ -107,27 +203,47 @@ html, body {
   color: var(--text);
 }
 
+/* The buttons sit on the glass rather than being glass themselves: a second
+   backdrop-filter inside the first only re-blurs an already-blurred surface,
+   and the result is muddier than a flat wash for twice the compositing. Both
+   states are mixed from white, so they hold against whatever the panel covers
+   instead of against one assumed backdrop colour. */
 .segmented { display: flex; gap: 4px; }
 .segmented button {
   flex: 1;
   padding: 6px 4px;
   font: inherit;
   font-size: 12px;
-  color: var(--muted);
-  background: #171d29;
-  border: 1px solid var(--border);
+  color: #fff;
+  background: rgba(255, 255, 255, 0.13);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 6px;
   cursor: pointer;
+  transition:
+    color 0.14s ease,
+    background-color 0.14s ease,
+    border-color 0.14s ease;
 }
-.segmented button:hover:not(:disabled) { color: var(--text); border-color: #3c485c; }
+/* The hover lift has to exclude the selected button: it is more specific than
+   the [aria-checked] rule below and would otherwise grey out the white one. */
+.segmented button:hover:not(:disabled):not([aria-checked="true"]) {
+  background: rgba(255, 255, 255, 0.24);
+  border-color: rgba(255, 255, 255, 0.3);
+}
 .segmented button[aria-checked="true"] {
-  color: #fff;
-  background: var(--accent);
-  border-color: var(--accent);
+  font-weight: 600;
+  color: var(--accent-ink);
+  background: #fff;
+  border-color: #fff;
 }
 .segmented button:disabled { opacity: 0.35; cursor: not-allowed; }
 
-input[type="range"] { width: 100%; accent-color: var(--accent); }
+/* White rather than the accent: the accent marks the selected segment, and a
+   filled track in the same colour reads as a second selection. The handle turns
+   white along with it — `accent-color` paints the whole control from a single
+   value, and splitting the two means drawing the track by hand in both
+   engines, which is more machinery than the difference is worth. */
+input[type="range"] { width: 100%; accent-color: #fff; }
 
 /* Shared by the panel and the inventories toggle: one glyph, flipped, so the
    two states cannot drift apart. `up` marks the collapsed one. */
@@ -225,7 +341,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .maplibregl-ctrl-attrib { font-size: 10px; }
 
 @media (max-width: 640px) {
-  #panel {
+  #panel-shell {
     /* Stops clear of the map controls instead of running the full width: a
        MapLibre control group is 29px wide inside a 10px margin, so a panel
        reaching the right edge sits on top of the zoom buttons. */
