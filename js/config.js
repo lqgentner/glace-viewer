@@ -30,7 +30,7 @@ const DEFAULTS = {
   /* Protomaps' free daily basemap build, mirrored on Source Cooperative.
    * Serves CORS `*` and honours range requests, so it can be read cross-origin. */
   basemapUrl: "https://data.source.coop/protomaps/openstreetmap/v4.pmtiles",
-  basemapFlavor: "grayscale",
+  basemapFlavor: "dark",
   basemapAssets: "https://protomaps.github.io/basemaps-assets",
 
   /* Mapterhorn global terrain, terrarium-encoded, 512 px WEBP tiles. */

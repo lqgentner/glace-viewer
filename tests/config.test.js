@@ -23,7 +23,7 @@ test("built-in defaults", async () => {
   assert.equal(config.INVENTORY_INDEX_URL, "data/inventories.json");
   assert.equal(config.GRID_ARCHIVE_URL, "tiles/tile-grid.pmtiles");
   assert.equal(config.GRID_SOURCE_LAYER, "grid");
-  assert.equal(config.BASEMAP_FLAVOR, "grayscale");
+  assert.equal(config.BASEMAP_FLAVOR, "dark");
   assert.deepEqual(config.INITIAL_VIEW, { center: [10.4, 46.5], zoom: 6.2, maxZoom: 14 });
 });
 
