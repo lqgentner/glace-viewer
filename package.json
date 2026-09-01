@@ -2,7 +2,11 @@
   "name": "glace-viewer",
   "version": "0.0.0",
   "private": true,
-  "description": "Development-only tooling for the GLACE viewer. The page itself has no build step and no runtime dependencies: index.html loads the modules under js/ directly, and nothing here is ever published.",
+  "description": "Interactive web map viewer for GLACE – Sentinel-1 coherence and backscatter composites of the European Alps.",
+  "author": {
+    "name": "Luis Gentner",
+    "email": "luis.gentner@geo.uzh.ch"
+  },
   "type": "module",
   "license": "MIT",
   "scripts": {
