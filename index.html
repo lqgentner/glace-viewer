@@ -55,6 +55,14 @@
               <div id="year-ticks" class="ticks"></div>
             </section>
 
+            <!-- Which archive the layer on screen is read from. Hidden unless
+                 the manifest offers both, since one source is not a choice —
+                 see js/rasters.js. -->
+            <section class="control" id="source-row" hidden>
+              <label for="source">Tile source</label>
+              <div id="source" class="segmented" role="radiogroup" aria-label="Tile source"></div>
+            </section>
+
             <section class="control">
               <label for="opacity">Layer opacity <output id="opacity-value">100%</output></label>
               <input type="range" id="opacity" min="0" max="100" value="100" step="1" />
@@ -69,6 +77,10 @@
               </div>
               <div id="legend-bar"></div>
               <div id="legend-labels"><span id="legend-min"></span><span id="legend-max"></span></div>
+              <!-- A false-colour layer has no ramp: three channels, each carrying
+                   a different measurement. Filled by js/rasters.js, which hides
+                   the bar and its labels whenever it fills this. -->
+              <div id="legend-channels" hidden></div>
             </section>
 
             <!-- What the selected layer is. Sits under the ramp rather than in a
@@ -97,8 +109,8 @@
           <hr id="inventories-rule" />
 
           <section class="control" id="extras-section">
-            <!-- Same reasoning as the inventories above: everything in here is off
-                 by default (bar the basemap labels) and nobody needs it on arrival. -->
+            <!-- Same reasoning as the inventories above: the optional layers are
+                 off on arrival; the vector basemap and its labels are the defaults. -->
             <button type="button" id="extras-toggle" aria-expanded="false" aria-controls="extras">
               <span>Map options</span><span class="chevron up" aria-hidden="true"
                     ><svg viewBox="0 0 12 12" width="12" height="12" fill="none"
@@ -138,6 +150,29 @@
     </div>
 
     <div id="status" hidden></div>
+
+    <!-- `lerc` is resolved to the package's own file rather than through the CDN
+         that builds the COG reader around it.
+         lerc's emscripten loader picks its environment with
+         `globalThis.process?.versions?.node && process.type != "renderer"`, and
+         esm.sh *rewrites* that `globalThis.process` to its own Node polyfill,
+         which answers `versions.node` unconditionally. Served that way lerc
+         decides it is running under Node, reaches for `createRequire`, and
+         every LERC decode rejects. jsDelivr serves the file untouched, where
+         `globalThis.process` is genuinely undefined in a browser, and the wasm
+         sits beside it for `new URL("lerc-wasm.wasm", import.meta.url)`.
+         An import map has to be parsed before the first module loads, so this
+         cannot move below js/app.js. It pairs with `?external=lerc` on
+         cogReaderUrl in js/config.js, and its version has to match `lercUrl`
+         there, which is how the decode worker resolves the same dependency —
+         workers do not inherit import maps. Change the three together. -->
+    <script type="importmap">
+      {
+        "imports": {
+          "lerc": "https://cdn.jsdelivr.net/npm/lerc@4.2.0/LercDecode.es.js"
+        }
+      }
+    </script>
 
     <script src="https://unpkg.com/maplibre-gl@5.9.0/dist/maplibre-gl.js"></script>
     <script src="https://unpkg.com/pmtiles@4.4.0/dist/pmtiles.js"></script>

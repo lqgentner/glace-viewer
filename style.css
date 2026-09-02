@@ -344,6 +344,14 @@ input[type="range"] { width: 100%; accent-color: #fff; }
   font-variant-numeric: tabular-nums;
 }
 
+/* The page hides things by setting `hidden` from JS, and several of them carry
+   an id-level `display` rule — #legend-labels is flex, #legend-channels is
+   grid. An id selector outranks the user-agent's `[hidden] { display: none }`,
+   so without this those elements stay on screen with the attribute set and no
+   sign anything is wrong. It is invisible to the tests too, which can only see
+   the property. */
+[hidden] { display: none !important; }
+
 #legend-bar {
   height: 10px;
   border-radius: 3px;
@@ -356,6 +364,27 @@ input[type="range"] { width: 100%; accent-color: #fff; }
   font-size: 11px;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
+}
+
+/* The false-colour legend: one row per channel, the swatch in the channel's own
+ * colour because that is exactly what the row is naming. */
+#legend-channels {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  gap: 2px 7px;
+  align-items: center;
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+#legend-channels .swatch {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+}
+#legend-channels .band {
+  color: var(--text);
 }
 
 /* Sits under the colour ramp, one fact per line. Tabular figures so the date

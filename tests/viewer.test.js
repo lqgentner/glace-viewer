@@ -27,7 +27,12 @@ const glaceLayers = (map) => [...map.layers.keys()].filter((id) => id.startsWith
 const visible = (map, id) => map.getLayer(id)?.layout?.visibility === "visible";
 
 test("the viewer", async (t) => {
-  const page = installBrowser({ files: MANIFESTS });
+  const page = installBrowser({
+    files: MANIFESTS,
+    // The tile grid imports its parquet reader; this is the same seam a
+    // deployment would use to pin a different CDN. See tile-grid.test.js.
+    site: { hyparquetUrl: new URL("./fixtures/fake-hyparquet.mjs", import.meta.url).href },
+  });
   const { el, change, input } = page;
 
   await load("js/app.js");
@@ -95,8 +100,8 @@ test("the viewer", async (t) => {
 
   await t.test("only the selected raster is created", async () => {
     // The head of each axis decides product and polarization; newest year wins.
-    assert.deepEqual(glaceLayers(map), ["glace-coh12_vv_2023"]);
-    assert.ok(visible(map, "glace-coh12_vv_2023"));
+    assert.deepEqual(glaceLayers(map), ["glace-pmtiles-coh12_vv_2023"]);
+    assert.ok(visible(map, "glace-pmtiles-coh12_vv_2023"));
     assert.equal(el("year-value").textContent, "2023");
   });
 
@@ -185,7 +190,7 @@ test("the viewer", async (t) => {
     assert.equal(map.getLayer("earth").layout.visibility, "none");
     assert.equal(map.getLayer("water").layout.visibility, "none");
     assert.equal(map.getLayer("places").layout.visibility, "none", "the label toggle still wins");
-    assert.ok(map.indexOf("world-imagery") < map.indexOf("glace-coh12_vv_2023"));
+    assert.ok(map.indexOf("world-imagery") < map.indexOf("glace-pmtiles-coh12_vv_2023"));
 
     change(el("basemap"), true);
     await settle();
@@ -204,11 +209,11 @@ test("the viewer", async (t) => {
     // for — Copernicus only with GLACE on screen, Mapterhorn with the hillshade
     // or 3D — are the strings being on the right sources.
     assert.match(
-      map.getSource("glace-coh12_vv_2023").attribution,
+      map.getSource("glace-pmtiles-coh12_vv_2023").attribution,
       /Contains modified Copernicus Sentinel data 2023/,
       "the year credited is the year on screen",
     );
-    assert.match(map.getSource("glace-coh12_vv_2023").attribution, /copernicus\.eu/);
+    assert.match(map.getSource("glace-pmtiles-coh12_vv_2023").attribution, /copernicus\.eu/);
     assert.match(map.getSource("terrain").attribution, /Mapterhorn/);
 
     // These three ride in one string so the length sort cannot scatter them.
@@ -222,7 +227,7 @@ test("the viewer", async (t) => {
   });
 
   await t.test("data draws under the hillshade, and both under the labels", async () => {
-    assert.ok(map.indexOf("glace-coh12_vv_2023") < map.indexOf("hillshade"));
+    assert.ok(map.indexOf("glace-pmtiles-coh12_vv_2023") < map.indexOf("hillshade"));
     assert.ok(map.indexOf("hillshade") < map.indexOf("places"));
     // The grid was ticked before the style loaded, so it was created before the
     // hillshade; it still has to end up above it and below the labels.
@@ -243,20 +248,20 @@ test("the viewer", async (t) => {
 
     const added = glaceLayers(map);
     assert.equal(added.length, 2, "the previous layer is kept for instant scrubbing");
-    assert.deepEqual(added.filter((id) => visible(map, id)), ["glace-rtc_vv_2023"]);
+    assert.deepEqual(added.filter((id) => visible(map, id)), ["glace-pmtiles-rtc_vv_2023"]);
   });
 
   await t.test("opacity applies to the visible raster", async () => {
     input(el("opacity"), "40");
     await settle();
-    assert.equal(map.getLayer("glace-rtc_vv_2023").paint["raster-opacity"], 0.4);
+    assert.equal(map.getLayer("glace-pmtiles-rtc_vv_2023").paint["raster-opacity"], 0.4);
     assert.equal(el("opacity-value").textContent, "40%");
   });
 
   await t.test("a new layer inherits the current opacity", async () => {
     el("pol").querySelector('[data-value="VH"]').click();
     await settle();
-    assert.equal(map.getLayer("glace-rtc_vh_2023").paint["raster-opacity"], 0.4);
+    assert.equal(map.getLayer("glace-pmtiles-rtc_vh_2023").paint["raster-opacity"], 0.4);
   });
 
   await t.test("a year with no archive for this combination is reported", async () => {
@@ -281,7 +286,7 @@ test("the viewer", async (t) => {
 
     button("product", "COH12").click();
     await settle();
-    assert.deepEqual(glaceLayers(map).filter((id) => visible(map, id)), ["glace-coh12_vh_2022"]);
+    assert.deepEqual(glaceLayers(map).filter((id) => visible(map, id)), ["glace-pmtiles-coh12_vh_2022"]);
     assert.equal(el("status").hidden, true, "the message clears once a layer exists again");
   });
 

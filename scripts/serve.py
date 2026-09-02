@@ -5,17 +5,19 @@ client cannot use: it fetches the header, the directory and each tile as byte
 ranges. This server adds ``Range`` handling and, given ``--tiles-dir``, mounts a
 local copy of the GLACE archives under ``/tiles``.
 
-The archives normally live on object storage, so the usual way to preview is to
-point the page at them instead:
+The GLACE archives live on object storage and ``site-config.js`` points the page
+there, so the plain command already shows them and ``--tiles-dir`` is only for
+reading a local build instead:
 
-    python scripts/serve.py
-    # -> http://127.0.0.1:8000/?tiles=https://data.source.coop/.../glace
+    uv run --locked python scripts/serve.py
+    # -> http://127.0.0.1:8000/            the published store
+    # -> http://127.0.0.1:8000/?tiles=tiles   whatever is mounted under /tiles
 
 Run ``scripts/build-tiles.py`` first: the inventory archives are build outputs
 and are not committed.
 
 Usage:
-    python scripts/serve.py [--tiles-dir DIR]
+    uv run --locked python scripts/serve.py [--tiles-dir DIR]
 """
 
 from __future__ import annotations

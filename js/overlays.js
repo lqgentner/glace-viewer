@@ -1,21 +1,18 @@
 /*
  * Vector overlays: the glacier inventories and the catalog tile grid.
  *
- * Both are vector PMTiles archives read by range request, and both share one
- * lifecycle — nothing is created until the box is first ticked, the archive
- * then streams itself, and a failure rolls the layers back so re-ticking is a
- * fresh attempt rather than a no-op. `LazyOverlay` is that lifecycle; the
- * inventories and the grid only differ in which layers they add and what they
- * say when they cannot be reached.
+ * Both are read by range request from object storage — the inventories as
+ * vector PMTiles, the grid out of the store's stac-geoparquet item index — and
+ * both share one lifecycle: nothing is created until the box is first ticked,
+ * and a failure rolls the layers back so re-ticking is a fresh attempt rather
+ * than a no-op. `LazyOverlay` is that lifecycle; the two differ in which layers
+ * they add, what they say when they cannot be reached, and whether they hand
+ * MapLibre a source that loads itself or one this page has already read.
  */
 
-import {
-  GRID_ARCHIVE_URL,
-  GRID_SOURCE_LAYER,
-  INVENTORY_BASE,
-  INVENTORY_INDEX_URL,
-} from "./config.js";
+import { GRID_INDEX_URL, INVENTORY_BASE, INVENTORY_INDEX_URL } from "./config.js";
 import { addStacked, map, styleReady } from "./map.js";
+import { loadTileGrid } from "./tile-grid.js";
 import { clearStatus, collapsible, creditButton, el, h, setStatus } from "./ui.js";
 
 /* ---------- the shared lazy-source lifecycle ---------- */
@@ -50,9 +47,26 @@ class LazyOverlay {
     }
     if (!on) return;
     setStatus(this.sourceId, `Loading ${this.label}…`);
-    this.add();
+    /* `add` may be asynchronous — the grid reads and parses its index before it
+     * has anything to give MapLibre, where an archive-backed overlay hands over
+     * a URL and lets the source load itself. Both failure paths land in the
+     * same place: roll back, untick, and say so. */
+    try {
+      await this.add();
+    } catch (error) {
+      this.fail(error);
+      return;
+    }
     this.loaded = true;
     this.watch();
+  }
+
+  /* Roll back, so re-ticking the box is a fresh attempt rather than a no-op. */
+  fail(error) {
+    this.remove();
+    const box = this.checkbox();
+    if (box) box.checked = false;
+    setStatus(this.sourceId, this.failure(error), "error");
   }
 
   remove() {
@@ -79,11 +93,7 @@ class LazyOverlay {
     const onError = (event) => {
       if (event.sourceId !== this.sourceId) return;
       stop();
-      // Roll back, so re-ticking the box is a fresh attempt rather than a no-op.
-      this.remove();
-      const box = this.checkbox();
-      if (box) box.checked = false;
-      setStatus(this.sourceId, this.failure(event.error), "error");
+      this.fail(event.error);
     };
     map.on("sourcedata", onData);
     map.on("error", onError);
@@ -208,17 +218,17 @@ export const grid = new LazyOverlay({
   layerIds: [GRID_LAYER, "grid-line"],
   label: "tile grid",
   checkbox: () => el("grid"),
-  failure: () => "Tile grid unavailable — rerun the build with --items-parquet",
-  add() {
-    /* Built only to z10 — the footprints are 110 km squares, and MapLibre
-     * overzooms a vector source past its maximum for hit-testing as well as for
-     * drawing. */
-    map.addSource(this.sourceId, { type: "vector", url: `pmtiles://${GRID_ARCHIVE_URL}` });
+  failure: (error) =>
+    `Tile grid unavailable — ${GRID_INDEX_URL}${error?.message ? ` (${error.message})` : ""}`,
+  async add() {
+    /* GeoJSON rather than a tiled source: this is 143 footprints over
+     * Switzerland and ~2 200 over the Alps, which is a small enough document to
+     * hand over whole, and it arrives already parsed. */
+    map.addSource(this.sourceId, { type: "geojson", data: await loadTileGrid() });
     addStacked("overlay", {
       id: GRID_LAYER,
       type: "fill",
       source: this.sourceId,
-      "source-layer": GRID_SOURCE_LAYER,
       paint: {
         // Shade each MGRS tile by how much of it the inventory calls glacier.
         // White rather than the panel's blue: the data ramps run through blue at
@@ -237,7 +247,6 @@ export const grid = new LazyOverlay({
       id: "grid-line",
       type: "line",
       source: this.sourceId,
-      "source-layer": GRID_SOURCE_LAYER,
       paint: { "line-color": "#ffffff", "line-width": 0.6, "line-opacity": 0.7 },
     });
   },
@@ -307,6 +316,9 @@ function gridRow(feature) {
     ["Tile identifier", props.tile],
     ["UTM zone", utmZone(props.tile)],
     ["Glacier fraction", percent(props.glacier_fraction)],
+    // What the sampler actually weights on, so it is worth showing beside the
+    // plain fraction rather than only in the catalogue.
+    ["Glacier fraction, 250 m buffer", percent(props.glacier_fraction_buffered)],
   ]);
 }
 

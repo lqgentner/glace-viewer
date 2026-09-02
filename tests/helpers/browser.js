@@ -260,6 +260,27 @@ export function installBrowser({ search = "", site, files = {}, pitch = 0, narro
     },
   };
   globalThis.pmtiles = { Protocol: class { tile() {} } };
+  /* Enough of the canvas for js/cog-rgb.js to turn its RGBA into tile bytes.
+   * The real one encodes a PNG; this hands the raw pixels straight back, which
+   * is both simpler and more useful — a test can assert on a channel value
+   * instead of decoding an image to find it. */
+  globalThis.ImageData = class {
+    constructor(data, width, height) {
+      Object.assign(this, { data, width, height });
+    }
+  };
+  globalThis.OffscreenCanvas = class {
+    constructor(width, height) {
+      Object.assign(this, { width, height });
+    }
+    getContext() {
+      return { putImageData: (image) => { this.image = image; } };
+    }
+    async convertToBlob() {
+      const { image } = this;
+      return { arrayBuffer: async () => image.data.buffer };
+    }
+  };
   globalThis.basemaps = {
     namedFlavor: () => ({}),
     layers: () => structuredClone(BASEMAP_LAYERS),

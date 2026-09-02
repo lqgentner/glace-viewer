@@ -1,0 +1,209 @@
+{
+  "title": "Fixture — the same layers published twice, and one published once",
+  "generated": "2026-01-01T00:00:00+00:00",
+  "years": [
+    2022,
+    2023
+  ],
+  "products": [
+    "COH12",
+    "RTC"
+  ],
+  "polarizations": [
+    "VV",
+    "VH"
+  ],
+  "layers": [
+    {
+      "id": "coh12_vv_2022",
+      "product": "COH12",
+      "polarization": "VV",
+      "year": 2022,
+      "url": "coh12_vv_2022.pmtiles",
+      "cog": "coh12_vv_2022.tif",
+      "bounds": [
+        5.0,
+        44.0,
+        12.0,
+        48.0
+      ],
+      "min_zoom": 5,
+      "max_zoom": 12,
+      "cmap": "cmc.lipari",
+      "vmin": 0.1,
+      "vmax": 0.8,
+      "units": "",
+      "size_bytes": 12345678,
+      "colors": [
+        "#031326",
+        "#525b7a",
+        "#a56267",
+        "#e7c49a",
+        "#fdf5da"
+      ]
+    },
+    {
+      "id": "coh12_vh_2022",
+      "product": "COH12",
+      "polarization": "VH",
+      "year": 2022,
+      "url": "coh12_vh_2022.pmtiles",
+      "bounds": [
+        5.0,
+        44.0,
+        12.0,
+        48.0
+      ],
+      "min_zoom": 5,
+      "max_zoom": 12,
+      "cmap": "cmc.lipari",
+      "vmin": 0.1,
+      "vmax": 0.8,
+      "units": "",
+      "size_bytes": 12345678,
+      "colors": [
+        "#031326",
+        "#525b7a",
+        "#a56267",
+        "#e7c49a",
+        "#fdf5da"
+      ]
+    },
+    {
+      "id": "rtc_vv_2022",
+      "product": "RTC",
+      "polarization": "VV",
+      "year": 2022,
+      "url": "rtc_vv_2022.pmtiles",
+      "bounds": [
+        5.0,
+        44.0,
+        12.0,
+        48.0
+      ],
+      "min_zoom": 5,
+      "max_zoom": 12,
+      "cmap": "cmc.navia",
+      "vmin": -18.5,
+      "vmax": -5.0,
+      "units": "dB",
+      "size_bytes": 12345678,
+      "colors": [
+        "#031326",
+        "#525b7a",
+        "#a56267",
+        "#e7c49a",
+        "#fdf5da"
+      ]
+    },
+    {
+      "id": "coh12_vv_2023",
+      "product": "COH12",
+      "polarization": "VV",
+      "year": 2023,
+      "url": "coh12_vv_2023.pmtiles",
+      "cog": "coh12_vv_2023.tif",
+      "bounds": [
+        4.5,
+        43.5,
+        12.5,
+        48.5
+      ],
+      "min_zoom": 5,
+      "max_zoom": 12,
+      "cmap": "cmc.lipari",
+      "vmin": 0.1,
+      "vmax": 0.8,
+      "units": "",
+      "size_bytes": 12345678,
+      "colors": [
+        "#031326",
+        "#525b7a",
+        "#a56267",
+        "#e7c49a",
+        "#fdf5da"
+      ]
+    },
+    {
+      "id": "coh12_vh_2023",
+      "product": "COH12",
+      "polarization": "VH",
+      "year": 2023,
+      "url": "coh12_vh_2023.pmtiles",
+      "bounds": [
+        4.5,
+        43.5,
+        12.5,
+        48.5
+      ],
+      "min_zoom": 5,
+      "max_zoom": 12,
+      "cmap": "cmc.lipari",
+      "vmin": 0.1,
+      "vmax": 0.8,
+      "units": "",
+      "size_bytes": 12345678,
+      "colors": [
+        "#031326",
+        "#525b7a",
+        "#a56267",
+        "#e7c49a",
+        "#fdf5da"
+      ]
+    },
+    {
+      "id": "rtc_vv_2023",
+      "product": "RTC",
+      "polarization": "VV",
+      "year": 2023,
+      "url": "rtc_vv_2023.pmtiles",
+      "bounds": [
+        4.5,
+        43.5,
+        12.5,
+        48.5
+      ],
+      "min_zoom": 5,
+      "max_zoom": 12,
+      "cmap": "cmc.navia",
+      "vmin": -18.5,
+      "vmax": -5.0,
+      "units": "dB",
+      "size_bytes": 12345678,
+      "colors": [
+        "#031326",
+        "#525b7a",
+        "#a56267",
+        "#e7c49a",
+        "#fdf5da"
+      ]
+    },
+    {
+      "id": "rtc_vh_2023",
+      "product": "RTC",
+      "polarization": "VH",
+      "year": 2023,
+      "url": "rtc_vh_2023.pmtiles",
+      "bounds": [
+        4.5,
+        43.5,
+        12.5,
+        48.5
+      ],
+      "min_zoom": 5,
+      "max_zoom": 12,
+      "cmap": "cmc.navia",
+      "vmin": -18.5,
+      "vmax": -5.0,
+      "units": "dB",
+      "size_bytes": 12345678,
+      "colors": [
+        "#031326",
+        "#525b7a",
+        "#a56267",
+        "#e7c49a",
+        "#fdf5da"
+      ]
+    }
+  ]
+}

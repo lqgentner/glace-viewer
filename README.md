@@ -12,7 +12,7 @@ is plain HTML/CSS/JS with no build step or framework.
 
 | | source |
 | --- | --- |
-| GLACE rasters | object storage, via `?tiles=<base-url>` (default `./tiles`) |
+| GLACE rasters | the [`glace-ch` store](https://source.coop/lqgentner/glace-ch) on Source Cooperative, repointable with `?tiles=<base-url>` |
 | Basemap | Protomaps vector tiles from [Source Cooperative](https://source.coop/), or Esri World Imagery |
 | Terrain | Mapterhorn global DEM, terrarium-encoded, from their `{z}/{x}/{y}` endpoint |
 | Glacier inventories | built from `data/*.geojson` in this repo |
@@ -23,11 +23,14 @@ page and its overlays.
 
 ## Preview locally
 
-The inventory archives are build outputs, so build them first:
+Python tooling is managed by [uv](https://docs.astral.sh/uv/). The repository
+pins both uv and Python and commits `uv.lock`; `--locked` makes every command
+fail rather than silently changing that environment. The inventory archives are
+build outputs, so build them first:
 
 ```bash
-python scripts/build-tiles.py          # data/*.geojson -> data/*.pmtiles
-python scripts/serve.py                # -> http://127.0.0.1:8000/
+uv run --locked python scripts/build-tiles.py  # data/*.geojson -> data/*.pmtiles
+uv run --locked python scripts/serve.py        # -> http://127.0.0.1:8000/
 ```
 
 `build-tiles.py` needs tippecanoe on `PATH`, or `--tippecanoe /path/to/binary`.
@@ -38,39 +41,89 @@ which is why `serve.py` exists. It also sets caching per file type: the page
 shell is sent `no-store`, since a stale `js/app.js` leaves the page silently
 rendering the previous version, while the archives are cached normally.
 
-To see the GLACE rasters, `serve.py` mounts `./tiles` under `/tiles`. Until the
-archives are published, point that at a local build in deep-glacier-mapping:
+The page reads the published store by default, so `http://127.0.0.1:8000/` shows
+the real archives with nothing mounted locally — see [The published
+store](#the-published-store).
+
+To read a local build instead, `serve.py` mounts `./tiles` under `/tiles` and
+`?tiles=` repoints the page at it:
 
 ```bash
 ln -s ../deep-glacier-mapping/cache/stac-dataloader/pmtiles tiles
+# -> http://127.0.0.1:8000/?tiles=tiles
 ```
 
 `tiles` is gitignored (no trailing slash in the pattern — git sees a symlink as a
-file, so `tiles/` would not match it). Once the archives are on object storage,
-skip the symlink and point the page at them instead:
+file, so `tiles/` would not match it).
+
+Any bucket the page is pointed at has to allow anonymous reads **and** send CORS
+headers with `ExposeHeaders` for `Content-Range`, `Content-Length`,
+`Accept-Ranges` and `ETag`. Without those the browser fetches the bytes but
+refuses to let the PMTiles client read the range metadata, which fails looking
+like a corrupt archive rather than a permissions problem. The COG source reads
+the same way, so the same rule covers both, and Source Cooperative serves both.
+
+`--tiles-dir` mounts any directory that holds a `layers.json`, which is how the
+COG comparison below is looked at:
+
+```bash
+uv run --locked python scripts/serve.py --tiles-dir \
+    ../deep-glacier-mapping/cache/stac-store-refactor/cog-study
+```
+
+## The published store
+
+The archives live in [`lqgentner/glace-ch`](https://source.coop/lqgentner/glace-ch)
+on Source Cooperative, and `site-config.js` points the page there. It is the
+**Switzerland-only rehearsal build** — the full store's layout and machinery over
+one scope, published to exercise both before the Alps dataset arrives. What
+changes when that lands is the extent and the number of years, not the layout or
+the manifest.
 
 ```
-http://127.0.0.1:8000/?tiles=https://data.source.coop/<org>/glace
+{root}/
+├── layers.json                     # the only file this page reads
+├── catalog.json                    # STAC root: a tiles and a mosaics collection
+└── 2024/
+    ├── mosaics/coh12_vv.tif        # float32 LERC_ZSTD COG, WebMercatorQuad z13
+    └── pmtiles/coh12_vv.pmtiles    # pre-styled RGBA, z5-z13
 ```
 
-That needs the bucket to allow anonymous reads **and** to send CORS headers with
-`ExposeHeaders` for `Content-Range`, `Content-Length`, `Accept-Ranges` and
-`ETag`. Without those the browser fetches the bytes but refuses to let the
-PMTiles client read the range metadata, which fails looking like a corrupt
-archive rather than a permissions problem.
+Every layer is published twice under one stem, which is what the [Tile
+source](#tile-source-pmtiles-or-cog) control switches between. Because the COG
+grid *is* the tile grid at z13, the file's own overview levels land on z12, z11
+and below, so no level costs the browser a resampling step.
+
+**The QA diagnostics are deliberately not on the map.** The manifest's
+`polarization` axis carries seven values, not three: `VV`, `VH`, `RGB`, and the
+four QA layers (`VV_QA_NUM`, `VV_QA_CQM` and their VH pair). A polarization, a
+QA role and a channel recipe share one field, and the panel has a row for the
+first three only. `js/rasters.js` drops the rest against the `POLARIZATIONS`
+allowlist, and does it *silently* — they are correct layers this page has no
+control for, not malformed ones, so warning about each would be noise. Of the 56
+entries the store publishes, 24 reach the map.
+
+**Nothing else in the store needs a product built for it.** The false colour is
+either the archive the store published or the two mosaics it was rendered from,
+stacked in the browser ([Tile source](#tile-source-pmtiles-or-cog)); the catalog
+tile grid is read straight out of `tiles.parquet` ([The tile
+grid](#the-tile-grid)). Neither needs a sidecar this repository has to keep in
+step with the catalogue.
 
 ## Tests
 
 ```bash
-python -m unittest discover -s tests   # the two scripts
-npm install && npm test                # the page
+uv run --locked python -m unittest discover -s tests  # the two scripts
+npm ci && npm test                                    # the page
 ```
 
 `.github/workflows/test.yml` runs both on every pull request, and the deploy
 workflow calls it before staging the site — so a red suite cannot reach Pages.
-Neither suite builds anything: the Python side is stdlib only, and the JavaScript side
-needs `jsdom` and nothing else. **`node_modules` is development-only** — the
-page has no runtime dependencies and nothing is ever bundled.
+Both Python jobs install the pinned uv, select Python from `.python-version`,
+and refuse a stale `uv.lock`. Neither suite builds anything: the Python side is
+stdlib only, and the JavaScript side needs `jsdom` and nothing else.
+**`node_modules` is development-only** — the page has no runtime dependencies
+and nothing is ever bundled.
 
 | file | covers |
 | --- | --- |
@@ -80,6 +133,10 @@ page has no runtime dependencies and nothing is ever bundled.
 | `tests/manifest.test.js` | `layers.json` validation, MGRS/UTM parsing |
 | `tests/ui.test.js` | status priority and keying, escaping in the credit popover |
 | `tests/viewer.test.js` | the page end to end against a fake MapLibre |
+| `tests/cog-source.test.js` | the PMTiles/COG switch, against a manifest that offers both |
+| `tests/store-manifest.test.js` | the published store's own `layers.json`, one year of it verbatim |
+| `tests/cog-rgb.test.js` | the `glace-rgb://` protocol and the false-colour row |
+| `tests/tile-grid.test.js` | the tile grid, read from the stac-geoparquet index |
 | `tests/viewer-degraded.test.js` | the page with no reachable `layers.json` |
 
 The path and range cases are written to a socket by hand: `http.client` and
@@ -98,13 +155,19 @@ the disabled-button and no-layer-for-this-year paths reachable. The one case
 that reads the real `tiles/layers.json` skips itself when the directory is
 absent.
 
+`cog-source.test.js` has its own fixture, `layers-cog.json`, in which COH12 VV
+carries a `cog` and nothing else does — the arrangement that makes both the
+disabled COG button and the fall back to PMTiles reachable. It is a separate
+file rather than another subtest because the modules hold state at module scope
+and the map is a singleton, so a second manifest needs a second process.
+
 ## Deploy
 
 `.github/workflows/deploy.yml` publishes to GitHub Pages on every push to
 `main`. It builds tippecanoe from source (pinned by `TIPPECANOE_VERSION`, cached
-between runs), converts `data/*.geojson` to archives, and uploads only the
-archives — never the GeoJSON they came from, which would double what a visitor
-could download for nothing.
+between runs), runs the tile builder through `uv run --locked`, converts
+`data/*.geojson` to archives, and uploads only the archives — never the GeoJSON
+they came from, which would double what a visitor could download for nothing.
 
 Set **Settings -> Pages -> Source** to **GitHub Actions**, not "Deploy from a
 branch". The branch option publishes the repository as-is, which serves the
@@ -193,6 +256,9 @@ under `js/`, loaded straight by the browser.
 | `config.js` | resolves the settings below into archive locations and endpoints |
 | `map.js` | the map, layer ordering, basemap labels, hillshade, 3D terrain |
 | `rasters.js` | the `layers.json` manifest, layer selection, legend |
+| `cog-rgb.js` | the `glace-rgb://` protocol: COG layers, one archive or two |
+| `cog-worker.js` | its decoder, in a module worker |
+| `tile-grid.js` | the catalog grid, read from the store's geoparquet index |
 | `overlays.js` | glacier inventories, catalog tile grid, popups |
 | `ui.js` | status line, attribution popovers, safe DOM helpers |
 | `app.js` | control wiring and startup |
@@ -471,6 +537,426 @@ one layer's legibility matters more than comparability, and `--vmin` / `--vmax`
 override the range outright.
 
 
+### Missing tiles
+
+A raster PMTiles archive stores no tile where the image is blank, and the
+archives are sparse: their bounds are one rectangle over a sparse set of MGRS
+tiles, so a good fraction of the tiles inside that rectangle do not exist. In
+the Alps build, 12 of 36 sampled z11 tiles are absent; in the Aletsch study
+block, 5 of the 25 z11 tiles covering it.
+
+`pmtiles.Protocol` answers for those with `data: null`, and MapLibre's
+`RasterTileSource.loadTile` sets `tile.state = 'loaded'` only inside
+`if (response && response.data)` — with no else. A missing tile is therefore
+left in `loading` for ever: never drawn, never retried, and the coarser parent
+stays magnified in its place. It reads as patches near the edge of the data that
+never sharpen however far you zoom in, and it also means `map.on('idle')` can
+never fire while such a tile is on screen.
+
+`js/map.js` wraps the protocol and answers a missing raster tile with a single
+transparent pixel instead, which says what the absence means and lets MapLibre
+finish the tile. Vector archives are passed through untouched — for those the
+protocol already returns an empty buffer rather than null, so the tile grid was
+never affected. `errorOnMissingTile` does not help here: the protocol consults
+it only for vector tiles.
+
+### Tile source: PMTiles or COG
+
+A layer can be published twice: as the pre-styled RGBA PMTiles archive the build
+has always written, and as the float COG it was styled from. The panel grows a
+**Tile source** control as soon as any entry offers both. Nothing else about the
+page changes — the two answer the same product / polarization / year / opacity
+controls, draw in the same slot under the hillshade, and carry the same
+Copernicus credit.
+
+**Finding the second href.** A manifest entry may name it as a `cog` beside its
+`url`, and that always wins. The store writes no such key, so where it is absent
+the page derives one from the archive href: `{year}/pmtiles/{stem}.pmtiles`
+becomes `{year}/mosaics/{stem}.tif`, which is how the store publishes the pair.
+The pattern is anchored to the whole href rather than substituted into it, so it
+fails closed — a manifest laid out any other way yields no COG at all instead of
+a `.tif` beside an archive that was never published. That is what keeps the
+button dark for the false-colour layers, which have no COG by design, and for
+the older flat manifests, which have none at all.
+
+| | PMTiles | COG |
+| --- | --- | --- |
+| what is fetched | WEBP RGBA, ramp already applied | float32 LERC, range-read |
+| who applies the ramp | the build, once | the browser, per tile |
+| decode | native WEBP | @developmentseed/geotiff: Zstd, then LERC |
+| ramp and stretch | baked in | applied per pixel by `setColorFunction` |
+| units | converted before the bake | converted per pixel, from `units` |
+| pixel values | gone | present |
+
+The colour function is built from the same `colors`, `vmin` and `vmax` the legend
+draws, so switching source changes how a pixel gets its colour and nothing else. That
+is deliberate: it makes the switch a controlled comparison rather than two
+different pictures. It also means the stretch has become a *runtime* value on the
+COG path — nothing but a slider stands between it and an adjustable one.
+
+**LERC decodes.** This was the question the whole comparison hung on, and both
+readers tried here answer it: compression 34887 with Zstandard as its inner
+codec, which is what every mosaic in the store is written with, decodes to real
+float values in the browser.
+
+**Nodata needs handling the fragment cannot do.** geotiff.js decodes LERC but
+discards LERC's *validity mask*, so a nodata pixel arrives as a plain `0` rather
+than as NaN — measured: a tile of either study archive lying wholly outside the
+data comes back as 65 536 exact zeros. The protocol's own `#color:` renderer
+tests `Number.isNaN(px)`, which never fires, and those zeros clamp to whichever
+end of the ramp they fall outside: **white** for backscatter, where 0 dB is above
+the stretch, and **near-black** for coherence, where 0 is below it. That is the
+fringe around the edge of the data.
+
+So `js/rasters.js` colours the tile itself, through `setColorFunction`, building
+the same ramp the fragment would have carried and treating an exact zero as
+absent. That test is measured, not assumed. Checked against the PMTiles alpha —
+baked from the real validity mask at build time, so it is ground truth — over
+every tile of both study archives at z11, z12 and z13:
+
+| | pixels | exact zeros among them |
+| --- | --- | --- |
+| inside the data (168 tiles/layer) | 11 010 048 per layer | **0** |
+| blank, would show as fringe | 2.6 M per layer | 2 (0.0001 %) |
+
+No false positives at all across 22 million interior pixels, and essentially no
+fringe. The smallest non-zero magnitude anywhere is 1.2e-5 dB, so the data does
+come arbitrarily close to zero without landing on it. At the boundary the test
+blanks a seam about a pixel wide — 121–390 px on a straddling tile — and it
+never colours a pixel the mask calls blank. It errs toward erasing, not fringing.
+
+**Since re-measured against the mask itself**, rather than against the PMTiles
+alpha standing in for it. Decoding the published store's 2024 COH12 VV and
+RTC VV mosaics with `lerc` directly gives both the pixels *and* the `mask` the
+readers throw away, so the sentinel can be scored against the exact thing it
+approximates — 234 tiles, at full resolution and at the third overview:
+
+| | pixels | sentinel vs mask |
+| --- | --- | --- |
+| COH12 VV, z13 + overview 3 | 7.7 M | **0** erased, **0** missed |
+| RTC VV, z13 + overview 3 | 7.7 M | **0** erased, **0** missed |
+
+Every invalid pixel decodes to exactly `0` and never to NaN; no valid pixel is
+exactly `0`, the closest being 0.0038. Over 15.3 million pixels the sentinel is
+not an approximation of the mask — it is the same partition.
+
+**This belongs in the viewer, not in the archives.** A NaN nodata is a correct
+GeoTIFF, read properly by GDAL, rasterio and QGIS; what is broken is the browser
+decoders, and the store should not carry a redundant validity band to paper over
+it. `Lerc.decode()` *does* return the mask, as `mask` beside `pixels` — the
+readers are what drop it. geotiff.js takes `pixels[0]` and leaves the rest, and
+it is reachable in principle through geotiff's `addDecoder()`, except that the
+protocol bundles its own copy of geotiff and exports no handle on it. So today
+the knowledge has to live here.
+
+**The stored value is not always the plotted one.** Every COG in the store is
+*linear* — the backscatter mosaics say so in a `BACKSCATTER_CONVENTION=Power`
+tag, and QA-CQM is a plain contributing-area ratio — while the stretch published
+beside them is quoted in dB, the domain the layer is actually read in. The
+PMTiles need nothing: the build converts before it bakes the ramp into RGBA. The
+COG path has to convert per pixel, keyed on the manifest's `units`, or the two
+sources draw different pictures.
+
+It is not a nicety. Valid pixels of the 2024 RTC VV mosaic run **0.0038 to 24.8**
+in linear power, against a published stretch of **−18.5 to −5**; read raw, every
+one of them clamps to the top of the ramp and the whole layer draws as a single
+flat block. Coherence has no units and is read as stored, which is why the fault
+was invisible on the layer the page opens on.
+
+Converting here rather than in the archive is the same decision as §7 of the
+store plan: `10·log10` is the last step before the colour, not a change to what
+was averaged. GDAL's internal overviews and MapLibre's resampling both average
+the linear values, which is the domain in which averaging power is meaningful —
+a mean taken in dB would be a different quantity.
+
+Two integration details, both settled here:
+
+- The reader is **ESM-only with bare specifiers and ships no UMD build**, so
+  unlike the page's other libraries it cannot be a `<script>` tag. It is
+  imported dynamically from esm.sh the first time a COG layer is drawn, with
+  `?external=lerc` so that one dependency comes from the package's own file
+  instead — see the import map in `index.html` for why that one has to move.
+- The archives are given **absolute** URLs. `tilesBase` defaults to a relative
+  `tiles`, and the protocol hands the string to the reader rather than letting
+  the document resolve it.
+
+#### False colour: two archives, one tile
+
+The false-colour composite is the one layer that is not a single file. `cog://`
+reads one GeoTIFF, so **js/cog-rgb.js** registers `glace-rgb://` beside it,
+whose URL names a *recipe* — two archives, three stretches, a channel rule —
+rather than an archive. On the PMTiles side nothing is special: the store
+publishes `coh12_rgb.pmtiles` and the page reads it like any other. The two
+therefore compare a rendering baked at build time against the same rendering
+computed from the measurements, which is the same comparison the rest of this
+section is about, one level up.
+
+| channel | carries | stretch |
+| --- | --- | --- |
+| R | VV | the VV layer's own `vmin`/`vmax` |
+| G | VH | the VH layer's own `vmin`/`vmax` |
+| B | VV ÷ VH, or VV − VH in dB | measured here — see below |
+
+The third channel is the ratio of the first two, written in whatever domain the
+product is read in: a quotient for coherence, a difference for backscatter,
+which in dB is the same thing. Its stretch is **this page's to choose** — the
+manifest publishes a `vmin`/`vmax` per single-band layer, and the false-colour
+entry's own pair describes only its red channel. Measured at native resolution
+(§5 of the store plan is explicit that a decimated read averages SAR speckle
+away and reports a range about three times too narrow) over 619 958 valid pixels
+of the 2024 mosaics:
+
+| | p2 | p50 | p98 | used |
+| --- | ---: | ---: | ---: | --- |
+| COH12 VV ÷ VH | 0.76 | 1.39 | 2.63 | 0.75 – 2.75 |
+| RTC VV − VH (dB) | 3.50 | 6.73 | 11.03 | 3.5 – 11 |
+
+**What makes it cheap is the canonical grid, not the reader.** Every mosaic of a
+scope is written on the WebMercatorQuad grid at one zoom, so VV and VH share a
+size, an origin, a blocking and an overview count — tile (x, y) of one covers
+exactly the ground of tile (x, y) of the other. The grid also lines up with the
+XYZ pyramid: on `glace-ch` the image origin sits 1 088 000 by 734 720 pixels
+from the WebMercator origin at z13, and halving stays integral through all seven
+overview levels. A tile is therefore an **integer window read** out of each file
+and a per-pixel combine — never a reprojection, never a resample.
+
+Whole pixels does not mean whole tiles. At z13 and z12 the origin lands on a
+tile boundary and one XYZ tile is a copy of one source tile; from z11 down it
+lands on a half or a quarter, and the window straddles a 2x2 block — four reads
+per archive, eight for the pair.
+
+**Which is why the decoded source tiles are cached.** Neighbouring XYZ tiles
+straddle the *same* source tiles, so a viewport asks for each of them several
+times over. Counted per archive over one 6x4 viewport:
+
+| zoom | reads | distinct source tiles |
+| --- | ---: | ---: |
+| z13, z12 | 24 | 24 |
+| z11 | 96 | 35 |
+| z10 | 88 | 30 |
+| z9 | 63 | 20 |
+| z8 | 24 | 6 |
+
+`js/cog-rgb.js` keeps a bounded LRU of them — the promise rather than the array,
+so tiles wanted at the same moment share one read instead of racing. Measured
+against the live store, a 24-tile viewport: **62 requests at z11** where the
+uncached path would make 192, and **32 at z9** against 126. A 256x256 float tile
+is 256 kB, so the 128-entry ceiling is about 32 MB: roughly one viewport of both
+archives at the level that needs the most, with room to pan.
+
+One consequence, stated because it is a real trade: the abort signal is **not**
+passed down into those reads. A cached read is shared, and one consumer
+cancelling it would fail every other tile waiting on the same source tile — so a
+tile MapLibre gave up on still lands in the cache, where on these overlaps it is
+usually wanted again within the same viewport. Abort still stops the work after
+the read.
+
+Switching layers is a separate question and needs nothing: MapLibre keeps a
+hidden layer's source and its rendered tiles, and `js/rasters.js` only ever sets
+`visibility: none` — no GLACE layer is removed once added. The open GeoTIFF
+headers are kept per archive too.
+
+Two consequences worth stating:
+
+- The two archives agree on which pixels exist, to the pixel — 0 disagreements
+  over the 15.3 million measured above — because both were warped from the same
+  tile set onto the same grid. The intersection is not a compromise; it is the
+  same footprint twice.
+- Zoomed out past the COGs' coarsest overview the tile comes back blank, where
+  the pre-styled archive still draws. The mosaics stop at z6 and the PMTiles go
+  to z5, so the two sources differ by one level at the far end.
+
+The reader is **@developmentseed/geotiff**, which decodes LERC and Zstd through
+its own dependencies rather than through geotiff.js. It is ESM-only with bare
+specifiers and ships no UMD build, so unlike the page's other libraries it
+cannot be a `<script>` tag: it is imported dynamically from a CDN that resolves
+the bare specifiers, the first time a false-colour layer is shown. A visit that
+never selects one never fetches it. `cogReaderUrl` in `site-config.js` repoints
+it — deliberately not a query parameter, since the URL is executed.
+
+#### Which reader
+
+The COG path went through `@geomatico/maplibre-cog-protocol`, which bundles
+geotiff.js 3. It now goes through **@developmentseed/geotiff** (from
+[developmentseed/deck.gl-raster](https://github.com/developmentseed/deck.gl-raster)),
+built on `@cogeotiff/core` with `lerc` and `fzstd` as direct dependencies,
+behind this page's own protocol. The measurements below are why.
+
+The original hope was that a reader written for exactly this file type would
+preserve LERC's validity mask and retire the zero sentinel. **It does not.** Its
+LERC codec unwraps the Zstd layer, calls `lerc.decode()`, and returns
+`{ layout: "band-separate", bands: result.pixels }` — discarding `result.mask`
+in precisely the way geotiff.js discards it. Nothing else in the package reads a
+mask back. The mask is one field away in *both*, so the real repair is a
+three-line change to a codec, and this package's copy is the smaller target.
+
+What did decide it was everything else: one reader instead of two for the same
+file type, one decoded-tile cache that both the single-band and the false-colour
+layers draw from, one place for the nodata sentinel and the dB conversion, and
+**207 kB less script** on every visit — geomatico's UMD bundle was loaded
+whether or not a COG was ever opened.
+
+#### What it costs
+
+Re-measured against the published store rather than localhost, which is what the
+Source Cooperative publication was for. One 24-tile viewport over Aletsch,
+COH12 VV 2024, cold each time, median of 5:
+
+| zoom | source | requests | kB | ms |
+| --- | --- | ---: | ---: | ---: |
+| z9 | PMTiles | 15 | 135 | **405** |
+| | COG, geotiff.js | 113 | 1262 | **986** |
+| | COG, this reader | 21 | 415 | **177** |
+| z11 | PMTiles | 21 | 354 | **137** |
+| | COG, geotiff.js | 174 | 3934 | **929** |
+| | COG, this reader | 36 | 1417 | **194** |
+| z13 | PMTiles | 25 | 245 | **119** |
+| | COG, geotiff.js | 78 | 1389 | **580** |
+| | COG, this reader | 25 | 1450 | **201** |
+
+z11 is the row to believe — it is the one where the extent fills the viewport.
+Against PMTiles it reads **1.4× the time and 4.0× the bytes**; through geotiff.js
+the same layer cost 6.8× the time and 11.1× the bytes. The old localhost figure
+was "about 2× the time and 3–9× the bytes", and the reader turns out to have
+been most of it.
+
+Warm — the archive already open, which is what panning costs once a layer is on
+screen — the gap holds: at z11, geotiff.js takes 156 requests, 3930 kB and
+468 ms against this reader's 30, 1288 kB and 152 ms.
+
+**Why the readers differ so much.** geotiff.js batches range reads into 64 kB
+blocks, so a 26 kB tile drags a whole block behind it; that is the same effect
+the localhost run saw as "3–9× the bytes", and over a real network it is paid in
+latency as well. `@developmentseed/geotiff` reads tile data with exact ranges and
+bypasses its own block cache for it. On top of that, this page caches decoded
+source tiles, which below z12 is worth a further 2.7–4× (see above).
+
+What is counted, since the two rows stop in different places: measured in Node
+against the live bucket, the PMTiles row ends at the compressed tile bytes — the
+browser decodes WEBP natively from there, around a millisecond a tile — and the
+COG rows end at the RGBA array, before the browser encodes and uploads it. Both
+omit their last step. geotiff.js was driven directly with no worker pool so that
+both COG rows decode on one thread; geomatico's wrapper puts that decode in a
+Web Worker, which moves it off the main thread but does not change a byte.
+
+**Decoding runs in workers.** Zstd and then LERC are the slowest things this
+page does per tile, and on the main thread they compete with the map for the
+same frames. The reader can decode in a pool of workers instead, and
+`js/cog-worker.js` is that worker. It is a file here rather than the reader's
+own `defaultDecoderPool()` for two reasons, both about where code is served
+from:
+
+- **A worker script has to be same-origin.** The default pool does
+  `new Worker(new URL("./worker.js", import.meta.url))`, which resolves against
+  the CDN the module came from and is refused. This file is served beside the
+  page; being a module worker it may then import from a CDN that sends CORS.
+- **A worker gets no import map.** The page resolves `lerc` through the import
+  map in `index.html`; import maps are per-document and workers do not inherit
+  them. So the worker uses the reader's own extension point instead — the
+  decoder registry is exported and the package documents overriding a codec
+  before importing the worker handler — and registers LERC against the same
+  untouched build of lerc the page uses. Checked against a real LERC_ZSTD tile
+  from the store: the override returns the same 65 536 floats as the codec it
+  replaces, bit for bit.
+
+The workers are **proved before they are used**. A module worker reports a
+failed load asynchronously, so a pool handed a dead worker would leave every
+tile pending for ever — strictly worse than not having one. Each worker has to
+announce itself within ten seconds or it is dropped, and if none answer the pool
+is built without workers and the reader decodes inline, exactly as it did
+before. Up to four, or `hardwareConcurrency` if that is lower.
+
+#### What it buys, and what it does not
+
+The COG carries the float values, so the stretch, the colour map and a readable
+pixel value all become runtime properties instead of build-time ones — and
+`create_rgba_vrt`, `write_rgba`, `rio-pmtiles` and the legend plumbing stop being
+needed to publish a viewable layer.
+
+**Changing the stretch is free.** Measured with the stretch in the URL fragment,
+where moving it means a new MapLibre source: `CogReader` caches the decoded
+*values* under the archive URL and tile index, which the fragment is not part of,
+so re-colouring the 24-tile z11 viewport measured above cost **0 bytes and
+~125 ms** against the 842 ms and 2.4 MB of the first load. The page colours
+through `setColorFunction` rather than the fragment, which does not change that
+arithmetic — the values are decoded and cached either way. Whatever an adjustable
+stretch would cost, it is not a refetch.
+
+**It does not buy resolution.** Side by side the COG looks cleaner, which is
+easy to misread as more detail; it is not. Horizontal autocorrelation of the same
+tile from both archives agrees to within 0.02 at every lag from 1 to 8 px, at
+z11, z12 and z13 — the same ground detail is behind both. What differs is that
+the PMTiles archive has been through an 8-bit ramp and a lossy WEBP encode, so
+smooth areas band and block; the COG evaluates the ramp on float values per
+pixel. Runs of exactly-equal adjacent pixels are 1.56 px long in the PMTiles
+COH12 tile against 1.06 in the COG's, which is that quantisation and nothing
+else.
+
+The blocky-looking hop the *data* still carries — 10 m composites → 40 m
+EPSG:3035 → WebMercator, described under Resampling above — is upstream of both
+and is not what this switch is about.
+
+### The tile grid
+
+**Catalog tile grid** in the map options draws the MGRS footprints the store is
+built on, shaded by how much of each the glacier inventory covers. It used to be
+a vector PMTiles archive built beside the rasters; the store does not publish
+one, and does not need to. What it publishes is `tiles.parquet`, the
+stac-geoparquet mirror of every tile Item, which already carries the footprint
+and both glacier fractions.
+
+**js/tile-grid.js** reads it with [hyparquet](https://github.com/hyparam/hyparquet),
+which needs no server: parquet is column-major, so four columns of the ~200 the
+index carries are four small byte ranges. hyparquet also reads the geoparquet
+metadata and hands geometry back already decoded from WKB, so there is no binary
+parsing here to get wrong.
+
+The index holds one Item per (tile, year) — 572 rows over four years — and a
+footprint is a footprint, so the repeats collapse to **143 features**, which is
+exactly the perimeter the scope claims. Measured against the live store: 549 ms
+end to end. The properties keep the names the old archive used, so the paint
+expressions and the popup did not change with the source.
+
+#### What it costs
+
+Measured against the live store, cold, five runs:
+
+| | |
+| --- | --- |
+| total | **~230-420 ms**, 6 requests, 330 kB |
+| decoding the four columns | **5 ms** (all ~200 columns: 293 ms) |
+| the four column chunks | **9 kB** of the 200 kB of column data |
+| the footer | **321 kB** — the whole file |
+
+**The parsing is not the cost.** Decoding is 5 ms of it; the rest is one fetch.
+Projecting four columns is still what makes that 5 ms rather than 293 ms, and it
+does fetch exactly the 9 kB of column data it needs — but it does not save the
+file. This index's footer is ~121 kB, because ~200 columns of STAC metadata
+carry that much schema and statistics, and hyparquet reads generously to locate
+it rather than pay a second round trip. Asking it to read a smaller footer first
+was measured and changes nothing: the request comes back as the whole 321 kB
+either way. On the Alps store, where the data dwarfs the footer, the projection
+will save bytes as well as time.
+
+**Nothing recurs.** It is paid once, when the box is first ticked, and the
+result is handed to MapLibre as a GeoJSON source — so panning and zooming
+afterwards cost nothing, where the archive this replaced fetched tiles per
+viewport for as long as the overlay was on. Over a session it is the cheaper of
+the two, and 143 polygons is nothing for MapLibre to draw.
+
+Two things this settles beyond the grid itself:
+
+- **No sidecar to keep in step.** The grid cannot disagree with the catalogue,
+  because it *is* the catalogue.
+- **The index is now reachable from the page**, which is what any later
+  filtering — by glacier fraction, by year, by UTM zone — would be built on. The
+  columns are there; only the controls are not.
+
+The store's index is SNAPPY, which hyparquet decodes on its own, so there is no
+companion codec package. One written with ZSTD pages would need
+`hyparquet-compressors` beside it, and fails loudly rather than quietly: the
+overlay unticks itself and reports what it could not read.
+
 ### Resampling
 
 The tiler reprojects with **`bilinear`** by default. `--resampling` overrides.
@@ -521,4 +1007,8 @@ and pixel values cannot be read back from the tiles. The legend reports the
 stretch each layer was built with, which is the fixed range from the table above
 unless the build opted into `--percentile-stretch`; either way it is recorded
 per layer in `layers.json`. For quantitative work, go to the COGs the STAC items
-point at.
+point at — or, where a manifest names one, switch the layer to its COG source
+and read the values in the browser (see below).
+
+A **Tile source** control appears when the manifest offers a layer both ways.
+It is the only control whose presence depends on what was published.

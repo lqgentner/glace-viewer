@@ -21,8 +21,7 @@ test("built-in defaults", async () => {
   assert.equal(config.TILES_BASE, "tiles");
   assert.equal(config.LAYER_MANIFEST_URL, "tiles/layers.json");
   assert.equal(config.INVENTORY_INDEX_URL, "data/inventories.json");
-  assert.equal(config.GRID_ARCHIVE_URL, "tiles/tile-grid.pmtiles");
-  assert.equal(config.GRID_SOURCE_LAYER, "grid");
+  assert.equal(config.GRID_INDEX_URL, "tiles/tiles.parquet");
   assert.equal(config.BASEMAP_FLAVOR, "dark");
   assert.match(config.WORLD_IMAGERY_URL, /World_Imagery\/MapServer\/tile\/\{z\}\/\{y\}\/\{x\}/);
   assert.deepEqual(config.INITIAL_VIEW, { center: [10.4, 46.5], zoom: 6.2, maxZoom: 14 });
@@ -40,14 +39,14 @@ test("site config repoints the archives, and everything derived follows", async 
   const config = await load({
     site: {
       tilesBase: "https://s3.example/glace/",
-      gridArchive: "grid-v2.pmtiles",
+      gridIndex: "items/tiles.parquet",
       worldImageryUrl: "https://imagery.example/{z}/{x}/{y}.jpg",
     },
   });
   // The trailing slash is trimmed, so the joins below cannot double it.
   assert.equal(config.TILES_BASE, "https://s3.example/glace");
   assert.equal(config.LAYER_MANIFEST_URL, "https://s3.example/glace/layers.json");
-  assert.equal(config.GRID_ARCHIVE_URL, "https://s3.example/glace/grid-v2.pmtiles");
+  assert.equal(config.GRID_INDEX_URL, "https://s3.example/glace/items/tiles.parquet");
   assert.equal(config.WORLD_IMAGERY_URL, "https://imagery.example/{z}/{x}/{y}.jpg");
 });
 
@@ -80,9 +79,14 @@ test("an empty query parameter does not blank a setting", async () => {
 
 test("deployment-only settings are not reachable from the address bar", async () => {
   const config = await load({
-    search: "?gridSourceLayer=nope&inventoryBase=/etc&initialView=x&terrainTilejson=http://evil",
+    search:
+      "?gridIndex=nope&hyparquetUrl=http://evil&cogReaderUrl=http://evil" +
+      "&inventoryBase=/etc&initialView=x&terrainTilejson=http://evil",
   });
-  assert.equal(config.GRID_SOURCE_LAYER, "grid");
+  // The two reader URLs are imported and executed, so they matter most here.
+  assert.equal(config.GRID_INDEX_URL, "tiles/tiles.parquet");
+  assert.match(config.HYPARQUET_URL, /^https:\/\/esm\.sh\//);
+  assert.match(config.COG_READER_URL, /^https:\/\/esm\.sh\//);
   assert.equal(config.INVENTORY_BASE, "data");
   assert.equal(config.TERRAIN_TILEJSON, "https://tiles.mapterhorn.com/tilejson.json");
   assert.deepEqual(config.INITIAL_VIEW, { center: [10.4, 46.5], zoom: 6.2, maxZoom: 14 });
@@ -93,11 +97,15 @@ test("a misspelled setting warns instead of silently doing nothing", async () =>
   assert.ok(warnings.some((line) => line.includes("tileBase")));
 });
 
-test("the committed site-config.js parses and sets no overrides", async () => {
-  // The template ships enabled but empty; a stray uncommented key here would
-  // change every deployment that does not replace the file.
+test("the committed site-config.js names the store, and sets nothing else", async () => {
+  // This copy of the file is a live deployment as well as a template, and the
+  // one thing it has to say is where the archives are. Everything else stays
+  // commented out: an uncommented key here would change every deployment that
+  // does not replace the file, which is what the defaults are for.
   const { window } = installBrowser();
   const source = fs.readFileSync(path.join(REPO, "site-config.js"), "utf8");
   new Function("window", source)(window);
-  assert.deepEqual(window.GLACE_CONFIG, {});
+  assert.deepEqual(window.GLACE_CONFIG, {
+    tilesBase: "https://data.source.coop/lqgentner/glace-ch",
+  });
 });

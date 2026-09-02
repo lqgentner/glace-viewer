@@ -124,6 +124,27 @@ test("a missing axis is derived from the layers", () => {
   assert.deepEqual(validateManifest({ layers, products: "COH12" }).products, ["COH12", "RTC"]);
 });
 
+test("the source axis follows what was actually published", () => {
+  // The one axis the manifest does not get to declare: it is not a naming
+  // decision the build makes, only which archives exist.
+  assert.deepEqual(validateManifest({ layers: [layer()] }).sources, ["pmtiles"]);
+  assert.deepEqual(
+    validateManifest({ layers: [layer(), layer({ id: "b", year: 2024, cog: "b.tif" })] }).sources,
+    ["pmtiles", "cog"],
+    "one COG anywhere in the manifest is enough for the control to appear",
+  );
+});
+
+test("a COG a layer cannot use costs it a button, not its place on the map", async () => {
+  // Unlike the structural fields above, `cog` is descriptive: the layer still
+  // draws from its PMTiles archive without it.
+  for (const cog of [undefined, "", 42, null]) {
+    const manifest = validateManifest({ layers: [layer({ cog })] });
+    assert.equal(manifest.layers.length, 1, `for ${JSON.stringify(cog)}`);
+    assert.deepEqual(manifest.sources, ["pmtiles"], `for ${JSON.stringify(cog)}`);
+  }
+});
+
 test("UTM zone is read off an MGRS tile name", () => {
   assert.equal(utmZone("32TMS12"), "32N");
   assert.equal(utmZone("31TFJ68"), "31N");
