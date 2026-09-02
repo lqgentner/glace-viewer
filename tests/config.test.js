@@ -24,6 +24,7 @@ test("built-in defaults", async () => {
   assert.equal(config.GRID_ARCHIVE_URL, "tiles/tile-grid.pmtiles");
   assert.equal(config.GRID_SOURCE_LAYER, "grid");
   assert.equal(config.BASEMAP_FLAVOR, "dark");
+  assert.match(config.WORLD_IMAGERY_URL, /World_Imagery\/MapServer\/tile\/\{z\}\/\{y\}\/\{x\}/);
   assert.deepEqual(config.INITIAL_VIEW, { center: [10.4, 46.5], zoom: 6.2, maxZoom: 14 });
 });
 
@@ -37,12 +38,17 @@ test("the committed empty template changes nothing", async () => {
 
 test("site config repoints the archives, and everything derived follows", async () => {
   const config = await load({
-    site: { tilesBase: "https://s3.example/glace/", gridArchive: "grid-v2.pmtiles" },
+    site: {
+      tilesBase: "https://s3.example/glace/",
+      gridArchive: "grid-v2.pmtiles",
+      worldImageryUrl: "https://imagery.example/{z}/{x}/{y}.jpg",
+    },
   });
   // The trailing slash is trimmed, so the joins below cannot double it.
   assert.equal(config.TILES_BASE, "https://s3.example/glace");
   assert.equal(config.LAYER_MANIFEST_URL, "https://s3.example/glace/layers.json");
   assert.equal(config.GRID_ARCHIVE_URL, "https://s3.example/glace/grid-v2.pmtiles");
+  assert.equal(config.WORLD_IMAGERY_URL, "https://imagery.example/{z}/{x}/{y}.jpg");
 });
 
 test("a partial nested override keeps the rest of the object", async () => {

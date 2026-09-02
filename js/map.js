@@ -17,6 +17,7 @@ import {
   BASEMAP_URL,
   INITIAL_VIEW,
   TERRAIN_TILEJSON,
+  WORLD_IMAGERY_URL,
 } from "./config.js";
 
 const protocol = new pmtiles.Protocol();
@@ -26,6 +27,19 @@ maplibregl.addProtocol("pmtiles", protocol.tile);
  * it is ~100 layers, and the flavor decides all of their colours. Data layers are
  * appended after it, so they draw on top. */
 const flavor = basemaps.namedFlavor(BASEMAP_FLAVOR);
+const DARK_LABEL_PAINT = {
+  "text-color": "#f8fafc",
+  "text-halo-color": "rgba(0, 0, 0, 0.9)",
+  "text-halo-width": 2,
+  "text-halo-blur": 0.5,
+};
+const darkVectorBasemap = new Set(["black", "dark"]).has(BASEMAP_FLAVOR);
+const basemapLayers = basemaps.layers("protomaps", flavor, { lang: "en" }).map((layer) => {
+  if (darkVectorBasemap && layer.type === "symbol" && layer.layout?.["text-field"] !== undefined) {
+    return { ...layer, paint: { ...layer.paint, ...DARK_LABEL_PAINT } };
+  }
+  return layer;
+});
 const style = {
   version: 8,
   /* `globe` is not "always a globe": MapLibre expands the bare type into a zoom
@@ -59,8 +73,37 @@ const style = {
         ' | <a href="https://maplibre.org">MapLibre</a>',
     },
   },
-  layers: basemaps.layers("protomaps", flavor, { lang: "en" }),
+  layers: basemapLayers,
 };
+
+/* The vector basemap can be replaced by imagery without replacing the whole
+ * style (which would discard every lazily added data layer). Remember the
+ * original visibility of its non-label layers so switching back restores the
+ * generated Protomaps style exactly. Symbols are intentionally excluded: the
+ * separate label checkbox controls them, including over World Imagery. */
+const VECTOR_BASEMAP_LAYERS = new Map(
+  style.layers
+    .filter((layer) => layer.type !== "symbol")
+    .map((layer) => [layer.id, layer.layout?.visibility ?? "visible"]),
+);
+const LABEL_PAINT_PROPERTIES = Object.keys(DARK_LABEL_PAINT);
+const VECTOR_LABEL_PAINT = new Map(
+  style.layers
+    .filter(
+      (layer) =>
+        layer.type === "symbol" &&
+        layer.source === "protomaps" &&
+        layer.layout?.["text-field"] !== undefined,
+    )
+    .map((layer) => [
+      layer.id,
+      Object.fromEntries(
+        LABEL_PAINT_PROPERTIES.map((property) => [property, layer.paint?.[property] ?? null]),
+      ),
+    ]),
+);
+const WORLD_IMAGERY_SOURCE = "world-imagery";
+const WORLD_IMAGERY_LAYER = "world-imagery";
 
 export const map = new maplibregl.Map({
   container: "map",
@@ -128,6 +171,55 @@ export function addStacked(kind, layer) {
     firstSymbolLayer();
   map.addLayer(layer, before);
   layerKinds.set(layer.id, kind);
+}
+
+/* ---------- basemap ---------- */
+
+function ensureWorldImagery() {
+  if (!map.getSource(WORLD_IMAGERY_SOURCE)) {
+    map.addSource(WORLD_IMAGERY_SOURCE, {
+      type: "raster",
+      tiles: [WORLD_IMAGERY_URL],
+      tileSize: 256,
+      maxzoom: 19,
+      attribution:
+        'Tiles © Esri, Maxar, Earthstar Geographics, and the GIS User Community' +
+        ' | <a href="https://maplibre.org">MapLibre</a>',
+    });
+  }
+  if (!map.getLayer(WORLD_IMAGERY_LAYER)) {
+    /* Below the first generated basemap layer, so imagery remains the floor of
+     * the stack and GLACE data, relief, overlays and labels all stay above it. */
+    map.addLayer(
+      {
+        id: WORLD_IMAGERY_LAYER,
+        type: "raster",
+        source: WORLD_IMAGERY_SOURCE,
+        layout: { visibility: "none" },
+      },
+      map.getStyle().layers[0]?.id,
+    );
+  }
+}
+
+export async function setBasemap(value) {
+  await styleReady;
+  const imagery = value === "imagery";
+  if (imagery) ensureWorldImagery();
+  for (const [id, visibility] of VECTOR_BASEMAP_LAYERS) {
+    map.setLayoutProperty(id, "visibility", imagery ? "none" : visibility);
+  }
+  if (map.getLayer(WORLD_IMAGERY_LAYER)) {
+    map.setLayoutProperty(WORLD_IMAGERY_LAYER, "visibility", imagery ? "visible" : "none");
+  }
+  /* World Imagery varies from snow to near-black forest within one viewport, so
+   * its labels need a fixed light face and dark halo. On the vector background,
+   * restore the flavor's own paint (already strengthened for dark flavors). */
+  for (const [id, paint] of VECTOR_LABEL_PAINT) {
+    for (const property of LABEL_PAINT_PROPERTIES) {
+      map.setPaintProperty(id, property, imagery ? DARK_LABEL_PAINT[property] : paint[property]);
+    }
+  }
 }
 
 /* ---------- basemap labels ---------- */

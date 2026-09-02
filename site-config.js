@@ -20,6 +20,7 @@
  *   basemapUrl       Protomaps' daily planet build on Source Cooperative
  *   basemapFlavor    "grayscale"    grayscale | black | dark | light | white
  *   basemapAssets    Protomaps' fonts and sprites endpoint
+ *   worldImageryUrl  Esri World Imagery XYZ tile template
  *   terrainTilejson  Mapterhorn's global terrain
  *   terrainCredit    { title, citation, links } shown behind the hillshade's info mark
  *   initialView      { center: [lon, lat], zoom, maxZoom } before the #hash applies

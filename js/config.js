@@ -33,6 +33,11 @@ const DEFAULTS = {
   basemapFlavor: "dark",
   basemapAssets: "https://protomaps.github.io/basemaps-assets",
 
+  /* Esri's cached World Imagery service. Kept as a template rather than a
+   * TileJSON document because MapLibre can read ArcGIS' XYZ endpoint directly. */
+  worldImageryUrl:
+    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+
   /* Mapterhorn global terrain, terrarium-encoded, 512 px WEBP tiles. */
   terrainTilejson: "https://tiles.mapterhorn.com/tilejson.json",
   terrainCredit: {
@@ -90,6 +95,7 @@ export const GRID_SOURCE_LAYER = settings.gridSourceLayer;
 export const BASEMAP_URL = settings.basemapUrl;
 export const BASEMAP_FLAVOR = settings.basemapFlavor;
 export const BASEMAP_ASSETS = settings.basemapAssets;
+export const WORLD_IMAGERY_URL = settings.worldImageryUrl;
 
 export const TERRAIN_TILEJSON = settings.terrainTilejson;
 export const TERRAIN_CREDIT = settings.terrainCredit;

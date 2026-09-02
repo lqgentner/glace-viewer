@@ -154,10 +154,48 @@ test("the viewer", async (t) => {
     assert.ok(el("extras").contains(el("hillshade-row")));
     assert.ok(el("extras").contains(el("grid")));
     assert.ok(el("extras").contains(el("basemap")));
+    assert.ok(el("extras").contains(el("basemap-style")));
 
     el("extras-toggle").click();
     assert.equal(el("extras").hidden, false);
     assert.equal(el("extras-toggle").getAttribute("aria-expanded"), "true");
+  });
+
+  await t.test("World Imagery replaces the vector fills but keeps labels independent", async () => {
+    const buttons = [...el("basemap-style").children];
+    assert.deepEqual(
+      buttons.map((button) => button.textContent),
+      ["Vector", "World Imagery"],
+    );
+    assert.equal(buttons[0].getAttribute("aria-checked"), "true");
+    assert.equal(map.getLayer("places").paint["text-color"], "#f8fafc");
+    assert.equal(map.getLayer("places").paint["text-halo-width"], 2);
+    assert.equal(map.getSource("world-imagery"), undefined, "imagery is lazy");
+
+    buttons[1].click();
+    await settle();
+    const source = map.getSource("world-imagery");
+    assert.deepEqual(source.tiles, [
+      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    ]);
+    assert.equal(source.type, "raster");
+    assert.match(source.attribution, /Esri.*Maxar/);
+    assert.match(source.attribution, /maplibre\.org/);
+    assert.ok(visible(map, "world-imagery"));
+    assert.equal(map.getLayer("earth").layout.visibility, "none");
+    assert.equal(map.getLayer("water").layout.visibility, "none");
+    assert.equal(map.getLayer("places").layout.visibility, "none", "the label toggle still wins");
+    assert.ok(map.indexOf("world-imagery") < map.indexOf("glace-coh12_vv_2023"));
+
+    change(el("basemap"), true);
+    await settle();
+    assert.equal(map.getLayer("places").layout.visibility, "visible", "labels overlay imagery");
+
+    buttons[0].click();
+    await settle();
+    assert.equal(map.getLayer("world-imagery").layout.visibility, "none");
+    assert.equal(map.getLayer("earth").layout.visibility, "visible");
+    assert.equal(map.getLayer("water").layout.visibility, "visible");
   });
 
   await t.test("each layer credits the source it is actually drawing", async () => {

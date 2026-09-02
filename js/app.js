@@ -13,10 +13,16 @@
  */
 
 import { TERRAIN_CREDIT } from "./config.js";
-import { map, setHillshade, setHillshadeStrength, toggleBasemapLabels } from "./map.js";
+import {
+  map,
+  setBasemap,
+  setHillshade,
+  setHillshadeStrength,
+  toggleBasemapLabels,
+} from "./map.js";
 import { grid, loadInventories } from "./overlays.js";
 import { loadRasters, manifestBounds } from "./rasters.js";
-import { collapsible, creditButton, el } from "./ui.js";
+import { buildSegmented, collapsible, creditButton, el } from "./ui.js";
 
 /* The panel covers most of a phone screen, so on a narrow viewport it opens
  * collapsed to its title bar and the reader taps to open it. Wide viewports open
@@ -46,6 +52,19 @@ function initControls() {
   });
   NARROW_VIEWPORT.addEventListener("change", (event) => setPanelOpen(!event.matches));
   setPanelOpen(!NARROW_VIEWPORT.matches);
+
+  const basemapOptions = [
+    { value: "vector", label: "Vector" },
+    { value: "imagery", label: "World Imagery" },
+  ];
+  const selectBasemap = (value) => {
+    for (const button of el("basemap-style").children) {
+      button.setAttribute("aria-checked", String(button.dataset.value === value));
+    }
+    setBasemap(value);
+  };
+  buildSegmented(el("basemap-style"), basemapOptions, selectBasemap);
+  selectBasemap("vector");
 
   el("hillshade-row").append(creditButton(TERRAIN_CREDIT.title, TERRAIN_CREDIT));
   el("hillshade").addEventListener("change", (event) => {

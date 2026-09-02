@@ -20,8 +20,20 @@ export const REPO = path.join(import.meta.dirname, "..", "..");
 export const BASEMAP_LAYERS = [
   { id: "earth", type: "background", source: "protomaps" },
   { id: "water", type: "fill", source: "protomaps" },
-  { id: "places", type: "symbol", source: "protomaps" },
-  { id: "roads_label", type: "symbol", source: "protomaps" },
+  {
+    id: "places",
+    type: "symbol",
+    source: "protomaps",
+    layout: { "text-field": ["get", "name"] },
+    paint: { "text-color": "#94a3b8", "text-halo-color": "#0f172a", "text-halo-width": 1 },
+  },
+  {
+    id: "roads_label",
+    type: "symbol",
+    source: "protomaps",
+    layout: { "text-field": ["get", "name"] },
+    paint: { "text-color": "#94a3b8", "text-halo-color": "#0f172a", "text-halo-width": 1 },
+  },
 ];
 
 /* The page never exports its map — it is a module singleton created at import

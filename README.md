@@ -13,7 +13,7 @@ is plain HTML/CSS/JS with no build step or framework.
 | | source |
 | --- | --- |
 | GLACE rasters | object storage, via `?tiles=<base-url>` (default `./tiles`) |
-| Basemap | Protomaps `grayscale`, from the free [Source Cooperative](https://source.coop/) mirror |
+| Basemap | Protomaps vector tiles from [Source Cooperative](https://source.coop/), or Esri World Imagery |
 | Terrain | Mapterhorn global DEM, terrarium-encoded, from their `{z}/{x}/{y}` endpoint |
 | Glacier inventories | built from `data/*.geojson` in this repo |
 
@@ -212,12 +212,12 @@ string, so a value containing markup stays a value.
 
 Top to bottom: the raster controls (product, polarization, year, opacity, the
 colour ramp and the description of what is selected), then the glacier
-inventories, then **Map options** — hillshade, catalog tile grid, basemap
-labels. The last two are collapsed by default; between them they are seven
-controls that are off on arrival, and the panel is shorter without them.
+inventories, then **Map options** — basemap, hillshade, catalog tile grid and
+basemap labels. The last two sections are collapsed by default, and the panel is
+shorter without them.
 
-"Map options" rather than "Additional layers" because only two of the three are
-layers: the basemap labels toggle is a visibility switch on the basemap that is
+"Map options" rather than "Additional layers" because not every control adds a
+layer: the basemap labels toggle is a visibility switch on the basemap that is
 already drawn.
 
 The panel names products the way a reader would rather than the way the archives
@@ -320,7 +320,7 @@ are mirrored in the modules that own that state.
 
 ### Basemap and terrain
 
-The basemap style is generated at runtime by `@protomaps/basemaps` (69 layers,
+The vector basemap style is generated at runtime by `@protomaps/basemaps` (69 layers,
 13 of them labels) rather than hand-written, so the flavor decides every colour.
 `?flavor=` switches it (`grayscale`, `black`, `dark`, `light`, `white`) and
 `?basemap=` points at a different archive. The default reads Protomaps' daily
@@ -330,13 +330,18 @@ discourage hot-linking their own `maps.protomaps.com` builds; the Source
 Cooperative mirror is the sanctioned free option, and for production you would
 copy an extract to your own storage.
 
+The **Basemap** control replaces the vector fills with Esri World Imagery, read
+directly from its 256 px XYZ endpoint. It is created lazily, so it costs no
+request until selected; switching back restores the generated vector style
+without rebuilding the map or discarding any data layers.
+
 Data layers are inserted below the basemap's first symbol layer, so labels stay
-readable on top of the imagery. The "Basemap labels" checkbox hides just those
-symbol layers.
+readable on either background. The "Basemap labels" checkbox hides just those
+symbol layers and is independent of the background choice.
 
 ### Draw order
 
-Bottom to top: basemap fills, GLACE rasters, hillshade, vector overlays (glacier
+Bottom to top: vector basemap fills or World Imagery, GLACE rasters, hillshade, vector overlays (glacier
 inventories, catalog tile grid), basemap labels.
 
 Everything above the basemap is created lazily, the first time its control is
