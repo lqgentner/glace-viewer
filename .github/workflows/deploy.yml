@@ -34,6 +34,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Set up uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          enable-cache: true
 
       # Building tippecanoe takes ~90 s; the cache makes every later run instant.
       # Keyed on the version, so bumping it rebuilds without a manual purge.
@@ -58,7 +62,7 @@ jobs:
         run: |
           chmod +x ~/.local/bin/tippecanoe
           ~/.local/bin/tippecanoe --version
-          python3 scripts/build-tiles.py --tippecanoe ~/.local/bin/tippecanoe
+          uv run --locked python scripts/build-tiles.py --tippecanoe ~/.local/bin/tippecanoe
 
       # Only the archives are published, never the GeoJSON they were built from:
       # shipping both would double what a visitor could download for no gain.

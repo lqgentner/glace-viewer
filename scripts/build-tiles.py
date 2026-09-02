@@ -11,7 +11,7 @@ tippecanoe on PATH (or --tippecanoe); see .github/workflows/deploy.yml for the
 pinned build.
 
 Usage:
-    python scripts/build-tiles.py
+    uv run --locked python scripts/build-tiles.py
 """
 
 from __future__ import annotations

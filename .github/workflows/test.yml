@@ -20,12 +20,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Set up uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
-          python-version: "3.12"
+          enable-cache: true
       # No dependencies: serve.py and build-tiles.py are stdlib only, and so are
-      # their tests.
-      - run: python -m unittest discover -s tests -v
+      # their tests. --locked also checks that pyproject.toml and uv.lock agree.
+      - run: uv run --locked python -m unittest discover -s tests -v
 
   javascript:
     runs-on: ubuntu-latest
