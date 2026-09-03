@@ -10,8 +10,12 @@ there, so the plain command already shows them and ``--tiles-dir`` is only for
 reading a local build instead:
 
     uv run --locked python scripts/serve.py
-    # -> http://127.0.0.1:8000/            the published store
-    # -> http://127.0.0.1:8000/?tiles=tiles   whatever is mounted under /tiles
+    # -> http://localhost:8000/            the published store
+    # -> http://localhost:8000/?tiles=tiles   whatever is mounted under /tiles
+
+Use ``localhost``, not ``127.0.0.1``: the basemap reads Protomaps' hosted API,
+and its CORS exemption for local development matches the ``localhost``
+hostname exactly, not the loopback IP.
 
 Run ``scripts/build-tiles.py`` first: the inventory archives are build outputs
 and are not committed.
@@ -190,7 +194,11 @@ def main() -> None:
     handler = partial(RangeRequestHandler, directory=str(web_dir))
     RangeRequestHandler.tiles_dir = tiles_dir
     with ThreadingHTTPServer((args.bind, args.port), handler) as server:
-        print(f"Serving {web_dir} (tiles: {tiles_dir}) on http://{args.bind}:{args.port}/")
+        # "localhost", not the 127.0.0.1 the socket is bound to: the browser's
+        # Origin header has to read exactly "localhost" for the Protomaps API
+        # key's CORS exemption for local development to match.
+        host = "localhost" if args.bind == "127.0.0.1" else args.bind
+        print(f"Serving {web_dir} (tiles: {tiles_dir}) on http://{host}:{args.port}/")
         try:
             server.serve_forever()
         except KeyboardInterrupt:
