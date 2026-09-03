@@ -149,7 +149,7 @@ export const map = new maplibregl.Map({
   attributionControl: false,
 });
 map.addControl(new maplibregl.NavigationControl({ visualizePitch: false }), "top-right");
-map.addControl(new maplibregl.ScaleControl({ maxWidth: 120, unit: "metric" }), "bottom-right");
+map.addControl(new maplibregl.ScaleControl({ maxWidth: 120, unit: "metric" }), "bottom-left");
 map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-right");
 
 map.on("error", (event) => {

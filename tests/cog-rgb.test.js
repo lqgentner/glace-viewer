@@ -180,14 +180,14 @@ test("the legend names the channels instead of showing a ramp", async () => {
   assert.equal(el("legend-channels").hidden, false);
 
   const cells = [...el("legend-channels").children].map((node) => node.textContent);
-  assert.deepEqual(cells.filter((text) => text !== "" && !text.includes("to")), ["VV", "VH", "VV ÷ VH"]);
+  assert.deepEqual(cells.filter((text) => text !== "" && !text.includes("to")), ["VV", "VH", "VV / VH"]);
   assert.ok(cells.includes("0.75 to 2.75"), "and the range this page chose for the quotient");
 
   /* On the pre-styled archive the build chose the stretch and never published
    * it, so the legend names the channels and stops there. */
   await pick("RGB", "pmtiles");
   const published = [...el("legend-channels").children].map((node) => node.textContent);
-  assert.ok(published.includes("VV ÷ VH"));
+  assert.ok(published.includes("VV / VH"));
   assert.ok(!published.some((text) => text.includes("to")), "no numbers this page cannot vouch for");
 });
 

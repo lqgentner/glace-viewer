@@ -87,7 +87,7 @@ const isFalseColour = (layer) => layer !== null && layer.polarization === FALSE_
  * A product with no entry here has no false colour, and its RGB button stays
  * dark rather than the page inventing a range for it. */
 const FALSE_COLOUR_BLUE = {
-  COH12: { label: "VV ÷ VH", range: [0.75, 2.75] },
+  COH12: { label: "VV / VH", range: [0.75, 2.75] },
   RTC: { label: "VV − VH", range: [3.5, 11] },
 };
 
@@ -484,7 +484,7 @@ function updateChannelLegend(layer, source) {
   const rows = [
     ["#e0524f", "VV", recipe?.channels.red],
     ["#4c9f4c", "VH", recipe?.channels.green],
-    ["#5b8def", FALSE_COLOUR_BLUE[layer.product]?.label ?? "VV ÷ VH", recipe?.channels.blue],
+    ["#5b8def", FALSE_COLOUR_BLUE[layer.product]?.label ?? "VV / VH", recipe?.channels.blue],
   ];
   el("legend-channels").replaceChildren(
     ...rows.flatMap(([colour, band, range]) => [
