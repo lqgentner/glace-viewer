@@ -20,19 +20,6 @@ export const VALUES = { coh12_vv: 0.5, coh12_vh: 0.25, rtc_vv: 0.05, rtc_vh: 0.0
 /** Tile indices asked for, newest last, so a test can count the reads. */
 export const fetched = [];
 
-/** Every pool built, and whether one reached the read. */
-export const pools = [];
-export let lastPool;
-
-/** The reader's worker pool, enough of it to see that the page builds one and
- *  hands it down. jsdom has no `Worker`, so the page builds a pool with none
- *  and the reader would decode inline — which is the fallback worth testing. */
-export class DecoderPool {
-  constructor(options = {}) {
-    this.options = options;
-    pools.push(this);
-  }
-}
 
 class Level {
   constructor(url, step) {
@@ -48,8 +35,7 @@ class Level {
     return hit === undefined ? 1 : VALUES[hit];
   }
 
-  async fetchTile(x, y, options) {
-    lastPool = options?.pool;
+  async fetchTile(x, y) {
     fetched.push(`${this.url.split("/").at(-1)}@${this.step}:${x},${y}`);
     const bands = [new Float32Array(TILE * TILE).fill(this.value)];
     /* One pixel of every tile is left absent, so the nodata path is exercised

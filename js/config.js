@@ -38,14 +38,6 @@ const DEFAULTS = {
    * this CDN. Change the two together. */
   cogReaderUrl: "https://esm.sh/@developmentseed/geotiff@0.7.0?external=lerc",
 
-  /* The reader's worker-side decode handler, and the LERC build the worker
-   * registers against it. js/cog-worker.js passes both on to the worker it
-   * spawns; see the note there for why a worker cannot use the page's import
-   * map and needs to be told. `lercUrl` has to name the same version the import
-   * map in index.html does — the two resolve the same dependency for the two
-   * threads. */
-  cogWorkerUrl: "https://esm.sh/@developmentseed/geotiff@0.7.0/pool/worker?external=lerc",
-  lercUrl: "https://cdn.jsdelivr.net/npm/lerc@4.2.0/LercDecode.es.js",
 
   /* The parquet reader behind the tile grid, on the same terms and imported the
    * same way. Also absent from QUERY_PARAMS, and for the same reason. */
@@ -114,8 +106,6 @@ export const INVENTORY_BASE = String(settings.inventoryBase).replace(/\/$/, "");
 export const INVENTORY_INDEX_URL = `${INVENTORY_BASE}/inventories.json`;
 
 export const COG_READER_URL = settings.cogReaderUrl;
-export const COG_WORKER_URL = settings.cogWorkerUrl;
-export const LERC_URL = settings.lercUrl;
 export const HYPARQUET_URL = settings.hyparquetUrl;
 
 export const GRID_INDEX_URL = `${TILES_BASE}/${settings.gridIndex}`;

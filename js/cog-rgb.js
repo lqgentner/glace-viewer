@@ -27,7 +27,7 @@
  * actually shown. A deployment that never selects one never fetches it.
  */
 
-import { COG_READER_URL, COG_WORKER_URL, LERC_URL } from "./config.js";
+import { COG_READER_URL } from "./config.js";
 
 /* Half the WebMercator span, which is also the coordinate of its origin. */
 const HALF_SPAN = 20037508.342789244;
@@ -77,80 +77,6 @@ function archive(url) {
   return archives.get(url);
 }
 
-/* Decoding, moved off the main thread.
- *
- * Zstd and then LERC are the slowest things this page does per tile, and on the
- * main thread they compete with the map for the same frames. The reader can
- * decode in workers instead, given a pool; js/cog-worker.js is the worker, and
- * the note at the top of it says why it is a file here rather than the
- * reader's own default.
- *
- * The workers are started and *proved* before the pool is built. A module
- * worker reports a failed load asynchronously, so a pool handed a dead worker
- * would leave every tile pending for ever — strictly worse than not having one.
- * Each worker therefore has to say it is ready, within a timeout, or it is
- * dropped; if none answer, the pool is built without workers and the reader
- * decodes inline exactly as it did before. */
-const WORKER_LIMIT = 4;
-const WORKER_TIMEOUT = 10_000;
-
-function spawnWorker(source) {
-  return new Promise((resolve) => {
-    let worker;
-    try {
-      worker = new Worker(source, { type: "module" });
-    } catch {
-      resolve(null);
-      return;
-    }
-    const settle = (ready) => {
-      clearTimeout(timer);
-      worker.removeEventListener("message", onReady);
-      worker.removeEventListener("error", onFailure);
-      if (ready) resolve(worker);
-      else {
-        worker.terminate();
-        resolve(null);
-      }
-    };
-    const onReady = (event) => {
-      if (event.data?.glaceWorkerReady) settle(true);
-    };
-    const onFailure = () => settle(false);
-    const timer = setTimeout(() => settle(false), WORKER_TIMEOUT);
-    worker.addEventListener("message", onReady);
-    worker.addEventListener("error", onFailure);
-  });
-}
-
-/* Built once, on the first tile, and shared by every layer after it. */
-let decoderPool = null;
-
-function pool() {
-  decoderPool ??= (async () => {
-    const { DecoderPool } = await reader();
-    // A reader with no pool to offer decodes inline, which is the old behaviour
-    // and a perfectly good one. The test harness's stand-in is such a reader.
-    if (typeof DecoderPool !== "function") return null;
-    if (typeof Worker !== "function") return new DecoderPool();
-
-    const source = new URL("./cog-worker.js", import.meta.url);
-    source.searchParams.set("reader", COG_READER_URL);
-    source.searchParams.set("worker", COG_WORKER_URL);
-    source.searchParams.set("lerc", LERC_URL);
-
-    const size = Math.min(WORKER_LIMIT, navigator?.hardwareConcurrency ?? 2);
-    const started = await Promise.all(Array.from({ length: size }, () => spawnWorker(source)));
-    const live = started.filter((worker) => worker !== null);
-    if (live.length === 0) {
-      console.warn("cog-worker.js did not start; decoding on the main thread");
-      return new DecoderPool();
-    }
-    return new DecoderPool({ size: live.length, createWorker: () => live.pop() });
-  })();
-  return decoderPool;
-}
-
 /* Decoded source tiles, keyed by archive, level and tile index.
  *
  * This is not about switching layers — MapLibre keeps a hidden layer's source
@@ -180,7 +106,7 @@ const decoded = new Map();
  * cached and shared on its own. The batch call is documented as parallel today
  * and only *may* coalesce byte ranges later; when it does, this is the place to
  * reconsider. */
-function sourceTile(level, levelKey, tx, ty, decoders) {
+function sourceTile(level, levelKey, tx, ty) {
   const key = `${levelKey}:${tx},${ty}`;
   const hit = decoded.get(key);
   if (hit !== undefined) {
@@ -188,7 +114,7 @@ function sourceTile(level, levelKey, tx, ty, decoders) {
     decoded.set(key, hit);
     return hit;
   }
-  const pending = level.fetchTile(tx, ty, decoders === null ? undefined : { pool: decoders }).then(
+  const pending = level.fetchTile(tx, ty).then(
     (tile) => tile.array,
     (error) => {
       // A failure is not cached: panning back over this tile should retry it.
@@ -232,7 +158,7 @@ function levelFor(tiff, z) {
  * Pixels the window does not reach — outside the image, or in a tile the
  * archive does not store — stay 0, which is what the archives already encode
  * absent data as. */
-async function readWindow(level, levelKey, x, y, decoders) {
+async function readWindow(level, levelKey, x, y) {
   const resolution = level.transform[0];
   const originX = Math.round((level.transform[2] + HALF_SPAN) / resolution);
   const originY = Math.round((HALF_SPAN - level.transform[5]) / resolution);
@@ -254,7 +180,7 @@ async function readWindow(level, levelKey, x, y, decoders) {
     for (let tx = firstX; tx <= lastX; tx++) wanted.push([tx, ty]);
   }
   const arrays = await Promise.all(
-    wanted.map(([tx, ty]) => sourceTile(level, levelKey, tx, ty, decoders)),
+    wanted.map(([tx, ty]) => sourceTile(level, levelKey, tx, ty)),
   );
 
   for (const [at, [tx, ty]] of wanted.entries()) {
@@ -396,11 +322,8 @@ export async function cogRgbProtocol(params, abortController) {
    * request that was already in flight and leaves it in the cache, which on
    * these overlaps is usually wanted again within the same viewport. What abort
    * still does is stop the work after them. */
-  const decoders = await pool();
   const values = await Promise.all(
-    levels.map(({ level, step }, at) =>
-      readWindow(level, `${recipe.archives[at]}@${step}`, x, y, decoders),
-    ),
+    levels.map(({ level, step }, at) => readWindow(level, `${recipe.archives[at]}@${step}`, x, y)),
   );
   if (abortController?.signal?.aborted) throw new DOMException("tile aborted", "AbortError");
   return { data: await encode(composite(values, recipe)) };

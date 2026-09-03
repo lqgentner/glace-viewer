@@ -308,16 +308,3 @@ test("backscatter is converted to dB before the ramp, not after", async () => {
   buttons("product").COH12.click();
   await settle();
 });
-
-test("decoding is handed to the reader's pool, built once and shared", async () => {
-  await pick("VV", "cog");
-  await tile("glace-rgb://glace-cog-coh12_vv_2024/13/4272/2882");
-
-  assert.equal(fake.pools.length, 1, "one pool for every layer and every tile");
-  assert.ok(fake.lastPool, "and it reaches the read");
-  assert.equal(fake.lastPool, fake.pools[0]);
-  /* jsdom has no `Worker`, so the page asks for a pool with none rather than
-   * spawning one it cannot prove — the reader then decodes inline, which is
-   * what this path did before workers existed. */
-  assert.deepEqual(fake.pools[0].options, {});
-});

@@ -257,7 +257,6 @@ under `js/`, loaded straight by the browser.
 | `map.js` | the map, layer ordering, basemap labels, hillshade, 3D terrain |
 | `rasters.js` | the `layers.json` manifest, layer selection, legend |
 | `cog-rgb.js` | the `glace-rgb://` protocol: COG layers, one archive or two |
-| `cog-worker.js` | its decoder, in a module worker |
 | `tile-grid.js` | the catalog grid, read from the store's geoparquet index |
 | `overlays.js` | glacier inventories, catalog tile grid, popups |
 | `ui.js` | status line, attribution popovers, safe DOM helpers |
@@ -839,32 +838,24 @@ omit their last step. geotiff.js was driven directly with no worker pool so that
 both COG rows decode on one thread; geomatico's wrapper puts that decode in a
 Web Worker, which moves it off the main thread but does not change a byte.
 
-**Decoding runs in workers.** Zstd and then LERC are the slowest things this
-page does per tile, and on the main thread they compete with the map for the
-same frames. The reader can decode in a pool of workers instead, and
-`js/cog-worker.js` is that worker. It is a file here rather than the reader's
-own `defaultDecoderPool()` for two reasons, both about where code is served
-from:
+**Decoding runs on the main thread, and that is fine.** The reader can decode in
+a pool of Web Workers, and this page did that briefly. It was measured and
+removed. Over 40 full-resolution tiles:
 
-- **A worker script has to be same-origin.** The default pool does
-  `new Worker(new URL("./worker.js", import.meta.url))`, which resolves against
-  the CDN the module came from and is refused. This file is served beside the
-  page; being a module worker it may then import from a CDN that sends CORS.
-- **A worker gets no import map.** The page resolves `lerc` through the import
-  map in `index.html`; import maps are per-document and workers do not inherit
-  them. So the worker uses the reader's own extension point instead — the
-  decoder registry is exported and the package documents overriding a codec
-  before importing the worker handler — and registers LERC against the same
-  untouched build of lerc the page uses. Checked against a real LERC_ZSTD tile
-  from the store: the override returns the same 65 536 floats as the codec it
-  replaces, bit for bit.
+| per tile | | a 24-tile viewport |
+| --- | ---: | ---: |
+| Zstd + LERC decode — what a worker moves | 0.36 ms | **9 ms** |
+| colouring, per pixel — stays either way | 0.52 ms | **12 ms** |
 
-The workers are **proved before they are used**. A module worker reports a
-failed load asynchronously, so a pool handed a dead worker would leave every
-tile pending for ever — strictly worse than not having one. Each worker has to
-announce itself within ten seconds or it is dropped, and if none answer the pool
-is built without workers and the reader decodes inline, exactly as it did
-before. Up to four, or `hardwareConcurrency` if that is lower.
+A worker takes about 9 ms off a thread that is still doing 12 ms of colouring
+and a PNG encode, for a whole viewport — under a frame at 60 Hz. Against that:
+a same-origin worker file, a pool proved before use so that a dead worker cannot
+leave every tile pending, two more settings, and a version coupling between the
+import map and the worker, since workers do not inherit import maps and the
+CDN's build of lerc cannot be used inside one. Not a trade worth making.
+
+The decode is cheap because LERC is cheap. If a layer ever decodes slowly enough
+to matter, repeating that measurement is the way to find out.
 
 #### What it buys, and what it does not
 

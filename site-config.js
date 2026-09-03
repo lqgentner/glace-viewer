@@ -19,8 +19,6 @@
  *   inventoryBase    "data"         where the inventory archives and index live
  *   gridIndex        "tiles.parquet"  the catalog grid's item index, under tilesBase
  *   cogReaderUrl     @developmentseed/geotiff on esm.sh, for the COG layers
- *   cogWorkerUrl     its worker-side decode handler, for js/cog-worker.js
- *   lercUrl          the LERC build that worker decodes with
  *   hyparquetUrl     hyparquet on esm.sh, for the tile grid
  *   basemapUrl       Protomaps' daily planet build on Source Cooperative
  *   basemapFlavor    "dark"         grayscale | black | dark | light | white
@@ -33,11 +31,9 @@
  * `initialView` and `terrainCredit` are merged key by key, so naming just
  * `zoom` keeps the default centre and maximum.
  *
- * The four library URLs are imported and executed, so unlike the endpoints
- * above they are not reachable from the address bar. Repoint them to pin a
- * version or to serve the libraries from your own origin; leave them alone
- * otherwise. `lercUrl` has to name the same version as the import map in
- * index.html — they resolve the same dependency for the worker and the page.
+ * The two library URLs are imported and executed, so unlike the endpoints above
+ * they are not reachable from the address bar. Repoint them to pin a version or
+ * to serve the libraries from your own origin; leave them alone otherwise.
  */
 
 window.GLACE_CONFIG = {
