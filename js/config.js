@@ -65,8 +65,9 @@ const DEFAULTS = {
     ],
   },
 
-  /* Where the map opens when the URL carries no #hash naming a view. */
-  initialView: { center: [10.4, 46.5], zoom: 6.2, maxZoom: 14 },
+  /* Where the map opens when the URL carries no #hash naming a view. Centred
+   * on the Aletsch Glacier, matching #10/46.51/8.03. */
+  initialView: { center: [8.03, 46.51], zoom: 10, maxZoom: 14 },
 };
 
 /* The subset a reader is expected to switch by hand, and the parameter name for

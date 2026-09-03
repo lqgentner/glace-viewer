@@ -678,15 +678,3 @@ export async function loadRasters() {
   render();
   return manifest;
 }
-
-/* The union of every archive's footprint — what to frame when the page is
- * opened without a #hash naming a view. */
-export function manifestBounds(manifest) {
-  return manifest.layers.reduce(
-    (acc, layer) => [
-      Math.min(acc[0], layer.bounds[0]), Math.min(acc[1], layer.bounds[1]),
-      Math.max(acc[2], layer.bounds[2]), Math.max(acc[3], layer.bounds[3]),
-    ],
-    [180, 90, -180, -90],
-  );
-}

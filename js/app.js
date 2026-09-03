@@ -21,7 +21,7 @@ import {
   toggleBasemapLabels,
 } from "./map.js";
 import { grid, loadInventories } from "./overlays.js";
-import { loadRasters, manifestBounds } from "./rasters.js";
+import { loadRasters } from "./rasters.js";
 import { buildSegmented, collapsible, creditButton, el } from "./ui.js";
 
 /* The panel covers most of a phone screen, so on a narrow viewport it opens
@@ -87,14 +87,7 @@ async function boot() {
   // is built at once: waiting for them made the panel jump as it grew.
   loadInventories();
 
-  const manifest = await loadRasters();
-  // Frame the data the first time the page is opened without a #hash.
-  if (manifest && !location.hash) {
-    map.fitBounds(manifestBounds(manifest), {
-      padding: { top: 40, bottom: 40, left: 324, right: 40 },
-      animate: false,
-    });
-  }
+  await loadRasters();
 }
 
 boot();

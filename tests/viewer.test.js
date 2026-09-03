@@ -235,11 +235,10 @@ test("the viewer", async (t) => {
     assert.ok(map.indexOf("grid-line") < map.indexOf("places"), "and under the basemap labels");
   });
 
-  await t.test("the view is framed to the union of the archives", async () => {
-    assert.ok(map.fitted, "fitBounds called when the URL carries no hash");
-    // The union of both years' footprints, not either one alone.
-    assert.deepEqual(map.fitted.bounds, [4.5, 43.5, 12.5, 48.5]);
-    assert.equal(map.fitted.options.animate, false);
+  await t.test("the view opens on the configured default rather than the data's own bounds", async () => {
+    assert.equal(map.fitted, undefined, "fitBounds is not called when the URL carries no hash");
+    assert.deepEqual(map.options.center, [8.03, 46.51]);
+    assert.equal(map.options.zoom, 10);
   });
 
   await t.test("changing product adds the new raster and hides the old", async () => {

@@ -24,7 +24,7 @@ test("built-in defaults", async () => {
   assert.equal(config.GRID_INDEX_URL, "tiles/tiles.parquet");
   assert.equal(config.BASEMAP_FLAVOR, "dark");
   assert.match(config.WORLD_IMAGERY_URL, /World_Imagery\/MapServer\/tile\/\{z\}\/\{y\}\/\{x\}/);
-  assert.deepEqual(config.INITIAL_VIEW, { center: [10.4, 46.5], zoom: 6.2, maxZoom: 14 });
+  assert.deepEqual(config.INITIAL_VIEW, { center: [8.03, 46.51], zoom: 10, maxZoom: 14 });
 });
 
 test("the committed empty template changes nothing", async () => {
@@ -53,7 +53,7 @@ test("site config repoints the archives, and everything derived follows", async 
 test("a partial nested override keeps the rest of the object", async () => {
   const view = await load({ site: { initialView: { zoom: 8 } } });
   assert.equal(view.INITIAL_VIEW.zoom, 8);
-  assert.deepEqual(view.INITIAL_VIEW.center, [10.4, 46.5]);
+  assert.deepEqual(view.INITIAL_VIEW.center, [8.03, 46.51]);
   assert.equal(view.INITIAL_VIEW.maxZoom, 14);
 
   const credit = await load({ site: { terrainCredit: { citation: "© Someone" } } });
@@ -89,7 +89,7 @@ test("deployment-only settings are not reachable from the address bar", async ()
   assert.match(config.COG_READER_URL, /^https:\/\/esm\.sh\//);
   assert.equal(config.INVENTORY_BASE, "data");
   assert.equal(config.TERRAIN_TILEJSON, "https://tiles.mapterhorn.com/tilejson.json");
-  assert.deepEqual(config.INITIAL_VIEW, { center: [10.4, 46.5], zoom: 6.2, maxZoom: 14 });
+  assert.deepEqual(config.INITIAL_VIEW, { center: [8.03, 46.51], zoom: 10, maxZoom: 14 });
 });
 
 test("a misspelled setting warns instead of silently doing nothing", async () => {
