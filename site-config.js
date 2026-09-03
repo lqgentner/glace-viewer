@@ -20,7 +20,7 @@
  *   gridIndex        "tiles.parquet"  the catalog grid's item index, under tilesBase
  *   cogReaderUrl     @developmentseed/geotiff on esm.sh, for the COG layers
  *   hyparquetUrl     hyparquet on esm.sh, for the tile grid
- *   basemapUrl       Protomaps' daily planet build on Source Cooperative
+ *   basemapUrl       Protomaps' hosted API, as a TileJSON URL with an API key
  *   basemapFlavor    "dark"         grayscale | black | dark | light | white
  *   basemapAssets    Protomaps' fonts and sprites endpoint
  *   worldImageryUrl  Esri World Imagery XYZ tile template
