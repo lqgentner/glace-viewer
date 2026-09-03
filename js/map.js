@@ -3,12 +3,14 @@
  * layered onto the basemap that are not data — the label toggle, the shaded
  * relief and the 3D view.
  *
- * The data and the basemap are PMTiles archives read straight from object
- * storage over HTTP range requests — the GLACE rasters and the Protomaps
- * basemap. The terrain is the exception: Mapterhorn publishes PMTiles too, but
- * only up to z12 in one archive, and its download server answers ranges
- * uncached. Its zxy endpoint covers every zoom and is edge-cached, so the
- * hillshade and the 3D mesh read that instead, from one shared source.
+ * The GLACE rasters and the glacier inventories are PMTiles archives read
+ * straight from object storage over HTTP range requests. The basemap and the
+ * terrain instead read from tile endpoints, each declared to MapLibre as a
+ * TileJSON document: the Protomaps hosted API for the basemap, and Mapterhorn
+ * for the terrain — Mapterhorn also publishes PMTiles, but only up to z12 in
+ * one archive, and its download server answers ranges uncached, where its zxy
+ * endpoint covers every zoom and is edge-cached; the hillshade and the 3D mesh
+ * read that instead, from one shared source.
  */
 
 import {
@@ -92,7 +94,7 @@ const style = {
   sources: {
     protomaps: {
       type: "vector",
-      url: `pmtiles://${BASEMAP_URL}`,
+      url: BASEMAP_URL,
       /* The basemap is always on the map, so this is the attribution that is
        * always shown, and the three credits that are not tied to a toggle ride
        * along in it. They stay in one string deliberately: MapLibre sorts

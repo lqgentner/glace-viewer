@@ -43,9 +43,12 @@ const DEFAULTS = {
    * same way. Also absent from QUERY_PARAMS, and for the same reason. */
   hyparquetUrl: "https://esm.sh/hyparquet@1.29.2",
 
-  /* Protomaps' free daily basemap build, mirrored on Source Cooperative.
-   * Serves CORS `*` and honours range requests, so it can be read cross-origin. */
-  basemapUrl: "https://data.source.coop/protomaps/openstreetmap/v4.pmtiles",
+  /* Protomaps' hosted API: a TileJSON document, read the same way as the
+   * Mapterhorn terrain below rather than as a PMTiles archive. Faster than the
+   * Source Cooperative mirror this replaced, since it is served from
+   * Protomaps' own edge rather than object storage, at the cost of the API key
+   * baked into the URL below (from https://protomaps.com/api). */
+  basemapUrl: "https://api.protomaps.com/tiles/v4.json?key=54af1e244a8f1599",
   basemapFlavor: "dark",
   basemapAssets: "https://protomaps.github.io/basemaps-assets",
 
