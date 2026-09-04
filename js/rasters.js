@@ -96,13 +96,9 @@ const QUANTITY_NAMES = { QA_NUM: "observation count", QA_CQM: "composite quality
 const FALSE_COLOUR = "RGB";
 const isFalseColour = (layer) => layer !== null && layer.polarization === FALSE_COLOUR;
 
-/* What the third channel carries, which is the ratio of the first two written
- * the way the product is read: a quotient for coherence, which is read
- * linearly, and a difference for backscatter, which is read in dB — where a
- * difference of logs is the log of the quotient, so it is one rule in two
- * spellings. The stretch each channel was baked with is the build's and was not
- * published, so the legend names the channels and prints no numbers. */
-const FALSE_COLOUR_BLUE = { COH12: "VV / VH", RTC: "VV − VH" };
+/* The swatch colour of each channel, red green blue, because that is what the
+ * legend row is naming — a pixel is as red as its VV is high. */
+const CHANNEL_SWATCHES = ["#e0524f", "#4c9f4c", "#5b8def"];
 
 /* Crameri's scientific colour maps, which the manifest names as `cmc.<map>`.
  * The credit is per-layer because the map is. */
@@ -398,22 +394,68 @@ function updateLegend(layer) {
   el("layer-info").replaceChildren(...layerDetail(layer).map((line) => h("div", { textContent: line })));
 }
 
-/* The swatch is in the channel's own colour, because that is what the row is
- * naming — a pixel is as red as its VV is high. No numbers beside them: the
- * build chose each channel's stretch and did not publish what it chose, so
- * printing a range here would be a guess dressed as a legend. */
 function updateChannelLegend(layer) {
-  const rows = [
-    ["#e0524f", "VV"],
-    ["#4c9f4c", "VH"],
-    ["#5b8def", FALSE_COLOUR_BLUE[layer.product] ?? "VV / VH"],
-  ];
+  const unit = unitSuffix(layer);
   el("legend-channels").replaceChildren(
-    ...rows.flatMap(([colour, band]) => [
-      h("span", { class: "swatch", style: { background: colour } }),
+    ...falseColourChannels(layer).flatMap(({ band, vmin, vmax }, at) => [
+      h("span", { class: "swatch", style: { background: CHANNEL_SWATCHES[at] } }),
       h("span", { class: "band", textContent: band }),
+      h("span", {
+        textContent:
+          vmin === undefined
+            ? ""
+            : `${round(vmin, vmax - vmin)} to ${round(vmax, vmax - vmin)}${unit}`,
+      }),
     ]),
   );
+}
+
+/* Three `{band, vmin, vmax}`, red green blue, or null where the manifest does
+ * not carry them. Checked rather than trusted, like everything else that
+ * reaches the page from a manifest — and descriptive rather than structural, so
+ * an unusable one costs the layer its numbers and not its place on the map. It
+ * is dropped silently for the same reason a half-written date is: nothing is
+ * wrong with the layer. */
+function validChannels(channels) {
+  const usable =
+    Array.isArray(channels) &&
+    channels.length === 3 &&
+    channels.every(
+      (channel) =>
+        channel !== null &&
+        typeof channel === "object" &&
+        isNonEmptyString(channel.band) &&
+        isFiniteNumber(channel.vmin) &&
+        isFiniteNumber(channel.vmax) &&
+        channel.vmin < channel.vmax,
+    );
+  return usable ? channels : null;
+}
+
+/**
+ * What each channel of a false-colour layer carries, and over what range.
+ *
+ * `channels` is the build's own record of what it baked into the archive — the
+ * band in each slot and the stretch it was given — so where the manifest
+ * publishes it, the legend reports what the tiles were actually made with. This
+ * page holds no stretch of its own and no table keyed on the product: those
+ * numbers belong to whatever rendered the archive, and a second copy here is a
+ * second copy to get wrong.
+ *
+ * Where it is absent the bands can still be named but their ranges cannot.
+ * Red and green are the two polarizations and blue is their ratio, written as a
+ * difference wherever the layer is read in dB and a quotient otherwise — one
+ * rule in two spellings, read off the manifest's own `units` rather than
+ * assumed per product. The ranges are left blank: printing numbers the archive
+ * was not necessarily built with is a guess dressed as a legend.
+ *
+ * @param {object} layer
+ * @returns {{band: string, vmin?: number, vmax?: number}[]}
+ */
+export function falseColourChannels(layer) {
+  const published = validChannels(layer.channels);
+  if (published !== null) return published;
+  return [{ band: "VV" }, { band: "VH" }, { band: layer.units === "dB" ? "VV − VH" : "VV / VH" }];
 }
 
 /* An ISO date as the manifest would carry it. Checked rather than trusted: the

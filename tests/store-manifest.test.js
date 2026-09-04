@@ -162,6 +162,9 @@ test("the false colour names its channels instead of showing a ramp", async () =
 
   const cells = [...el("legend-channels").children].map((node) => node.textContent);
   assert.deepEqual(cells.filter(Boolean), ["VV", "VH", "VV / VH"]);
+  // The store publishes no `channels` yet, so the build's three stretches are
+  // nowhere the page can read them. It names the bands and stops.
+  assert.ok(!cells.some((text) => text.includes("to")), "no numbers this page cannot vouch for");
   assert.equal(
     page.map.getSource("glace-coh12_rgb_2024").url,
     "pmtiles://tiles/2024/pmtiles/coh12_rgb.pmtiles",

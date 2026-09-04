@@ -376,7 +376,7 @@ input[type="range"] { width: 100%; accent-color: #fff; }
  * colour because that is exactly what the row is naming. */
 #legend-channels {
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: auto auto 1fr;
   gap: 2px 7px;
   align-items: center;
   font-size: 11px;

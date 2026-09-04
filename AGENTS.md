@@ -364,6 +364,46 @@ carries them onto the 40 m overview (which is written from merged arrays, so
 nothing survives unless it is passed through) and `build_pmtiles` reads them
 into the manifest.
 
+### The false-colour legend
+
+The false colour has no ramp: three channels, each carrying a different
+measurement. The legend names them and, where it can, the stretch each was baked
+with.
+
+**Those numbers are the build's, and this page holds no copy.** A manifest entry
+may carry them as `channels` — three objects in red, green, blue order:
+
+```json
+"channels": [
+  { "band": "VV", "vmin": -18.5, "vmax": -5 },
+  { "band": "VH", "vmin": -26, "vmax": -11 },
+  { "band": "VV − VH", "vmin": 4, "vmax": 14 }
+]
+```
+
+Validated like everything else that arrives from a manifest, and descriptive
+rather than structural: an unusable one costs the layer its numbers and not its
+place on the map, and is dropped silently, since nothing is wrong with the layer.
+
+**The store publishes no such key today**, so the legend names the bands and
+quotes no range. Red and green are the two polarizations; blue is their ratio,
+written as a difference wherever the layer is read in dB and a quotient
+otherwise — read off the manifest's own `units` rather than from a table keyed
+on the product, so there is no per-product constant here to fall out of step.
+
+What is *not* done is inference, and the reason is worth keeping. Red and green
+could be lifted from the sibling VV and VH entries, whose stretches are equal to
+the build's today — checked against the published manifest, both products. But
+that is a convention nothing enforces, and blue is recoverable from nothing at
+all: `LayerInfo` carries one scalar `vmin`/`vmax` pair, so `write_pmtiles`
+records `ranges[0]` and drops green and blue. Nor is there anything in the
+archive to fall back on — measured, a PMTiles metadata block holds `name`,
+`type`, `description`, `writer`, `attribution` and `tileSize`, for the
+single-band layers as much as the false colour. The single-band legend's numbers
+have always come from `layers.json`, never from the tiles.
+
+Publishing them is tracked in glace-catalog's `docs/MIGRATION.md`.
+
 The `SCALE` heading carries an info mark with the colour map's credit, rebuilt
 only when the map actually changes — the button owns a hover popover, and
 replacing it under the pointer would drop the box being read.
@@ -748,25 +788,24 @@ therefore compare a rendering baked at build time against the same rendering
 computed from the measurements, which is the same comparison the rest of this
 section is about, one level up.
 
-| channel | carries | stretch |
-| --- | --- | --- |
-| R | VV | the VV layer's own `vmin`/`vmax` |
-| G | VH | the VH layer's own `vmin`/`vmax` |
-| B | VV ÷ VH, or VV − VH in dB | measured here — see below |
+| channel | carries |
+| --- | --- |
+| R | VV |
+| G | VH |
+| B | VV ÷ VH, or VV − VH in dB |
 
 The third channel is the ratio of the first two, written in whatever domain the
 product is read in: a quotient for coherence, a difference for backscatter,
-which in dB is the same thing. Its stretch is **this page's to choose** — the
-manifest publishes a `vmin`/`vmax` per single-band layer, and the false-colour
-entry's own pair describes only its red channel. Measured at native resolution
-(§5 of the store plan is explicit that a decimated read averages SAR speckle
-away and reports a range about three times too narrow) over 619 958 valid pixels
-of the 2024 mosaics:
+which in dB is the same thing.
 
-| | p2 | p50 | p98 | used |
-| --- | ---: | ---: | ---: | --- |
-| COH12 VV ÷ VH | 0.76 | 1.39 | 2.63 | 0.75 – 2.75 |
-| RTC VV − VH (dB) | 3.50 | 6.73 | 11.03 | 3.5 – 11 |
+> **The stretches are the build's, and this page keeps no copy of them.** While
+> the COG path was live this repository measured its own blue range and used it.
+> That was a second source of truth and it disagreed with the first:
+> `RGB_STYLES` gives blue `0.8–2.5` for coherence and `4.0–14.0` dB for
+> backscatter, against the `0.75–2.75` and `3.5–11` measured here. The
+> measurements are deleted rather than corrected — see [The false-colour
+> legend](#the-false-colour-legend) for where the numbers have to come from
+> instead.
 
 **What makes it cheap is the canonical grid, not the reader.** Every mosaic of a
 scope is written on the WebMercatorQuad grid at one zoom, so VV and VH share a

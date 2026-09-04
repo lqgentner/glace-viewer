@@ -12,7 +12,7 @@ import test from "node:test";
 import { captureWarnings, installBrowser, load, REPO } from "./helpers/browser.js";
 
 installBrowser();
-const { layerDetail, validateManifest } = await load("js/rasters.js");
+const { falseColourChannels, layerDetail, validateManifest } = await load("js/rasters.js");
 const { utmZone } = await load("js/overlays.js");
 
 const layer = (overrides = {}) => ({
@@ -161,6 +161,58 @@ test("a QA role the panel has no row for is dropped without a word", async () =>
     assert.deepEqual(manifest.layers.map((entry) => entry.id), ["coh12_vv_2023"]);
   });
   assert.deepEqual(warnings, []);
+});
+
+test("a false colour reports the channels the build published", () => {
+  // The one record of what was baked into the archive. The page holds no
+  // stretch of its own, so this is the only way numbers reach that legend.
+  const channels = [
+    { band: "VV", vmin: -18.5, vmax: -5 },
+    { band: "VH", vmin: -26, vmax: -11 },
+    { band: "VV − VH", vmin: 4, vmax: 14 },
+  ];
+  assert.deepEqual(
+    falseColourChannels(layer({ polarization: "RGB", units: "dB", channels })),
+    channels,
+  );
+});
+
+test("without them it names the bands and quotes no range", () => {
+  // Which way the ratio is written follows the manifest's own `units`, not a
+  // table keyed on the product: a difference in dB, a quotient otherwise.
+  assert.deepEqual(falseColourChannels(layer({ polarization: "RGB" })), [
+    { band: "VV" },
+    { band: "VH" },
+    { band: "VV / VH" },
+  ]);
+  assert.deepEqual(falseColourChannels(layer({ polarization: "RGB", units: "dB" })).at(-1), {
+    band: "VV − VH",
+  });
+});
+
+test("a channel list the page cannot vouch for is dropped, not printed", () => {
+  const good = { band: "VV", vmin: 0.1, vmax: 0.8 };
+  for (const channels of [
+    undefined,
+    null,
+    "VV,VH",
+    [],
+    [good, good],
+    [good, good, good, good],
+    [good, good, { band: "B", vmin: 1 }],
+    [good, good, { band: "B", vmin: 2, vmax: 1 }],
+    [good, good, { band: "B", vmin: 1, vmax: 1 }],
+    [good, good, { band: "", vmin: 1, vmax: 2 }],
+    [good, good, { band: "B", vmin: "1", vmax: 2 }],
+    [good, good, null],
+  ]) {
+    const shown = falseColourChannels(layer({ polarization: "RGB", channels }));
+    assert.deepEqual(
+      shown.map((channel) => channel.vmin),
+      [undefined, undefined, undefined],
+      `for ${JSON.stringify(channels)}`,
+    );
+  }
 });
 
 test("UTM zone is read off an MGRS tile name", () => {
