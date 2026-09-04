@@ -124,25 +124,43 @@ test("a missing axis is derived from the layers", () => {
   assert.deepEqual(validateManifest({ layers, products: "COH12" }).products, ["COH12", "RTC"]);
 });
 
-test("the source axis follows what was actually published", () => {
-  // The one axis the manifest does not get to declare: it is not a naming
-  // decision the build makes, only which archives exist.
-  assert.deepEqual(validateManifest({ layers: [layer()] }).sources, ["pmtiles"]);
+test("the polarization field is split into a polarization and a quantity", () => {
+  // The store spells a QA raster as a suffix on the polarization, so one field
+  // feeds two rows. The measurement is the absence of a suffix.
+  const layers = [
+    layer(),
+    layer({ id: "num", polarization: "VV_QA_NUM" }),
+    layer({ id: "cqm", polarization: "VH_QA_CQM" }),
+  ];
+  const manifest = validateManifest({ layers });
+  assert.equal(manifest.layers.length, 3);
+  assert.deepEqual(manifest.polarizations, ["VV", "VH"]);
+  assert.deepEqual(manifest.quantities, ["", "QA_NUM", "QA_CQM"]);
+});
+
+test("the quantity axis follows what was published, in the panel's order", () => {
+  // Declared order cannot reach it: the manifest names these inside the
+  // polarization axis, mixed in with the polarizations themselves.
+  assert.deepEqual(validateManifest({ layers: [layer()] }).quantities, [""]);
   assert.deepEqual(
-    validateManifest({ layers: [layer(), layer({ id: "b", year: 2024, cog: "b.tif" })] }).sources,
-    ["pmtiles", "cog"],
-    "one COG anywhere in the manifest is enough for the control to appear",
+    validateManifest({
+      layers: [layer({ id: "cqm", polarization: "VV_QA_CQM" }), layer({ id: "num", polarization: "VV_QA_NUM" })],
+      polarizations: ["VV_QA_CQM", "VV_QA_NUM"],
+    }).quantities,
+    ["QA_NUM", "QA_CQM"],
   );
 });
 
-test("a COG a layer cannot use costs it a button, not its place on the map", async () => {
-  // Unlike the structural fields above, `cog` is descriptive: the layer still
-  // draws from its PMTiles archive without it.
-  for (const cog of [undefined, "", 42, null]) {
-    const manifest = validateManifest({ layers: [layer({ cog })] });
-    assert.equal(manifest.layers.length, 1, `for ${JSON.stringify(cog)}`);
-    assert.deepEqual(manifest.sources, ["pmtiles"], `for ${JSON.stringify(cog)}`);
-  }
+test("a QA role the panel has no row for is dropped without a word", async () => {
+  // Silently, unlike a malformed entry: it is a correct layer this page has no
+  // control for, not a broken one. Same for a polarization off the allowlist.
+  const warnings = await captureWarnings(() => {
+    const manifest = validateManifest({
+      layers: [layer(), layer({ id: "odd", polarization: "VV_QA_LIA" }), layer({ id: "hh", polarization: "HH" })],
+    });
+    assert.deepEqual(manifest.layers.map((entry) => entry.id), ["coh12_vv_2023"]);
+  });
+  assert.deepEqual(warnings, []);
 });
 
 test("UTM zone is read off an MGRS tile name", () => {
@@ -206,6 +224,17 @@ test("a half-written or malformed window is dropped, not rendered", () => {
     assert.equal(detail.length, 3, JSON.stringify(overrides));
     assert.doesNotMatch(detail.join(" "), /NaN|undefined|null|to /, JSON.stringify(overrides));
   }
+});
+
+test("a QA raster describes itself rather than the product it sits beside", () => {
+  // One line each, and no compositing line: neither is a composite of the
+  // measurement.
+  assert.deepEqual(layerDetail(layer({ polarization: "VV_QA_NUM" })), [
+    "Number of contributing observations",
+  ]);
+  assert.deepEqual(layerDetail(layer({ polarization: "VH_QA_CQM", product: "RTC" })), [
+    "Composite quality map (higher is better)",
+  ]);
 });
 
 test("an unknown product still describes itself rather than going blank", () => {

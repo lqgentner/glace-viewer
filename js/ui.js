@@ -82,7 +82,11 @@ function paintStatus() {
  * polarizations — or a `{ value, label }` pair where the name on the button is
  * not the name in the manifest, as for the products. `data-value` always
  * carries the manifest's own spelling, so nothing downstream has to translate
- * back. */
+ * back.
+ *
+ * A pair may also carry a `title`, for a row whose faces had to be shortened to
+ * fit: three buttons across a 292px panel leave about eleven characters each,
+ * and the full name goes on the tooltip rather than off the edge. */
 export function buildSegmented(node, entries, onSelect) {
   node.replaceChildren(
     ...entries.map((entry) => {
@@ -92,6 +96,7 @@ export function buildSegmented(node, entries, onSelect) {
         type: "button",
         role: "radio",
         textContent: String(pair ? entry.label : entry),
+        title: pair ? entry.title : null,
         dataset: { value },
         onclick: () => onSelect(value),
       });

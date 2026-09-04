@@ -18,7 +18,7 @@
  *   tilesBase        "tiles"        where layers.json and the raster archives live
  *   inventoryBase    "data"         where the inventory archives and index live
  *   gridIndex        "tiles.parquet"  the catalog grid's item index, under tilesBase
- *   cogReaderUrl     @developmentseed/geotiff on esm.sh, for the COG layers
+ *   cogReaderUrl     @developmentseed/geotiff on esm.sh, for js/cog-rgb.js
  *   hyparquetUrl     hyparquet on esm.sh, for the tile grid
  *   basemapUrl       Protomaps' hosted API, as a TileJSON URL with an API key
  *   basemapFlavor    "dark"         grayscale | black | dark | light | white
@@ -44,9 +44,9 @@ window.GLACE_CONFIG = {
    * This is `glace-ch`, the Switzerland-only rehearsal build — the layout and
    * the machinery of the full store over one scope, published to be exercised
    * before the Alps dataset arrives. Each year is there twice: pre-styled
-   * PMTiles under `{year}/pmtiles/`, and the float COGs they were styled from
-   * under `{year}/mosaics/`, which is the pairing the Tile source control
-   * switches between.
+   * PMTiles under `{year}/pmtiles/`, which is what this page draws, and the
+   * float COGs they were styled from under `{year}/mosaics/`, which the STAC
+   * items point at for quantitative work.
    *
    * `?tiles=` still wins over this, which is how a local build or the next store
    * gets looked at without a redeploy. */

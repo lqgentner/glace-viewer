@@ -44,6 +44,15 @@
               <div id="product" class="segmented" role="radiogroup" aria-label="Product"></div>
             </section>
 
+            <!-- The measurement, or one of the two QA rasters the store
+                 publishes beside it. Hidden unless the manifest carries more
+                 than one, since a manifest written before the QA layers offers
+                 no choice at all — see js/rasters.js. -->
+            <section class="control" id="quantity-row" hidden>
+              <label for="quantity">Layer</label>
+              <div id="quantity" class="segmented" role="radiogroup" aria-label="Layer"></div>
+            </section>
+
             <section class="control">
               <label for="pol">Polarization</label>
               <div id="pol" class="segmented" role="radiogroup" aria-label="Polarization"></div>
@@ -53,14 +62,6 @@
               <label for="year">Year <output id="year-value"></output></label>
               <input type="range" id="year" step="1" />
               <div id="year-ticks" class="ticks"></div>
-            </section>
-
-            <!-- Which archive the layer on screen is read from. Hidden unless
-                 the manifest offers both, since one source is not a choice —
-                 see js/rasters.js. -->
-            <section class="control" id="source-row" hidden>
-              <label for="source">Tile source</label>
-              <div id="source" class="segmented" role="radiogroup" aria-label="Tile source"></div>
             </section>
 
             <section class="control">
@@ -151,7 +152,12 @@
 
     <div id="status" hidden></div>
 
-    <!-- `lerc` is resolved to the package's own file rather than through the CDN
+    <!-- Nothing on the page reads a COG today — the tile-source switch was
+         retired in favour of the pre-styled archives — but js/cog-rgb.js and its
+         protocol are still wired up, so this map stays with them. It is parsed
+         and never used until something asks for a `glace-rgb://` tile.
+
+         `lerc` is resolved to the package's own file rather than through the CDN
          that builds the COG reader around it.
          lerc's emscripten loader picks its environment with
          `globalThis.process?.versions?.node && process.type != "renderer"`, and

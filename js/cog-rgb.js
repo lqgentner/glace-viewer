@@ -243,9 +243,9 @@ function rampScale({ colors, range: [low, high] }) {
 /* The value as it is read, which is not always the value as it is stored.
  *
  * Every COG in the store is linear — `BACKSCATTER_CONVENTION=Power` on the
- * backscatter mosaics, a plain ratio on QA-CQM — while the stretches published
- * beside them are quoted in dB. The PMTiles were converted before their ramp
- * was baked in, so converting here is what makes the two sources agree. */
+ * backscatter mosaics — while the stretches published beside them are quoted in
+ * dB. The PMTiles were converted before their ramp was baked in, so converting
+ * here is what makes the two sources agree. */
 const read = (stored, decibel) => (decibel ? 10 * Math.log10(stored) : stored);
 
 /* An exact zero is absent data. The reasoning, and the measurement behind it,

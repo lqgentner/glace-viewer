@@ -261,7 +261,13 @@ input[type="checkbox"]:checked {
   border-radius: 6px;
 }
 .segmented button[aria-checked="true"] { font-weight: 600; color: var(--accent-ink); }
-.segmented button:disabled { opacity: 0.35; cursor: not-allowed; }
+/* Both greys are the same grey — the button names something not on the map —
+   but only one of them refuses the click. `aria-disabled` marks a combination
+   that cannot exist and that a press resolves by moving the other row, so it
+   keeps the pointer cursor and the hover lift below: it does something. */
+.segmented button:disabled,
+.segmented button[aria-disabled="true"] { opacity: 0.35; }
+.segmented button:disabled { cursor: not-allowed; }
 
 /* `appearance: none` takes the native tick along with the native box, so the
    only thing left to draw is the tick. 14px keeps it the size the platform box
@@ -370,7 +376,7 @@ input[type="range"] { width: 100%; accent-color: #fff; }
  * colour because that is exactly what the row is naming. */
 #legend-channels {
   display: grid;
-  grid-template-columns: auto auto 1fr;
+  grid-template-columns: auto 1fr;
   gap: 2px 7px;
   align-items: center;
   font-size: 11px;

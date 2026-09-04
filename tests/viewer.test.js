@@ -100,8 +100,8 @@ test("the viewer", async (t) => {
 
   await t.test("only the selected raster is created", async () => {
     // The head of each axis decides product and polarization; newest year wins.
-    assert.deepEqual(glaceLayers(map), ["glace-pmtiles-coh12_vv_2023"]);
-    assert.ok(visible(map, "glace-pmtiles-coh12_vv_2023"));
+    assert.deepEqual(glaceLayers(map), ["glace-coh12_vv_2023"]);
+    assert.ok(visible(map, "glace-coh12_vv_2023"));
     assert.equal(el("year-value").textContent, "2023");
   });
 
@@ -120,6 +120,13 @@ test("the viewer", async (t) => {
       [...el(id).children].find((b) => b.getAttribute("aria-checked") === "true");
     assert.equal(checked("pol").dataset.value, "VV", "and the one selected");
     assert.equal(checked("product").dataset.value, "COH12");
+  });
+
+  await t.test("a manifest with no QA rasters shows no quantity row", async () => {
+    // The fixture predates them, as any older build does. One button is not a
+    // choice, so the row hides itself rather than standing there inert.
+    assert.equal(el("quantity-row").hidden, true);
+    assert.deepEqual([...el("quantity").children].map((b) => b.dataset.value), [""]);
   });
 
   await t.test("the description sits under the ramp and says what the layer is", async () => {
@@ -190,7 +197,7 @@ test("the viewer", async (t) => {
     assert.equal(map.getLayer("earth").layout.visibility, "none");
     assert.equal(map.getLayer("water").layout.visibility, "none");
     assert.equal(map.getLayer("places").layout.visibility, "none", "the label toggle still wins");
-    assert.ok(map.indexOf("world-imagery") < map.indexOf("glace-pmtiles-coh12_vv_2023"));
+    assert.ok(map.indexOf("world-imagery") < map.indexOf("glace-coh12_vv_2023"));
 
     change(el("basemap"), true);
     await settle();
@@ -209,11 +216,11 @@ test("the viewer", async (t) => {
     // for — Copernicus only with GLACE on screen, Mapterhorn with the hillshade
     // or 3D — are the strings being on the right sources.
     assert.match(
-      map.getSource("glace-pmtiles-coh12_vv_2023").attribution,
+      map.getSource("glace-coh12_vv_2023").attribution,
       /Contains modified Copernicus Sentinel data 2023/,
       "the year credited is the year on screen",
     );
-    assert.match(map.getSource("glace-pmtiles-coh12_vv_2023").attribution, /copernicus\.eu/);
+    assert.match(map.getSource("glace-coh12_vv_2023").attribution, /copernicus\.eu/);
     assert.match(map.getSource("terrain").attribution, /Mapterhorn/);
 
     // These three ride in one string so the length sort cannot scatter them.
@@ -227,7 +234,7 @@ test("the viewer", async (t) => {
   });
 
   await t.test("data draws under the hillshade, and both under the labels", async () => {
-    assert.ok(map.indexOf("glace-pmtiles-coh12_vv_2023") < map.indexOf("hillshade"));
+    assert.ok(map.indexOf("glace-coh12_vv_2023") < map.indexOf("hillshade"));
     assert.ok(map.indexOf("hillshade") < map.indexOf("places"));
     // The grid was ticked before the style loaded, so it was created before the
     // hillshade; it still has to end up above it and below the labels.
@@ -247,20 +254,20 @@ test("the viewer", async (t) => {
 
     const added = glaceLayers(map);
     assert.equal(added.length, 2, "the previous layer is kept for instant scrubbing");
-    assert.deepEqual(added.filter((id) => visible(map, id)), ["glace-pmtiles-rtc_vv_2023"]);
+    assert.deepEqual(added.filter((id) => visible(map, id)), ["glace-rtc_vv_2023"]);
   });
 
   await t.test("opacity applies to the visible raster", async () => {
     input(el("opacity"), "40");
     await settle();
-    assert.equal(map.getLayer("glace-pmtiles-rtc_vv_2023").paint["raster-opacity"], 0.4);
+    assert.equal(map.getLayer("glace-rtc_vv_2023").paint["raster-opacity"], 0.4);
     assert.equal(el("opacity-value").textContent, "40%");
   });
 
   await t.test("a new layer inherits the current opacity", async () => {
     el("pol").querySelector('[data-value="VH"]').click();
     await settle();
-    assert.equal(map.getLayer("glace-pmtiles-rtc_vh_2023").paint["raster-opacity"], 0.4);
+    assert.equal(map.getLayer("glace-rtc_vh_2023").paint["raster-opacity"], 0.4);
   });
 
   await t.test("a year with no archive for this combination is reported", async () => {
@@ -285,8 +292,15 @@ test("the viewer", async (t) => {
 
     button("product", "COH12").click();
     await settle();
-    assert.deepEqual(glaceLayers(map).filter((id) => visible(map, id)), ["glace-pmtiles-coh12_vh_2022"]);
+    assert.deepEqual(glaceLayers(map).filter((id) => visible(map, id)), ["glace-coh12_vh_2022"]);
     assert.equal(el("status").hidden, true, "the message clears once a layer exists again");
+
+    /* And now RTC is the one with nothing for this year. That is a gap in the
+     * data rather than a combination that cannot exist, so the click is refused
+     * outright — there is no other row to move that would rescue it, and moving
+     * the year is the reader's call. */
+    assert.equal(button("product", "RTC").disabled, true, "RTC VH 2022 was never built");
+    assert.equal(button("product", "RTC").hasAttribute("aria-disabled"), false);
   });
 
   await t.test("the strength slider drives the shadow alpha", async () => {

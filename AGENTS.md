@@ -51,11 +51,13 @@ Any bucket the page is pointed at has to allow anonymous reads **and** send CORS
 headers with `ExposeHeaders` for `Content-Range`, `Content-Length`,
 `Accept-Ranges` and `ETag`. Without those the browser fetches the bytes but
 refuses to let the PMTiles client read the range metadata, which fails looking
-like a corrupt archive rather than a permissions problem. The COG source reads
-the same way, so the same rule covers both, and Source Cooperative serves both.
+like a corrupt archive rather than a permissions problem. A COG read in the
+browser needs the same headers, so the one rule covers both, and Source
+Cooperative serves both.
 
-`--tiles-dir` mounts any directory that holds a `layers.json`, which is how the
-COG comparison below is looked at:
+`--tiles-dir` mounts any directory that holds a `layers.json`, which is how a
+build that is not the published store is looked at — the [COG
+comparison](#tile-source-pmtiles-or-cog-retired) was run this way:
 
 ```bash
 uv run --locked python scripts/serve.py --tiles-dir \
@@ -80,26 +82,27 @@ the manifest.
     └── pmtiles/coh12_vv.pmtiles    # pre-styled RGBA, z5-z13
 ```
 
-Every layer is published twice under one stem, which is what the [Tile
-source](#tile-source-pmtiles-or-cog) control switches between. Because the COG
-grid *is* the tile grid at z13, the file's own overview levels land on z12, z11
-and below, so no level costs the browser a resampling step.
+Every layer is published twice under one stem. The page reads the `pmtiles/`
+side of that pair for everything; the `mosaics/` side is what the retired [Tile
+source](#tile-source-pmtiles-or-cog-retired) control read, and the measurements
+that closed that question are recorded there.
 
-**The QA diagnostics are deliberately not on the map.** The manifest's
-`polarization` axis carries seven values, not three: `VV`, `VH`, `RGB`, and the
-four QA layers (`VV_QA_NUM`, `VV_QA_CQM` and their VH pair). A polarization, a
-QA role and a channel recipe share one field, and the panel has a row for the
-first three only. `js/rasters.js` drops the rest against the `POLARIZATIONS`
-allowlist, and does it *silently* — they are correct layers this page has no
-control for, not malformed ones, so warning about each would be noise. Of the 56
-entries the store publishes, 24 reach the map.
+**One manifest field carries three different things.** The `polarization` axis
+holds seven values, not three: `VV`, `VH`, `RGB`, and the four QA rasters
+(`VV_QA_NUM`, `VV_QA_CQM` and their VH pair). So a polarization, a QA role and a
+channel recipe share one field, and `js/rasters.js` splits it back into the two
+rows a reader chooses from — the polarization, and the [quantity](#the-panel).
+The split is a regex anchored to the two roles that exist, so an unrecognised
+suffix stays part of the polarization and is dropped by the `POLARIZATIONS`
+allowlist rather than becoming a fourth button nothing can draw. That drop is
+*silent* — such a layer is correct and merely unpresentable here, not malformed,
+so warning about each would be noise. All 56 entries the store publishes now
+reach the map.
 
 **Nothing else in the store needs a product built for it.** The false colour is
-either the archive the store published or the two mosaics it was rendered from,
-stacked in the browser ([Tile source](#tile-source-pmtiles-or-cog)); the catalog
-tile grid is read straight out of `tiles.parquet` ([The tile
-grid](#the-tile-grid)). Neither needs a sidecar this repository has to keep in
-step with the catalogue.
+the archive the store published, read like any other; the catalog tile grid is
+read straight out of `tiles.parquet` ([The tile grid](#the-tile-grid)). Neither
+needs a sidecar this repository has to keep in step with the catalogue.
 
 ## Tests
 
@@ -124,9 +127,8 @@ and nothing is ever bundled.
 | `tests/manifest.test.js` | `layers.json` validation, MGRS/UTM parsing |
 | `tests/ui.test.js` | status priority and keying, escaping in the credit popover |
 | `tests/viewer.test.js` | the page end to end against a fake MapLibre |
-| `tests/cog-source.test.js` | the PMTiles/COG switch, against a manifest that offers both |
-| `tests/store-manifest.test.js` | the published store's own `layers.json`, one year of it verbatim |
-| `tests/cog-rgb.test.js` | the `glace-rgb://` protocol and the false-colour row |
+| `tests/store-manifest.test.js` | the published store's own `layers.json`, one year of it verbatim — the polarization split, the QA rasters, the false-colour legend |
+| `tests/cog-rgb.test.js` | the `glace-rgb://` protocol, driven directly |
 | `tests/tile-grid.test.js` | the tile grid, read from the stac-geoparquet index |
 | `tests/viewer-degraded.test.js` | the page with no reachable `layers.json` |
 
@@ -146,11 +148,19 @@ the disabled-button and no-layer-for-this-year paths reachable. The one case
 that reads the real `tiles/layers.json` skips itself when the directory is
 absent.
 
-`cog-source.test.js` has its own fixture, `layers-cog.json`, in which COH12 VV
-carries a `cog` and nothing else does — the arrangement that makes both the
-disabled COG button and the fall back to PMTiles reachable. It is a separate
-file rather than another subtest because the modules hold state at module scope
-and the map is a singleton, so a second manifest needs a second process.
+`store-manifest.test.js` runs the page against a second manifest, and is a
+separate file rather than another subtest for that reason: the modules hold
+state at module scope and the map is a singleton, so a second manifest needs a
+second process, which `node --test` gives each file.
+
+`cog-rgb.test.js` no longer goes through the panel — nothing there produces a
+`glace-rgb://` source since the [tile-source
+switch](#tile-source-pmtiles-or-cog-retired) was retired — so it drives the
+protocol directly, through the same `setRecipe` + `recipeTiles` pair a source
+spec would use. The recipes are written out rather than derived, but their
+numbers come from the store fixture, so a stretch or a colour ramp changing
+upstream is still visible here. Keeping it is the point: kept code that nothing
+exercises is how it stops working quietly.
 
 ## Deploy
 
@@ -247,7 +257,7 @@ under `js/`, loaded straight by the browser.
 | `config.js` | resolves the settings below into archive locations and endpoints |
 | `map.js` | the map, layer ordering, basemap labels, hillshade, 3D terrain |
 | `rasters.js` | the `layers.json` manifest, layer selection, legend |
-| `cog-rgb.js` | the `glace-rgb://` protocol: COG layers, one archive or two |
+| `cog-rgb.js` | the `glace-rgb://` protocol: COG layers, one archive or two — [retired](#tile-source-pmtiles-or-cog-retired) from the panel, still wired up |
 | `tile-grid.js` | the catalog grid, read from the store's geoparquet index |
 | `overlays.js` | glacier inventories, catalog tile grid, popups |
 | `ui.js` | status line, attribution popovers, safe DOM helpers |
@@ -266,11 +276,11 @@ string, so a value containing markup stays a value.
 
 ### The panel
 
-Top to bottom: the raster controls (product, polarization, year, opacity, the
-colour ramp and the description of what is selected), then the glacier
-inventories, then **Map options** — basemap, hillshade, catalog tile grid and
-basemap labels. The last two sections are collapsed by default, and the panel is
-shorter without them.
+Top to bottom: the raster controls (product, quantity, polarization, year,
+opacity, the colour ramp and the description of what is selected), then the
+glacier inventories, then **Map options** — basemap, hillshade, catalog tile grid
+and basemap labels. The last two sections are collapsed by default, and the panel
+is shorter without them.
 
 "Map options" rather than "Additional layers" because not every control adds a
 layer: the basemap labels toggle is a visibility switch on the basemap that is
@@ -282,24 +292,68 @@ are named — `COH12` reads as **Coherence**, `RTC` as **Backscatter** — while
 translate back. A product with no entry in `PRODUCT_LABELS` falls back to its own
 name rather than vanishing.
 
-The polarization axis is **sorted rather than taken as declared**, so VV is the
-left-hand button and the one the page opens on; the manifest currently declares
-`["VH", "VV"]`. The opening selection is the head of each ordered axis with the
-newest year, falling back to a combination that has an archive if that one does
-not.
+The polarization axis is **derived from the layers and sorted**, not taken as
+declared: the manifest's own `polarizations` list mixes polarizations, QA roles
+and the channel recipe into one field (see [The published
+store](#the-published-store)), and the panel spends that field on two rows. So
+VV is the left-hand button and the one the page opens on whatever order the file
+used. The opening selection is the head of each ordered axis with the newest
+year, falling back to a combination that has an archive if that one does not.
+
+**Layer** is the second of those two rows: the measurement itself, or one of the
+two QA rasters the store publishes beside it. It is `quantity` in the code and
+in the DOM ids, which is what it selects — the label is the reader's word for it,
+not the axis's name.
+
+| button | manifest | what it is |
+| --- | --- | --- |
+| Data | no suffix | the coherence or backscatter composite |
+| QA: Count | `_QA_NUM` | the number of observations contributing to each pixel |
+| QA: Quality | `_QA_CQM` | the composite quality map, on a diverging ±6 dB ramp, where higher is better |
+
+What either quantity *is* is deep-glacier-mapping's to define and document; this
+page only has to name it and say which way is better.
+
+The faces are short because the row is three wide in a 292px panel, which leaves
+about eleven characters a button — `Measurement` alone overruns it. The full
+names ride on the buttons' tooltips and, at length, under the ramp. The row
+**hides itself when the manifest carries only one quantity**, as every build
+before the QA rasters does; one button is not a choice.
+
+**The false colour and the QA rasters exclude each other**, and the two rows
+resolve it between them. There is no `RGB_QA_NUM` and no QA false colour in the
+store, so each choice greys the other's buttons — but the click is still
+accepted. The clicked button always wins, and the row that cannot follow falls
+back to the leftmost of its values that can: press RGB while a QA raster is
+shown and **Layer** returns to Data; press a QA button while the false colour is
+shown and the polarization returns to VV.
+
+So grey means two things, told apart by whether the click is refused:
+
+| | marked | click |
+| --- | --- | --- |
+| a combination that cannot exist | `aria-disabled` | accepted; the other row moves |
+| a year with no archive for this one | `disabled` | refused |
+
+The second has nothing to move — the only thing that would rescue it is a
+different year, and that is the reader's call, not the panel's. `GIVES_WAY` in
+`js/rasters.js` is the whole rule, and it deliberately has no entry for the
+product row for exactly this reason.
 
 Under the ramp sits the description of the selected layer:
 
 ```
-Composite Coherence
-12-day baseline
+Composite Coherence                 Composite quality map (higher is better)
+12-day baseline                     2024-07-09 to 2024-10-05
 Local resolution weighted median
 2023-06-01 to 2023-09-30
 ```
 
-The first two lines are per product — the qualifier gets its own line because at
-this width it wraps anyway — and the third is how every GLACE layer is
-composited.
+For a measurement the first two lines are per product — the qualifier gets its
+own line because at this width it wraps anyway — and the third is how every GLACE
+layer is composited. A QA raster is **one line and its window**: neither is a
+composite of the measurement, so neither takes the compositing line, and the
+name plus which way is better is all the panel has to say.
 
 The window comes from `start_date` and `end_date` on the manifest entry, as
 `YYYY-MM-DD`, and the line is skipped when they are absent or malformed. Like
@@ -559,31 +613,37 @@ protocol already returns an empty buffer rather than null, so the tile grid was
 never affected. `errorOnMissingTile` does not help here: the protocol consults
 it only for vector tiles.
 
-### Tile source: PMTiles or COG
+### Tile source: PMTiles or COG (retired)
 
-A layer can be published twice: as the pre-styled RGBA PMTiles archive the build
-has always written, and as the float COG it was styled from. The panel grows a
-**Tile source** control as soon as any entry offers both. Nothing else about the
-page changes — the two answer the same product / polarization / year / opacity
-controls, draw in the same slot under the hillshade, and carry the same
-Copernicus credit.
+> **Retired.** The page draws every layer from its pre-styled PMTiles archive.
+> The **Tile source** control that switched a layer to the float COG it was
+> styled from is gone, along with the manifest plumbing that found the second
+> href — the comparison it existed for is finished, and the answer is below.
+>
+> **`js/cog-rgb.js` stays**, registered on its `glace-rgb://` protocol in
+> `js/map.js` and exercised by `tests/cog-rgb.test.js`, so reopening the question
+> is a source spec away rather than a rebuild away: register a recipe with
+> `setRecipe(id, …)` and hand `recipeTiles(id)` to a raster source's `tiles`.
+> What was removed is the panel row, the axis in `validateManifest()`, and the
+> `{year}/pmtiles/{stem}.pmtiles` → `{year}/mosaics/{stem}.tif` derivation that
+> found a layer's COG where the manifest named none.
+>
+> Kept because the measurements below are the record of *why*, and because the
+> reader is the only path by which this page can read a pixel value at all — the
+> thing the section closes on under [What it buys](#what-it-buys-and-what-it-does-not).
 
-**Finding the second href.** A manifest entry may name it as a `cog` beside its
-`url`, and that always wins. The store writes no such key, so where it is absent
-the page derives one from the archive href: `{year}/pmtiles/{stem}.pmtiles`
-becomes `{year}/mosaics/{stem}.tif`, which is how the store publishes the pair.
-The pattern is anchored to the whole href rather than substituted into it, so it
-fails closed — a manifest laid out any other way yields no COG at all instead of
-a `.tif` beside an archive that was never published. That is what keeps the
-button dark for the false-colour layers, which have no COG by design, and for
-the older flat manifests, which have none at all.
+A layer is published twice: as the pre-styled RGBA PMTiles archive the build has
+always written, and as the float COG it was styled from. While both were on the
+panel, nothing else about the page changed between them — the two answered the
+same product / polarization / year / opacity controls, drew in the same slot
+under the hillshade, and carried the same Copernicus credit.
 
 | | PMTiles | COG |
 | --- | --- | --- |
 | what is fetched | WEBP RGBA, ramp already applied | float32 LERC, range-read |
 | who applies the ramp | the build, once | the browser, per tile |
 | decode | native WEBP | @developmentseed/geotiff: Zstd, then LERC |
-| ramp and stretch | baked in | applied per pixel by `setColorFunction` |
+| ramp and stretch | baked in | applied per pixel, in `js/cog-rgb.js` |
 | units | converted before the bake | converted per pixel, from `units` |
 | pixel values | gone | present |
 
@@ -607,9 +667,8 @@ end of the ramp they fall outside: **white** for backscatter, where 0 dB is abov
 the stretch, and **near-black** for coherence, where 0 is below it. That is the
 fringe around the edge of the data.
 
-So `js/rasters.js` colours the tile itself, through `setColorFunction`, building
-the same ramp the fragment would have carried and treating an exact zero as
-absent. That test is measured, not assumed. Checked against the PMTiles alpha —
+So `js/cog-rgb.js` colours the tile itself, building the same ramp the fragment
+would have carried and treating an exact zero as absent. That test is measured, not assumed. Checked against the PMTiles alpha —
 baked from the real validity mask at build time, so it is ground truth — over
 every tile of both study archives at z11, z12 and z13:
 
@@ -650,11 +709,10 @@ the knowledge has to live here.
 
 **The stored value is not always the plotted one.** Every COG in the store is
 *linear* — the backscatter mosaics say so in a `BACKSCATTER_CONVENTION=Power`
-tag, and QA-CQM is a plain contributing-area ratio — while the stretch published
-beside them is quoted in dB, the domain the layer is actually read in. The
-PMTiles need nothing: the build converts before it bakes the ramp into RGBA. The
-COG path has to convert per pixel, keyed on the manifest's `units`, or the two
-sources draw different pictures.
+tag — while the stretch published beside them is quoted in dB, the domain the
+layer is actually read in. The PMTiles need nothing: the build converts before
+it bakes the ramp into RGBA. The COG path has to convert per pixel, keyed on the
+manifest's `units`, or the two sources draw different pictures.
 
 It is not a nicety. Valid pixels of the 2024 RTC VV mosaic run **0.0038 to 24.8**
 in linear power, against a published stretch of **−18.5 to −5**; read raw, every
@@ -869,7 +927,7 @@ where moving it means a new MapLibre source: `CogReader` caches the decoded
 *values* under the archive URL and tile index, which the fragment is not part of,
 so re-colouring the 24-tile z11 viewport measured above cost **0 bytes and
 ~125 ms** against the 842 ms and 2.4 MB of the first load. The page colours
-through `setColorFunction` rather than the fragment, which does not change that
+in its own protocol rather than through the fragment, which does not change that
 arithmetic — the values are decoded and cached either way. Whatever an adjustable
 stretch would cost, it is not a refetch.
 
@@ -987,19 +1045,20 @@ full-resolution windows rather than reading one decimated overview.
 
 ### What the viewer shows
 
-Product (COH12 / RTC), polarization (VV / VH) and a year slider select one
-raster layer; combinations with no archive are disabled rather than hidden.
-Layer opacity, shaded relief, the basemap labels, the catalog tile grid and the
-glacier inventories are independent of that choice and of each other. The map
-position lives in the URL hash, so a view can be linked.
+Product (COH12 / RTC), quantity (the measurement, or one of the two QA rasters),
+polarization (VV / VH / false colour) and a year slider select one raster layer;
+combinations with no archive are disabled rather than hidden. Layer opacity,
+shaded relief, the basemap labels, the catalog tile grid and the glacier
+inventories are independent of that choice and of each other. The map position
+lives in the URL hash, so a view can be linked.
 
 The rasters are *pre-styled RGBA* — the colour ramp is baked in at build time
 and pixel values cannot be read back from the tiles. The legend reports the
 stretch each layer was built with, which is the fixed range from the table above
 unless the build opted into `--percentile-stretch`; either way it is recorded
 per layer in `layers.json`. For quantitative work, go to the COGs the STAC items
-point at — or, where a manifest names one, switch the layer to its COG source
-and read the values in the browser (see below).
+point at.
 
-A **Tile source** control appears when the manifest offers a layer both ways.
-It is the only control whose presence depends on what was published.
+The **Layer** row is the one control whose presence depends on what was
+published: it appears only where the manifest carries a QA raster beside the
+measurement.

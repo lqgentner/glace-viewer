@@ -26,10 +26,12 @@ const DEFAULTS = {
    * tilesBase, like everything else the store publishes. */
   gridIndex: "tiles.parquet",
 
-  /* The COG reader behind the false-colour source, imported the first time such
-   * a layer is drawn. It is ESM-only with bare specifiers and ships no UMD
-   * build, so unlike the page's other libraries it cannot be a <script> tag —
-   * the CDN is what resolves its dependencies. Deliberately absent from
+  /* The COG reader behind js/cog-rgb.js, imported the first time a
+   * `glace-rgb://` tile is asked for — which nothing on the page does today,
+   * the tile-source switch having been retired in favour of the pre-styled
+   * archives. It is ESM-only with bare specifiers and ships no UMD build, so
+   * unlike the page's other libraries it cannot be a <script> tag — the CDN is
+   * what resolves its dependencies. Deliberately absent from
    * QUERY_PARAMS below: this URL is executed, so it is a deployment decision
    * and must not be settable from the address bar.
    *
