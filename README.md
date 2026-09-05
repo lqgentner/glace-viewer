@@ -3,9 +3,11 @@
 Quick-look web viewer for **GLACE** — resolution-weighted Sentinel-1 coherence
 and backscatter composites of the European Alps.
 
-The rasters are produced by [deep-glacier-mapping](https://github.com/lqgentner/deep-glacier-mapping),
-which also exports the glacier inventory data shown here. This repository
-holds only the viewer page and its overlays.
+The composites are produced by [deep-glacier-mapping](https://github.com/lqgentner/deep-glacier-mapping),
+which also exports the glacier inventory data shown here; they are published as
+a STAC catalog by [glace-catalog](https://github.com/lqgentner/glace-catalog),
+which is what this page reads. This repository holds only the viewer page and
+its overlays.
 
 ## Technology
 
