@@ -64,6 +64,53 @@ uv run --locked python scripts/serve.py --tiles-dir \
     ../deep-glacier-mapping/cache/stac-store-refactor/cog-study
 ```
 
+## To do when the updated catalog is published
+
+**The store is being restructured; this page has to follow.** Nothing is broken
+today — the published `layers.json` is from 2026-09-02 and still current — but
+the catalog repository has retired the manifest by design and stopped writing
+it, so the next publication will not refresh it. The work here is not started.
+
+What changed upstream (`glace-catalog`, `docs/MIGRATION.md` §4 and §9):
+
+- **`layers.json` is retired** (M-26). Its writer is deleted from
+  `glace-catalog`. Only the `deep-glacier-mapping` copy still produces one, and
+  that copy is scheduled for deletion (P-17) once this page no longer needs it.
+- **Every field has a standard home instead.** Enumerate archives from
+  `mosaics/collection.json`'s `rel="pmtiles"` links; take `bounds`, `minzoom`
+  and `maxzoom` from **the PMTiles header itself**, which already carries them;
+  take dates from the mosaic item.
+- **Display constants come from the MapLibre style** (M-27).
+  `mosaics/styles/default.json` is now a single file declaring all fourteen
+  layers, one visible and thirteen hidden, each carrying `cmap`, `vmin`, `vmax`,
+  `unit`, `decibel` and derived `stops` under `metadata.portolan:legend`. It is
+  the *source of truth* — the build reads the same file to bake the archives —
+  so this page should read it rather than keep any copy.
+- **False-colour stretches are published at last** (P-18), as
+  `type: "channels"` with three `{band, vmin, vmax}` entries.
+  `falseColourChannels()` already expects exactly this shape from `channels`;
+  the numbers just have to come from the style now instead of `layers.json`.
+- **The QA ranges changed** (P-19), re-derived from the published mosaics.
+  QA-NUM is now **0–70, shared by both products**, rather than 0–30: 2021
+  reaches 49 (COH12) and 58 (RTC) because S1B was still flying, and the old
+  ceiling clipped it to a flat block. The range is deliberately *not*
+  per-product — RTC sees more acquisitions than COH12, and a shared ceiling is
+  what makes that visible. QA-CQM is now **−3…3 dB** rather than −6…6, and its
+  ramp is sequential (`cmc.glasgow`), not diverging: CQM is a composite quality
+  indicator where higher is better, and the diverging ramp encoded a misreading
+  of it.
+- **The attribution wording is fixed and per-year**:
+  `University of Zurich, Contains modified Copernicus Sentinel data {year}`,
+  carried by the style's sources and baked into each archive's header. This page
+  builds its own line in `copernicus()` (`js/rasters.js`); that becomes a third
+  copy of something now published, and should be read rather than composed.
+- **The analysis mosaics move to ETRS89-LAEA 40 m** (M-24). The web-map archives
+  stay on WebMercator z13, so nothing about the PMTiles path changes — but
+  `js/cog-rgb.js` reads the *float mosaics*, and its whole cheapness argument is
+  that they share the XYZ grid. **Once the mosaics are LAEA that stops holding**,
+  and the pixel-value readout it provides has no equal-area-safe replacement on
+  this page. Decide whether to retire it or to ask for a float WebMercator COG.
+
 ## The published store
 
 The archives live in [`lqgentner/glace-ch`](https://source.coop/lqgentner/glace-ch)
