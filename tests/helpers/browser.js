@@ -55,6 +55,7 @@ class FakeMap {
     this.hits = [];
     this.calls = [];
     this.controlNodes = [];
+    this.controls = [];
     this.terrain = null;
     this.pitch = initialPitch;
     for (const layer of options.style.layers) {
@@ -70,6 +71,8 @@ class FakeMap {
     // Deliberately not recorded in `calls`: that log is what the tests read to
     // assert nothing has been added to the *map* yet, and controls are attached
     // at construction time rather than in response to anything a reader did.
+    // `controls` is separate, and holds what each was constructed with.
+    this.controls.push(control);
     if (typeof control.onAdd === "function") this.controlNodes.push(control.onAdd(this));
   }
 
@@ -243,8 +246,16 @@ export function installBrowser({ search = "", site, files = {}, pitch = 0, narro
     addProtocol() {},
     Map: FakeMap,
     NavigationControl: class {},
-    ScaleControl: class {},
-    AttributionControl: class {},
+    ScaleControl: class {
+      constructor(options = {}) {
+        this.options = options;
+      }
+    },
+    AttributionControl: class {
+      constructor(options = {}) {
+        this.options = options;
+      }
+    },
     Popup: class {
       setLngLat() {
         return this;

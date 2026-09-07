@@ -53,6 +53,13 @@ class RangeRequestHandler(SimpleHTTPRequestHandler):
     # pays for a fresh connection.
     protocol_version = "HTTP/1.1"
 
+    # ``mimetypes`` has no entry for ``.webmanifest``, and Chrome rejects one
+    # served as ``application/octet-stream`` with a console warning and nothing else.
+    extensions_map = {
+        **SimpleHTTPRequestHandler.extensions_map,
+        ".webmanifest": "application/manifest+json",
+    }
+
     tiles_dir: Path
 
     @staticmethod

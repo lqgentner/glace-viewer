@@ -4,6 +4,14 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>GLACE — Sentinel-1 composites, European Alps</title>
+
+    <!-- Relative, since a Pages project site is served from a subpath. The .ico
+         carries 16, 32 and 48 px, so no PNG favicons beside it. -->
+    <link rel="icon" href="assets/favicon.ico" sizes="16x16 32x32 48x48" />
+    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+    <link rel="manifest" href="assets/site.webmanifest" />
+    <meta name="theme-color" content="#10141c" />
+
     <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.9.0/dist/maplibre-gl.css" />
     <link rel="stylesheet" href="style.css" />
   </head>
@@ -20,7 +28,11 @@
       <aside id="panel">
         <header>
           <div>
-            <h1 id="title">GLACE</h1>
+            <!-- The wordmark carries its glyphs as outlines, so it needs no
+                 webfont — see AGENTS.md. -->
+            <h1 id="title">
+              <img src="assets/glace-wordmark.svg" alt="GLACE" width="2074" height="419" />
+            </h1>
             <p id="subtitle">Sentinel-1 annual summer composites of the European Alps</p>
           </div>
           <!-- Collapses everything below the title. The panel covers most of a

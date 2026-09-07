@@ -192,7 +192,7 @@ test("the viewer", async (t) => {
     ]);
     assert.equal(source.type, "raster");
     assert.match(source.attribution, /^© Esri, Maxar/, "worded like the credits it sits beside");
-    assert.match(source.attribution, /maplibre\.org/);
+    assert.doesNotMatch(source.attribution, /maplibre\.org/, "the renderer is not Esri's to credit");
     assert.ok(visible(map, "world-imagery"));
     assert.equal(map.getLayer("earth").layout.visibility, "none");
     assert.equal(map.getLayer("water").layout.visibility, "none");
@@ -225,14 +225,28 @@ test("the viewer", async (t) => {
       "and the panel credits the DEM from configuration either way",
     );
 
-    // These three ride in one string so the length sort cannot scatter them.
+    // These two ride in one string so the length sort cannot scatter them.
     const basemap = map.getSource("protomaps").attribution;
     assert.match(basemap, /openstreetmap\.org\/copyright.*OpenStreetMap contributors/);
     assert.ok(
       basemap.indexOf("OpenStreetMap") < basemap.indexOf("Protomaps"),
-      "OpenStreetMap, then Protomaps, then MapLibre",
+      "OpenStreetMap, then Protomaps",
     );
-    assert.ok(basemap.indexOf("Protomaps") < basemap.indexOf("MapLibre"));
+  });
+
+  await t.test("the renderer is credited by the control, not by a basemap", async () => {
+    /* A source is handed its attribution only once its TileJSON resolves, so
+     * every credit riding on one is conditional on that request — which is why
+     * the renderer's cannot. It is drawing whether the basemap loaded, failed,
+     * or was swapped for the imagery. */
+    const attribution = map.controls.find(
+      (control) => control instanceof globalThis.maplibregl.AttributionControl,
+    );
+    assert.match(attribution.options.customAttribution, /maplibre\.org/);
+
+    for (const id of ["protomaps", "world-imagery"]) {
+      assert.doesNotMatch(map.getSource(id).attribution, /maplibre\.org/, `${id} does not repeat it`);
+    }
   });
 
   await t.test("data draws under the hillshade, and both under the labels", async () => {

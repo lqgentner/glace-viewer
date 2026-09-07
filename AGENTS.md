@@ -175,6 +175,7 @@ and nothing is ever bundled.
 | `tests/cog-rgb.test.js` | the `glace-rgb://` protocol, driven directly |
 | `tests/tile-grid.test.js` | the tile grid, read from the stac-geoparquet index |
 | `tests/viewer-degraded.test.js` | the page with no reachable `layers.json` |
+| `tests/page-assets.test.js` | every local `src`/`href` in `index.html` exists, and `deploy.yml` stages the directory it is in |
 
 The path and range cases are written to a socket by hand: `http.client` and
 `curl` both normalise `a/../b` before sending it, which is the case under test.
@@ -316,6 +317,37 @@ when the style arrives rather than dropped.
 Anything that reaches the page from a manifest or a vector tile — a glacier
 name, a citation, a licence link — is built as DOM nodes rather than as an HTML
 string, so a value containing markup stays a value.
+
+### Wordmark and icons
+
+`assets/` holds the brand files, and the deploy stages the whole directory. Every
+path to them is relative — the icon links, and the manifest's `start_url`,
+`scope` and icon `src`s — because a Pages project site is served from a subpath.
+
+**The wordmark's glyphs are outlines, not text.** The file it came from set
+`font-family: Coiny` on a `<text>` element, and an `<img>` renders in an isolated
+document that loads none of the page's fonts, so that version came back in
+whatever the browser fell back to. To redraw it after a wordmark change, take
+[Coiny](https://fonts.google.com/specimen/Coiny) (SIL OFL 1.1) and run the glyphs
+through a `fontTools` `SVGPathPen`. Two things the file depends on: the `viewBox`
+is cropped to the ink, so the CSS height is cap height and there is no invisible
+padding to align around; and the gradient is `userSpaceOnUse`, so its
+`gradientTransform` moves with any change to that `viewBox` origin.
+
+The PNG wordmark that shipped beside it is **not kept** — it is opaque white with
+no alpha, so on the dark panel it would draw its own white box.
+
+| kept | read by |
+| --- | --- |
+| `favicon.ico` | every desktop tab — it carries 16, 32 and 48 px in the one file |
+| `apple-touch-icon.png` | iOS home screen, at 180 px |
+| `site.webmanifest` + `icon-192.png`, `icon-512.png` | Android add-to-home-screen, and nothing else |
+
+`favicon-16x16.png` and `favicon-32x32.png` came from the generator too and are
+**dropped**: the `.ico` carries both sizes already. The manifest is what earns
+the two large icons their place — without it nothing fetches them — and the
+generator's copy needed its empty `name`, absolute paths and white theme colours
+replaced. `serve.py` maps `.webmanifest`, which `mimetypes` does not.
 
 ### The panel
 
@@ -463,6 +495,49 @@ for a different screen.
 It also stops 52px short of the right edge rather than running the full width. A
 MapLibre control group is 29px wide inside a 10px margin, so a panel reaching the
 edge sits on top of the zoom buttons and the 3D toggle.
+
+At the bottom it stops **52px** short rather than the 12px it keeps at the top,
+which is the room the **scale bar** needs in the corner underneath: a MapLibre
+control's 10px margin plus the ~20px the bar is. Left symmetric, a viewport short
+enough for the panel to fill hands it the whole left edge and the scale sits
+behind it — a short desktop window as much as a phone. The 40px is only ever
+taken from a panel that had more height than it could fill, so the alternative —
+moving the scale to the bottom-right, above the attribution — buys nothing and
+crowds that corner. `js/map.js` and this cap have to agree.
+
+**The header does not scroll.** `#panel` is a flex column that clips, and
+`#panel-body` is what has `overflow-y: auto` — so the wordmark and the collapse
+button stay put however long the controls run. When the panel itself scrolled,
+a viewport short enough to overflow it carried the collapse button off the top,
+and there was then no way to get the map back.
+
+**The scrollbar lives in the panel's padding, and is always reserved.** A
+scrollbar takes its width out of the scroll container's content box, so the
+controls reflowed narrower the moment there was anything to scroll — and back
+again when there was not. The fix is to move the horizontal padding off `#panel`
+and onto `#panel-body`: negative margins stretch the body across the panel's
+full inner width, `padding-left: 16px` puts the controls back where they were,
+and `scrollbar-gutter: stable` reserves the matching 16px on the right whether
+or not the bar is showing. The content column is 258px either way.
+
+It stays a **native** scrollbar, so the OS keeps its sizing, click-and-drag and
+reduced-motion behaviour, which a div-and-JS reimplementation gives up. It is
+styled twice, because no one declaration reaches both engines: Blink and WebKit
+stop honouring `::-webkit-scrollbar` the moment either standard property is set,
+so `@supports selector(::-webkit-scrollbar)` splits them. Firefox takes
+`scrollbar-width: thin` with `scrollbar-color`, where the gutter is whatever
+`thin` is (~11px) and `padding-right: 5px` makes up the rest of the 16. Blink and
+WebKit take the pseudo-elements, which are the only way to set the **gutter's own
+width** — 16px of it carrying a 6px thumb, which is what centres the bar in the
+padding rather than leaving it against the border. Either way the column comes
+out at 258px.
+
+**A scroll container clips at its padding box, not its content box**, which is
+what the body's left padding is for beyond symmetry: it gives the checkboxes'
+focus rings somewhere to be drawn. The same rule is why the sliders were briefly
+cut off — `input[type="range"]` carries a UA `margin: 2px` that sits outside its
+`width: 100%`, and the overhang was invisible only while `#panel`'s own padding
+was absorbing it. It is reset now, as the checkbox's already was.
 
 **The collapsed state is a class on `#panel`, not `hidden` on the body**, and the
 narrow default is a stylesheet rule rather than something the script applies.
@@ -630,15 +705,26 @@ for the DEM — while it is carrying the terrain. So
   archive itself and per year, because every year is its own archive;
 - **Mapterhorn** appears when the hillshade is ticked *or* 3D is on, and goes
   away when both are off;
-- **OpenStreetMap, Protomaps and MapLibre** are always shown, riding on the
-  basemap source, which is always present.
+- **OpenStreetMap and Protomaps** ride on the basemap source, and are replaced by
+  **Esri** when World Imagery is showing;
+- **MapLibre** is always shown, and is the one credit that hangs off no source at
+  all.
 
-Those last three share one string on purpose. MapLibre sorts attributions by
-**string length** before joining them with `|`, so three separate entries would
-be scattered through the line at lengths nobody controls, while one entry keeps
-its own internal order. The same sort is why Mapterhorn prints ahead of
-Copernicus: its string is shorter. Ordering the line by hand would mean
-replacing the control rather than configuring it.
+Those first two share one string on purpose. MapLibre sorts attributions by
+**string length** before joining them with `|`, so two separate entries would be
+scattered through the line at lengths nobody controls, while one entry keeps its
+own internal order. The same sort is why Mapterhorn prints ahead of Copernicus:
+its string is shorter. Ordering the line by hand would mean replacing the control
+rather than configuring it.
+
+**The renderer's credit is `customAttribution` on the control**, not a field on a
+basemap source. It used to ride in both basemap sources' strings, on the reasoning
+that one basemap or the other is always present — but a source is handed its
+`attribution` only when its **TileJSON resolves**, so every credit riding on one
+is conditional on that request succeeding. A blocked basemap request therefore
+took the renderer's credit down with the basemap's, which is not what it is
+conditional on: MapLibre is drawing either way. On the control it is unconditional
+by construction. Being the shortest entry, it now sorts to the front of the line.
 
 #### Where each string comes from
 
@@ -646,13 +732,20 @@ A source given a `url:` inherits its attribution from the TileJSON at the other
 end unless the spec names one: MapLibre resolves it as
 `pick(extend(tileJSON, options), [… "attribution" …])`, so **the spec wins**.
 Declaring one here overrides the publisher rather than adding to them, which is
-why only two are declared:
+why only two are declared.
+
+Note where that expression sits: the spec's own string is applied *inside* the
+TileJSON resolution, so a source whose TileJSON never loads gets no attribution
+even though the page declared one. That is why the basemap's two credits both
+vanish together when Protomaps' API is unreachable — opening the page on
+`127.0.0.1` rather than `localhost` does it, see [Preview
+locally](#preview-locally) — and why the renderer's credit does not ride there.
 
 | source | declared here | why |
 | --- | --- | --- |
 | GLACE archives | **no** | each archive carries its own, and `pmtiles.Protocol({metadata: true})` is what puts it in the TileJSON — one 167 B read per archive. Still per year, since each year is its own archive |
 | Mapterhorn DEM | **no** | its TileJSON already carries `© Mapterhorn` with the same link |
-| Protomaps basemap | yes | its TileJSON credits **OpenStreetMap only**, and the spec replaces rather than appends, so the three have to be declared together — which is also what keeps their order |
+| Protomaps basemap | yes | its TileJSON credits **OpenStreetMap only**, and the spec replaces rather than appends, so Protomaps has to be declared alongside it — which is also what keeps their order |
 | World Imagery | yes | a `tiles:` template, so there is no TileJSON to inherit from |
 
 The cost is that a publisher can stop crediting itself and nothing here would

@@ -70,7 +70,7 @@ jobs:
         run: |
           mkdir -p _site/data
           cp index.html style.css site-config.js _site/
-          cp -r js _site/
+          cp -r js assets _site/
           cp data/*.pmtiles data/inventories.json _site/data/
           du -sh _site
 

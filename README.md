@@ -32,7 +32,9 @@ control as the layers that use them are switched on. The glacier inventories
 are third-party datasets (all CC BY 4.0) redistributed here in simplified
 form — each carries its own citation and licence behind the info mark next to
 its toggle in the panel. The MIT licence in this repository covers the viewer
-code only, not the inventory data — see [`LICENSE`](LICENSE).
+code only, not the inventory data — see [`LICENSE`](LICENSE). The wordmark and
+icons in `assets/` are drawn in [Coiny](https://fonts.google.com/specimen/Coiny)
+by Marcelo Magalhães, under the SIL Open Font License 1.1.
 
 ## Development
 

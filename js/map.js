@@ -102,17 +102,14 @@ const style = {
     protomaps: {
       type: "vector",
       url: BASEMAP_URL,
-      /* The basemap is always on the map, so this is the attribution that is
-       * always shown, and the three credits that are not tied to a toggle ride
-       * along in it. They stay in one string deliberately: MapLibre sorts
-       * attributions by length before joining them, so three separate entries
-       * would be scattered through the line, while one entry keeps its own
-       * order. MapLibre credits the renderer rather than a source, but there is
-       * no other entry guaranteed to be present. */
+      /* The data and its publisher, in one string deliberately: MapLibre sorts
+       * attributions by length before joining them, so two entries would be
+       * scattered through the line at lengths nobody controls, while one keeps
+       * its own order. The renderer's credit is *not* here — it belongs to no
+       * source, so it rides on the control below. */
       attribution:
         '<a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors</a>' +
-        ' | <a href="https://protomaps.com">Protomaps</a>' +
-        ' | <a href="https://maplibre.org">MapLibre</a>',
+        ' | <a href="https://protomaps.com">Protomaps</a>',
     },
   },
   layers: basemapLayers,
@@ -158,8 +155,22 @@ export const map = new maplibregl.Map({
   attributionControl: false,
 });
 map.addControl(new maplibregl.NavigationControl({ visualizePitch: false }), "top-right");
+// The panel is above this corner, and on a short viewport it would reach it —
+// #panel-shell in style.css stops short of the bottom by exactly the room this
+// needs, so the two have to agree.
 map.addControl(new maplibregl.ScaleControl({ maxWidth: 120, unit: "metric" }), "bottom-left");
-map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-right");
+map.addControl(
+  new maplibregl.AttributionControl({
+    compact: true,
+    /* The renderer is drawing whether or not any basemap is, so its credit hangs
+     * off the control rather than off a source. It used to ride in both basemap
+     * sources' strings, and a source only receives its attribution once its
+     * TileJSON resolves — so a blocked request took the renderer's credit with
+     * the basemap's. Being the shortest entry, it now sorts to the front. */
+    customAttribution: '<a href="https://maplibre.org">MapLibre</a>',
+  }),
+  "bottom-right",
+);
 
 map.on("error", (event) => {
   if (event.error) console.warn("maplibre:", event.error.message);
@@ -226,9 +237,7 @@ function ensureWorldImagery() {
       maxzoom: 19,
       // Declared because a `tiles:` template has no TileJSON to inherit from.
       // "© Esri", not Esri's own "Tiles © Esri", to read as the others do.
-      attribution:
-        '© Esri, Maxar, Earthstar Geographics, and the GIS User Community' +
-        ' | <a href="https://maplibre.org">MapLibre</a>',
+      attribution: "© Esri, Maxar, Earthstar Geographics, and the GIS User Community",
     });
   }
   if (!map.getLayer(WORLD_IMAGERY_LAYER)) {

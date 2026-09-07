@@ -4,11 +4,12 @@
   --border: #2a3242;
   --text: #e6eaf2;
   --muted: #8b95a8;
-  --accent: #4da3ff;
-  /* The same blue, darkened for text on a white fill. --accent on white is
-     2.6:1, which fails AA at any size; this is 4.7:1 and still reads as the
-     accent beside it. */
-  --accent-ink: #1f74d0;
+  /* The wordmark's pink. It is only ever used on the dark panel or the popover,
+     where it runs 8.6:1 and up. */
+  --accent: #d7acce;
+  /* The same hue, darkened and saturated for text on a white fill: --accent
+     there is 1.97:1, which fails AA at any size, and this is 4.7:1. */
+  --accent-ink: #b8479f;
 }
 
 * { box-sizing: border-box; }
@@ -54,7 +55,12 @@ html, body {
   top: 12px;
   left: 12px;
   width: 292px;
-  max-height: calc(100% - 24px);
+  /* 12px of margin above, and below it the room the scale bar needs in the
+     corner underneath: a MapLibre control's 10px margin plus the ~20px the bar
+     itself is, and some air. Left at 12px both ends, a short viewport hands the
+     panel the whole left edge and the scale sits behind it. It costs the panel
+     40px of height, but only where it had more than it could fill anyway. */
+  max-height: calc(100% - 52px);
   /* A column, so the panel can be capped by the shell's max-height and scroll
      inside it rather than growing past the bottom of the map. */
   display: flex;
@@ -91,39 +97,21 @@ html, body {
      an unpositioned panel would sit *under* the glass and be blurred by it. */
   position: relative;
   /* min-height lets the flex item shrink past its content, which is what makes
-     the overflow below scroll instead of the shell simply growing. */
+     the overflow below scroll instead of the shell simply growing. The scrolling
+     itself belongs to #panel-body, not here: the header carries the collapse
+     button, and a panel taller than the viewport used to scroll it out of reach
+     — on a short screen there was then no way to get the map back. */
   min-height: 0;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   padding: 16px;
   border: 1px solid var(--border);
   border-radius: 10px;
   /* Near-opaque, for the browsers that skip the @supports block below: at the
      glass alpha alone the map would read straight through an unblurred panel. */
   background: var(--panel);
-
-  /* The platform scrollbar is an opaque grey slab against a pane of glass. The
-     two standard properties below are the whole fix on anything current —
-     Firefox 64+, Chrome 121+, Safari 18.2+ — and they leave the scrollbar a
-     real scrollbar: the OS keeps its sizing, its click-and-drag and its
-     reduced-motion behaviour, which a div-and-JS reimplementation gives up.
-     `thin` and a transparent track reduce it to a translucent thumb. */
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.28) transparent;
 }
-
-/* The same thing for WebKit before 18.2, which ignores the pair above. Chrome
-   drops these the moment `scrollbar-color` is understood, so the two never
-   both apply. The transparent border plus content-box clip is what insets the
-   thumb from the panel edge — a margin is not available here. */
-#panel::-webkit-scrollbar { width: 10px; }
-#panel::-webkit-scrollbar-track { background: transparent; }
-#panel::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.28);
-  background-clip: content-box;
-  border: 3px solid transparent;
-  border-radius: 5px;
-}
-#panel::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.45); background-clip: content-box; }
 
 @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
   #panel-glass {
@@ -145,12 +133,66 @@ html, body {
    spacing belongs to the body rather than the header — collapsed, the panel is
    the title alone with no gap hanging off the bottom. */
 #panel header {
+  flex: none;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
 }
-#panel-body { margin-top: 14px; }
+/* The body owns the horizontal padding rather than inheriting the panel's, which
+   is what lets the scrollbar sit inside it. The negative margins stretch the
+   body across the panel's full inner width; the two paddings then put the
+   controls back where they were — 16px on the left, and on the right the ~5px
+   that a `thin` bar leaves of the same 16. `scrollbar-gutter: stable` reserves
+   that gutter whether or not there is anything to scroll, which is what stops
+   the controls reflowing when the bar appears.
+
+   A scroll container clips at its padding box, not its content box, so the left
+   padding is also what gives the checkboxes' focus rings room to be drawn.
+
+   The platform scrollbar is an opaque grey slab against a pane of glass, and the
+   two standard properties are what reduce it to a translucent thumb while
+   leaving it a real scrollbar — the OS keeps its sizing, its click-and-drag and
+   its reduced-motion behaviour, which a div-and-JS reimplementation gives up.
+   This is the Firefox path: `thin` is around 11px, and padding-right is the rest
+   of the 16. */
+#panel-body {
+  min-height: 0;
+  overflow-y: auto;
+  margin: 14px -16px 0;
+  padding-left: 16px;
+  padding-right: 5px;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.28) transparent;
+}
+
+/* Blink and WebKit stop honouring ::-webkit-scrollbar as soon as either standard
+   property is set, so this hands them back — they are the only engines that can
+   set the gutter's own width, and 16px of gutter carrying a 6px thumb is what
+   centres the bar in the padding instead of leaving it against the border. The
+   transparent border plus a content-box clip is what insets the thumb; a margin
+   is not available here. Firefox does not match the query and keeps the pair
+   above, where the gutter is whatever `thin` happens to be. */
+@supports selector(::-webkit-scrollbar) {
+  #panel-body {
+    padding-right: 0;
+    scrollbar-width: auto;
+    scrollbar-color: auto;
+  }
+  #panel-body::-webkit-scrollbar { width: 16px; }
+  #panel-body::-webkit-scrollbar-track { background: transparent; }
+  #panel-body::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.28);
+    background-clip: content-box;
+    border: 5px solid transparent;
+    border-radius: 8px;
+  }
+  #panel-body::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.45);
+    background-clip: content-box;
+  }
+}
 
 /* Collapsing is a class on the panel rather than `hidden` on the body, so that
    a phone-sized screen is already collapsed on the very first paint. The script
@@ -159,8 +201,12 @@ html, body {
    shut. Neither class is present until the script runs, which is what the
    narrow-screen default below is for. */
 #panel.collapsed #panel-body { display: none; }
-#panel h1 { margin: 0; font-size: 15px; letter-spacing: 0.02em; }
-#panel #subtitle { margin: 2px 0 0; font-size: 12px; color: var(--muted); }
+/* The heading is the wordmark, so the height sets it rather than a font size.
+   Its viewBox is cropped to the ink, so 20px is cap height and the 6px below is
+   the whole gap — the 2px that suited a text heading left the two touching. */
+#panel h1 { margin: 0; }
+#panel h1 img { display: block; height: 20px; width: auto; }
+#panel #subtitle { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
 
 #panel-toggle {
   flex: none;
@@ -286,11 +332,11 @@ input[type="checkbox"] {
 }
 /* A background image rather than a ::before, because an input is a replaced
    element and its pseudo-elements are not guaranteed to render. The cost is
-   that --accent-ink has to be written out as %231f74d0 — a data URI cannot read
+   that --accent-ink has to be written out as %23b8479f — a data URI cannot read
    a custom property — so the tick and the segments' text are kept in step by
    hand. */
 input[type="checkbox"]:checked {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%231f74d0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.6 6.2 5 8.6 9.4 3.6'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%23b8479f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.6 6.2 5 8.6 9.4 3.6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: center;
   background-size: 12px;
@@ -306,7 +352,9 @@ input[type="checkbox"]:focus-visible {
    white along with it — `accent-color` paints the whole control from a single
    value, and splitting the two means drawing the track by hand in both
    engines, which is more machinery than the difference is worth. */
-input[type="range"] { width: 100%; accent-color: #fff; }
+/* `margin: 0` for the same reason as the checkbox above: the UA margin sits
+   outside the 100% width, so the track overhung its own column by 2px. */
+input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
 
 /* Shared by the panel and the inventories toggle: one glyph, flipped, so the
    two states cannot drift apart. `up` marks the collapsed one. */

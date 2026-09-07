@@ -30,6 +30,21 @@ test("a narrow screen is collapsed by the stylesheet, before any script runs", (
   );
 });
 
+/* On a viewport too short for the controls, whichever box scrolls decides
+ * whether the collapse button can be reached at all. Stylesheet again, because
+ * jsdom lays nothing out. */
+test("the controls scroll under the header rather than taking it with them", () => {
+  const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+  const block = (selector) => {
+    const start = css.indexOf(`\n${selector} {`);
+    assert.notEqual(start, -1, `no rule for ${selector}`);
+    return css.slice(start, css.indexOf("}", start));
+  };
+
+  assert.match(block("#panel-body"), /overflow-y: auto/);
+  assert.doesNotMatch(block("#panel"), /overflow-y: auto/);
+});
+
 test("a narrow viewport opens with the panel collapsed", async () => {
   const page = installBrowser({
     narrow: true,
@@ -45,8 +60,9 @@ test("a narrow viewport opens with the panel collapsed", async () => {
   assert.match(el("panel-toggle").getAttribute("aria-label"), /show/i);
 
   // The title bar is what is left, so the reader can still see what this is
-  // and get the controls back.
-  assert.equal(el("title").textContent, "GLACE");
+  // and get the controls back. The heading is the wordmark, so what names the
+  // page here is the image's alt text.
+  assert.equal(el("title").querySelector("img").alt, "GLACE");
 
   el("panel-toggle").click();
   assert.ok(el("panel").classList.contains("expanded"), "and a tap brings them back");
