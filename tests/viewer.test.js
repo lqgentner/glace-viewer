@@ -191,7 +191,7 @@ test("the viewer", async (t) => {
       "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
     ]);
     assert.equal(source.type, "raster");
-    assert.match(source.attribution, /Esri.*Maxar/);
+    assert.match(source.attribution, /^© Esri, Maxar/, "worded like the credits it sits beside");
     assert.match(source.attribution, /maplibre\.org/);
     assert.ok(visible(map, "world-imagery"));
     assert.equal(map.getLayer("earth").layout.visibility, "none");
@@ -211,17 +211,19 @@ test("the viewer", async (t) => {
   });
 
   await t.test("each layer credits the source it is actually drawing", async () => {
-    // MapLibre shows a source's attribution only while a visible layer uses it
-    // (or, for the DEM, while it carries the terrain), so the conditions asked
-    // for — Copernicus only with GLACE on screen, Mapterhorn with the hillshade
-    // or 3D — are the strings being on the right sources.
+    /* Two sources declare none of their own — the GLACE archives and the DEM —
+     * because each publishes its credit and a spec-level string would override
+     * it. The fake map does no fetching, so what is assertable is that the page
+     * leaves the field alone, and that the credit still appears conditionally:
+     * MapLibre keys that on the source, not on where the string came from. */
+    assert.equal(map.getSource("glace-coh12_vv_2023").attribution, undefined);
+    assert.equal(map.getSource("terrain").attribution, undefined);
+    assert.equal(map.getSource("terrain").url, "https://tiles.mapterhorn.com/tilejson.json");
     assert.match(
-      map.getSource("glace-coh12_vv_2023").attribution,
-      /Contains modified Copernicus Sentinel data 2023/,
-      "the year credited is the year on screen",
+      el("hillshade-row").querySelector("button.credit").getAttribute("aria-label"),
+      /Mapterhorn/,
+      "and the panel credits the DEM from configuration either way",
     );
-    assert.match(map.getSource("glace-coh12_vv_2023").attribution, /copernicus\.eu/);
-    assert.match(map.getSource("terrain").attribution, /Mapterhorn/);
 
     // These three ride in one string so the length sort cannot scatter them.
     const basemap = map.getSource("protomaps").attribution;

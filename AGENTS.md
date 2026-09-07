@@ -185,12 +185,12 @@ not exist, or setting a property on a layer that was never added all throw —
 because MapLibre answers each of those with a console warning the page would
 otherwise sail past.
 
-`viewer.test.js` runs against `tests/fixtures/layers.json` rather than a real
-build, so it covers the same ground in CI as it does locally. The fixture holds
+**No test reads `./tiles`.** `viewer.test.js` runs against
+`tests/fixtures/layers.json` and `store-manifest.test.js` against one year of the
+published `layers.json` verbatim, so both cover the same ground in CI as they do
+locally, and mounting a local build changes no result. The first fixture holds
 one combination that exists in only one of its two years, which is what makes
-the disabled-button and no-layer-for-this-year paths reachable. The one case
-that reads the real `tiles/layers.json` skips itself when the directory is
-absent.
+the disabled-button and no-layer-for-this-year paths reachable.
 
 `store-manifest.test.js` runs the page against a second manifest, and is a
 separate file rather than another subtest for that reason: the modules hold
@@ -626,8 +626,8 @@ from the `attribution` field of each source. That is what makes it conditional
 for free: MapLibre credits a source only while a visible layer is using it, or —
 for the DEM — while it is carrying the terrain. So
 
-- **Copernicus** appears only when a GLACE raster is on screen, and names that
-  layer's year, because every year is its own source;
+- **Copernicus** appears only when a GLACE raster is on screen, worded by the
+  archive itself and per year, because every year is its own archive;
 - **Mapterhorn** appears when the hillshade is ticked *or* 3D is on, and goes
   away when both are off;
 - **OpenStreetMap, Protomaps and MapLibre** are always shown, riding on the
@@ -639,6 +639,25 @@ be scattered through the line at lengths nobody controls, while one entry keeps
 its own internal order. The same sort is why Mapterhorn prints ahead of
 Copernicus: its string is shorter. Ordering the line by hand would mean
 replacing the control rather than configuring it.
+
+#### Where each string comes from
+
+A source given a `url:` inherits its attribution from the TileJSON at the other
+end unless the spec names one: MapLibre resolves it as
+`pick(extend(tileJSON, options), [… "attribution" …])`, so **the spec wins**.
+Declaring one here overrides the publisher rather than adding to them, which is
+why only two are declared:
+
+| source | declared here | why |
+| --- | --- | --- |
+| GLACE archives | **no** | each archive carries its own, and `pmtiles.Protocol({metadata: true})` is what puts it in the TileJSON — one 167 B read per archive. Still per year, since each year is its own archive |
+| Mapterhorn DEM | **no** | its TileJSON already carries `© Mapterhorn` with the same link |
+| Protomaps basemap | yes | its TileJSON credits **OpenStreetMap only**, and the spec replaces rather than appends, so the three have to be declared together — which is also what keeps their order |
+| World Imagery | yes | a `tiles:` template, so there is no TileJSON to inherit from |
+
+The cost is that a publisher can stop crediting itself and nothing here would
+notice. For the DEM that is covered: `terrainCredit` repeats the same credit
+behind the info mark beside the hillshade toggle, out of configuration.
 
 Per-layer credits are a separate thing — see the info marks in the panel, which
 carry each inventory's citation and licence.

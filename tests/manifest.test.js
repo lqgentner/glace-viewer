@@ -5,11 +5,9 @@
  */
 
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import test from "node:test";
 
-import { captureWarnings, installBrowser, load, REPO } from "./helpers/browser.js";
+import { captureWarnings, installBrowser, load } from "./helpers/browser.js";
 
 installBrowser();
 const { falseColourChannels, layerDetail, validateManifest } = await load("js/rasters.js");
@@ -28,17 +26,6 @@ const layer = (overrides = {}) => ({
   vmax: 0.8,
   colors: ["#031326", "#fdf5da"],
   ...overrides,
-});
-
-test("the committed manifest is accepted whole", { skip: skipWithoutManifest() }, async () => {
-  const raw = JSON.parse(fs.readFileSync(path.join(REPO, "tiles", "layers.json"), "utf8"));
-  const manifest = validateManifest(raw);
-  assert.equal(manifest.layers.length, raw.layers.length);
-  assert.deepEqual(manifest.products, raw.products);
-  // The polarization axis is reordered rather than taken as declared, so that
-  // the page opens on VV. The set has to match; the order deliberately need not.
-  assert.deepEqual(manifest.polarizations, ["VV", "VH"]);
-  assert.deepEqual([...manifest.polarizations].sort(), [...raw.polarizations].sort());
 });
 
 test("a manifest with nothing usable in it is refused", async () => {
@@ -231,13 +218,6 @@ test("UTM zone declines rather than guessing", () => {
     assert.equal(utmZone(tile), null, `for ${JSON.stringify(tile)}`);
   }
 });
-
-/** The raster manifest is a local build artefact; skip rather than fail without it. */
-function skipWithoutManifest() {
-  return fs.existsSync(path.join(REPO, "tiles", "layers.json"))
-    ? false
-    : "tiles/layers.json is absent (build or symlink ./tiles first)";
-}
 
 test("the description says what the product is and how it was composited", () => {
   assert.deepEqual(layerDetail(layer()), [

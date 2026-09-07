@@ -23,7 +23,10 @@ import {
 } from "./config.js";
 import { cogRgbProtocol } from "./cog-rgb.js";
 
-const protocol = new pmtiles.Protocol();
+/* `metadata: true` so each archive's own TileJSON reaches MapLibre, which is
+ * what carries its attribution. Costs one small read per archive — 167 B on a
+ * GLACE mosaic, 1.2 kB on an inventory. */
+const protocol = new pmtiles.Protocol({ metadata: true });
 
 /* One transparent pixel, PNG-encoded, stretched over a tile that has none.
  *
@@ -221,8 +224,10 @@ function ensureWorldImagery() {
       tiles: [WORLD_IMAGERY_URL],
       tileSize: 256,
       maxzoom: 19,
+      // Declared because a `tiles:` template has no TileJSON to inherit from.
+      // "© Esri", not Esri's own "Tiles © Esri", to read as the others do.
       attribution:
-        'Tiles © Esri, Maxar, Earthstar Geographics, and the GIS User Community' +
+        '© Esri, Maxar, Earthstar Geographics, and the GIS User Community' +
         ' | <a href="https://maplibre.org">MapLibre</a>',
     });
   }
@@ -284,15 +289,10 @@ const TERRAIN_SOURCE = "terrain";
 
 function ensureTerrainSource() {
   if (map.getSource(TERRAIN_SOURCE)) return;
-  map.addSource(TERRAIN_SOURCE, {
-    type: "raster-dem",
-    url: TERRAIN_TILEJSON,
-    /* Shown while the DEM is actually being drawn — MapLibre credits a source
-     * when a visible layer uses it (the hillshade) or when it carries the
-     * terrain (3D), so this appears for either and goes away when both are
-     * off, without the page having to track it. */
-    attribution: '© <a href="https://mapterhorn.com/attribution/">Mapterhorn</a>',
-  });
+  /* No `attribution`: Mapterhorn's TileJSON carries its own, and a spec that
+   * names one would override it. Still shown only while the DEM is drawn — by
+   * the hillshade or by 3D — since MapLibre keys that on the source. */
+  map.addSource(TERRAIN_SOURCE, { type: "raster-dem", url: TERRAIN_TILEJSON });
 }
 
 /* ---------- hillshade ---------- */
