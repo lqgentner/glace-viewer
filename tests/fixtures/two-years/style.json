@@ -1,0 +1,247 @@
+{
+  "version": 8,
+  "name": "Fixture — Sentinel-1 composites (2023)",
+  "metadata": {
+    "description": "Every published web-map layer of the most recent year."
+  },
+  "sources": {
+    "src-coh12_vv": {
+      "type": "raster",
+      "url": "pmtiles://../pmtiles/2023/coh12_vv.pmtiles",
+      "tileSize": 256,
+      "minzoom": 5,
+      "maxzoom": 12,
+      "attribution": "Fixture, Contains modified Copernicus Sentinel data 2023"
+    },
+    "src-coh12_vh": {
+      "type": "raster",
+      "url": "pmtiles://../pmtiles/2023/coh12_vh.pmtiles",
+      "tileSize": 256,
+      "minzoom": 5,
+      "maxzoom": 12,
+      "attribution": "Fixture, Contains modified Copernicus Sentinel data 2023"
+    },
+    "src-rtc_vv": {
+      "type": "raster",
+      "url": "pmtiles://../pmtiles/2023/rtc_vv.pmtiles",
+      "tileSize": 256,
+      "minzoom": 5,
+      "maxzoom": 12,
+      "attribution": "Fixture, Contains modified Copernicus Sentinel data 2023"
+    },
+    "src-rtc_vh": {
+      "type": "raster",
+      "url": "pmtiles://../pmtiles/2023/rtc_vh.pmtiles",
+      "tileSize": 256,
+      "minzoom": 5,
+      "maxzoom": 12,
+      "attribution": "Fixture, Contains modified Copernicus Sentinel data 2023"
+    }
+  },
+  "layers": [
+    {
+      "id": "glace-coh12_vv-2023",
+      "type": "raster",
+      "source": "src-coh12_vv",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "raster-opacity": 1,
+        "raster-resampling": "linear"
+      },
+      "metadata": {
+        "portolan:legend": {
+          "title": "COH12 VV",
+          "type": "ramp",
+          "cmap": "cmc.lipari",
+          "vmin": 0.1,
+          "vmax": 0.8,
+          "unit": "",
+          "decibel": false,
+          "measured": true,
+          "stops": [
+            {
+              "value": 0.1,
+              "color": "#031326",
+              "label": ""
+            },
+            {
+              "value": 0.275,
+              "color": "#525b7a",
+              "label": ""
+            },
+            {
+              "value": 0.45000000000000007,
+              "color": "#a56267",
+              "label": ""
+            },
+            {
+              "value": 0.625,
+              "color": "#e7c49a",
+              "label": ""
+            },
+            {
+              "value": 0.8,
+              "color": "#fdf5da",
+              "label": ""
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "glace-coh12_vh-2023",
+      "type": "raster",
+      "source": "src-coh12_vh",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "raster-opacity": 1,
+        "raster-resampling": "linear"
+      },
+      "metadata": {
+        "portolan:legend": {
+          "title": "COH12 VH",
+          "type": "ramp",
+          "cmap": "cmc.lipari",
+          "vmin": 0.1,
+          "vmax": 0.8,
+          "unit": "",
+          "decibel": false,
+          "measured": true,
+          "stops": [
+            {
+              "value": 0.1,
+              "color": "#031326",
+              "label": ""
+            },
+            {
+              "value": 0.275,
+              "color": "#525b7a",
+              "label": ""
+            },
+            {
+              "value": 0.45000000000000007,
+              "color": "#a56267",
+              "label": ""
+            },
+            {
+              "value": 0.625,
+              "color": "#e7c49a",
+              "label": ""
+            },
+            {
+              "value": 0.8,
+              "color": "#fdf5da",
+              "label": ""
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "glace-rtc_vv-2023",
+      "type": "raster",
+      "source": "src-rtc_vv",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "raster-opacity": 1,
+        "raster-resampling": "linear"
+      },
+      "metadata": {
+        "portolan:legend": {
+          "title": "RTC VV",
+          "type": "ramp",
+          "cmap": "cmc.grayC",
+          "vmin": -18.5,
+          "vmax": -5.0,
+          "unit": "dB",
+          "decibel": true,
+          "measured": true,
+          "stops": [
+            {
+              "value": -18.5,
+              "color": "#031326",
+              "label": ""
+            },
+            {
+              "value": -15.125,
+              "color": "#525b7a",
+              "label": ""
+            },
+            {
+              "value": -11.75,
+              "color": "#a56267",
+              "label": ""
+            },
+            {
+              "value": -8.375,
+              "color": "#e7c49a",
+              "label": ""
+            },
+            {
+              "value": -5.0,
+              "color": "#fdf5da",
+              "label": ""
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "glace-rtc_vh-2023",
+      "type": "raster",
+      "source": "src-rtc_vh",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "raster-opacity": 1,
+        "raster-resampling": "linear"
+      },
+      "metadata": {
+        "portolan:legend": {
+          "title": "RTC VH",
+          "type": "ramp",
+          "cmap": "cmc.grayC",
+          "vmin": -18.5,
+          "vmax": -5.0,
+          "unit": "dB",
+          "decibel": true,
+          "measured": true,
+          "stops": [
+            {
+              "value": -18.5,
+              "color": "#031326",
+              "label": ""
+            },
+            {
+              "value": -15.125,
+              "color": "#525b7a",
+              "label": ""
+            },
+            {
+              "value": -11.75,
+              "color": "#a56267",
+              "label": ""
+            },
+            {
+              "value": -8.375,
+              "color": "#e7c49a",
+              "label": ""
+            },
+            {
+              "value": -5.0,
+              "color": "#fdf5da",
+              "label": ""
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

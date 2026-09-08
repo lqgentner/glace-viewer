@@ -10,8 +10,9 @@
  * quietly.
  *
  * The recipes below are written out rather than derived, but their numbers are
- * the published store's: the stretches, units and colour stops come from
- * `fixtures/layers-store.json`, one year of `layers.json` copied verbatim.
+ * the published store's: the stretches and colour stops come from
+ * `fixtures/store/style.json`, the MapLibre style the catalog publishes, which
+ * is where those constants live now that `layers.json` is retired.
  *
  * The reader is swapped for `fixtures/fake-geotiff.mjs` through the
  * `cogReaderUrl` setting, which is the same seam a deployment would use to pin
@@ -28,11 +29,13 @@ import test from "node:test";
 
 import { installBrowser, load, REPO } from "./helpers/browser.js";
 
-const raw = JSON.parse(
-  fs.readFileSync(path.join(REPO, "tests", "fixtures", "layers-store.json"), "utf8"),
+const style = JSON.parse(
+  fs.readFileSync(path.join(REPO, "tests", "fixtures", "store", "style.json"), "utf8"),
 );
-const entryOf = (id) => raw.layers.find((layer) => layer.id === id);
-const stretch = (id) => [entryOf(id).vmin, entryOf(id).vmax];
+const legendOf = (stem) =>
+  style.layers.find((layer) => layer.id === `glace-${stem}-2024`).metadata["portolan:legend"];
+const stretch = (stem) => [legendOf(stem).vmin, legendOf(stem).vmax];
+const colors = (stem) => legendOf(stem).stops.map((stop) => stop.color);
 
 const READER = new URL("./fixtures/fake-geotiff.mjs", import.meta.url).href;
 installBrowser({ site: { cogReaderUrl: READER } });
@@ -41,32 +44,33 @@ const { cogRgbProtocol, recipeTiles, setRecipe } = await load("js/cog-rgb.js");
 const fake = await import(READER);
 
 /* Absolute, as a source spec would build them: the protocol hands the string to
- * the reader rather than letting the document resolve it. The store publishes
- * each year's pair under one stem, at `{year}/mosaics/{stem}.tif`. */
-const mosaic = (stem) => `https://data.source.coop/lqgentner/glace-ch/2024/mosaics/${stem}.tif`;
+ * the reader rather than letting the document resolve it. Each year's mosaics
+ * are the assets of that year's STAC item, at `mosaics/{year}/{stem}.tif`. */
+const mosaic = (stem) =>
+  `https://data.source.coop/lqgentner/glace-ch/mosaics/2024/${stem}.tif`;
 
-/* Blue's stretch is the page's own rather than the manifest's: the entry's
- * vmin/vmax describe its red channel only. Measured at native resolution over
+/* Blue's stretch is the page's own rather than the style's: a single-band
+ * layer's vmin/vmax describe that band only. Measured at native resolution over
  * 619 958 valid pixels of the 2024 mosaics — see AGENTS.md. */
 setRecipe("coh12-rgb", {
   archives: [mosaic("coh12_vv"), mosaic("coh12_vh")],
   decibel: false,
-  channels: { red: stretch("coh12_vv_2024"), green: stretch("coh12_vh_2024"), blue: [0.75, 2.75] },
+  channels: { red: stretch("coh12_vv"), green: stretch("coh12_vh"), blue: [0.75, 2.75] },
 });
 setRecipe("rtc-rgb", {
   archives: [mosaic("rtc_vv"), mosaic("rtc_vh")],
   decibel: true,
-  channels: { red: stretch("rtc_vv_2024"), green: stretch("rtc_vh_2024"), blue: [3.5, 11] },
+  channels: { red: stretch("rtc_vv"), green: stretch("rtc_vh"), blue: [3.5, 11] },
 });
 setRecipe("coh12-vv", {
   archives: [mosaic("coh12_vv")],
   decibel: false,
-  ramp: { range: stretch("coh12_vv_2024"), colors: entryOf("coh12_vv_2024").colors },
+  ramp: { range: stretch("coh12_vv"), colors: colors("coh12_vv") },
 });
 setRecipe("rtc-vv", {
   archives: [mosaic("rtc_vv")],
   decibel: true,
-  ramp: { range: stretch("rtc_vv_2024"), colors: entryOf("rtc_vv_2024").colors },
+  ramp: { range: stretch("rtc_vv"), colors: colors("rtc_vv") },
 });
 
 /* Ask the protocol for one tile and hand back its pixels. The canvas stub in
@@ -210,32 +214,27 @@ function rampAt(colors, [low, high], value) {
 }
 
 test("a single-band layer is drawn through the ramp the legend shows", async () => {
-  const layer = entryOf("coh12_vv_2024");
   const rgba = await tile("glace-rgb://coh12-vv/13/4270/2880");
 
   // The fixture decodes this archive as a constant 0.5, against a 0.10-0.80
   // stretch — the same three values the PMTiles build baked into its RGBA.
-  assert.deepEqual(pixel(rgba, 1), [...rampAt(layer.colors, [layer.vmin, layer.vmax], 0.5), 255]);
+  assert.deepEqual(pixel(rgba, 1), [...rampAt(colors("coh12_vv"), stretch("coh12_vv"), 0.5), 255]);
   assert.deepEqual(pixel(rgba, 0), [0, 0, 0, 0], "and an absent pixel stays absent");
 });
 
 test("backscatter is converted to dB before the ramp, not after", async () => {
-  const layer = entryOf("rtc_vv_2024");
   const rgba = await tile("glace-rgb://rtc-vv/13/4270/2880");
 
   /* The archives store linear power; the stretch is published in dB. The
    * fixture's 0.05 is −13.01 dB, which sits inside −18.5..−5. */
   const decibel = 10 * Math.log10(0.05);
-  assert.deepEqual(pixel(rgba, 1), [
-    ...rampAt(layer.colors, [layer.vmin, layer.vmax], decibel),
-    255,
-  ]);
+  assert.deepEqual(pixel(rgba, 1), [...rampAt(colors("rtc_vv"), stretch("rtc_vv"), decibel), 255]);
 
   // The regression this guards: read raw, 0.05 is above the stretch and every
   // valid pixel would clamp to the ramp's ceiling.
   assert.notDeepEqual(
     pixel(rgba, 1),
-    [...rampAt(layer.colors, [layer.vmin, layer.vmax], 1e9), 255],
+    [...rampAt(colors("rtc_vv"), stretch("rtc_vv"), 1e9), 255],
     "a flat block is what not converting looks like",
   );
 });

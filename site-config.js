@@ -15,9 +15,10 @@
  *
  * Keys, with their defaults:
  *
- *   tilesBase        "tiles"        where layers.json and the raster archives live
+ *   tilesBase        "tiles"        the root of the published STAC catalog
  *   inventoryBase    "data"         where the inventory archives and index live
- *   gridIndex        "tiles.parquet"  the catalog grid's item index, under tilesBase
+ *   mosaicCollection "mosaics/collection.json"  the raster layers, under tilesBase
+ *   gridIndex        "tiles/items.parquet"      the grid's item index, likewise
  *   cogReaderUrl     @developmentseed/geotiff on esm.sh, for js/cog-rgb.js
  *   hyparquetUrl     hyparquet on esm.sh, for the tile grid
  *   basemapUrl       Protomaps' hosted API, as a TileJSON URL with an API key
@@ -44,15 +45,15 @@ window.GLACE_CONFIG = {
    * This is `glace-ch`, the Switzerland-only rehearsal build — the layout and
    * the machinery of the full store over one scope, published to be exercised
    * before the Alps dataset arrives. Each year is there twice: pre-styled
-   * PMTiles under `{year}/pmtiles/`, which is what this page draws, and the
-   * float COGs they were styled from under `{year}/mosaics/`, which the STAC
-   * items point at for quantitative work.
+   * PMTiles under `mosaics/pmtiles/{year}/`, which is what this page draws, and
+   * the float COGs they were styled from under `mosaics/{year}/`, which the
+   * STAC items point at for quantitative work.
    *
    * `?tiles=` still wins over this, which is how a local build or the next store
    * gets looked at without a redeploy. */
   tilesBase: "https://data.source.coop/lqgentner/glace-ch",
 
-  // The manifest's own bounds frame the map on arrival, so the view below is
-  // only what shows before it loads, and what is left if it never does.
+  // The page always opens on `initialView`, whatever the archives cover, so a
+  // deployment whose store sits elsewhere should name a view over it here.
   // initialView: { center: [7.66, 45.98], zoom: 8 },
 };

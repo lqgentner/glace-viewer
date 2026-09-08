@@ -1,0 +1,115 @@
+{
+  "type": "Collection",
+  "stac_version": "1.1.0",
+  "id": "fixture-mosaics",
+  "title": "Fixture — two years, one combination built for only one of them",
+  "description": "Not a published catalog: the shape of one, small enough to read.",
+  "license": "CC-BY-4.0",
+  "extent": {
+    "spatial": {
+      "bbox": [
+        [
+          5.0,
+          44.0,
+          12.0,
+          48.0
+        ]
+      ]
+    },
+    "temporal": {
+      "interval": [
+        [
+          "2022-06-01T00:00:00Z",
+          "2023-09-30T00:00:00Z"
+        ]
+      ]
+    }
+  },
+  "assets": {
+    "style-default": {
+      "href": "./style.json",
+      "type": "application/vnd.mapbox.style+json",
+      "title": "Fixture style",
+      "description": "The most recent year only, as the store publishes it.",
+      "roles": [
+        "style",
+        "default"
+      ]
+    }
+  },
+  "links": [
+    {
+      "rel": "root",
+      "href": "../catalog.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "license",
+      "href": "https://creativecommons.org/licenses/by/4.0/",
+      "type": "text/html"
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://tiles.example/glace/mosaics/pmtiles/2022/coh12_vv.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "coh12_vv web-map tiles, 2022",
+      "pmtiles:layers": [
+        "glace-coh12_vv-2022"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://tiles.example/glace/mosaics/pmtiles/2022/coh12_vh.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "coh12_vh web-map tiles, 2022",
+      "pmtiles:layers": [
+        "glace-coh12_vh-2022"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://tiles.example/glace/mosaics/pmtiles/2022/rtc_vv.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "rtc_vv web-map tiles, 2022",
+      "pmtiles:layers": [
+        "glace-rtc_vv-2022"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://tiles.example/glace/mosaics/pmtiles/2023/coh12_vv.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "coh12_vv web-map tiles, 2023",
+      "pmtiles:layers": [
+        "glace-coh12_vv-2023"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://tiles.example/glace/mosaics/pmtiles/2023/coh12_vh.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "coh12_vh web-map tiles, 2023",
+      "pmtiles:layers": [
+        "glace-coh12_vh-2023"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://tiles.example/glace/mosaics/pmtiles/2023/rtc_vv.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "rtc_vv web-map tiles, 2023",
+      "pmtiles:layers": [
+        "glace-rtc_vv-2023"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://tiles.example/glace/mosaics/pmtiles/2023/rtc_vh.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "rtc_vh web-map tiles, 2023",
+      "pmtiles:layers": [
+        "glace-rtc_vh-2023"
+      ]
+    }
+  ]
+}

@@ -16,15 +16,25 @@
  */
 
 const DEFAULTS = {
+  /* The root of the published STAC catalog: the page reads the mosaics
+   * collection under it for the raster layers, and the tiles collection's item
+   * index for the catalog grid. It was a directory of PMTiles beside a
+   * `layers.json` until the store retired that manifest; nothing about the
+   * archives moved, but where the page learns of them did — see js/store.js. */
   tilesBase: "tiles",
   /* The inventory archives are build outputs committed beside the page, so by
    * default they are served from the same origin as index.html. */
   inventoryBase: "data",
 
+  /* The mosaics collection, which is where the raster layers are enumerated and
+   * which points at the MapLibre style that describes how each is drawn.
+   * Relative to tilesBase, like everything else the store publishes. */
+  mosaicCollection: "mosaics/collection.json",
+
   /* The catalog tile grid is read from the store's stac-geoparquet item index
    * rather than from an archive built for it — see js/tile-grid.js. Relative to
    * tilesBase, like everything else the store publishes. */
-  gridIndex: "tiles.parquet",
+  gridIndex: "tiles/items.parquet",
 
   /* The COG reader behind js/cog-rgb.js, imported the first time a
    * `glace-rgb://` tile is asked for — which nothing on the page does today,
@@ -106,7 +116,7 @@ for (const [key, param] of Object.entries(QUERY_PARAMS)) {
 }
 
 export const TILES_BASE = String(settings.tilesBase).replace(/\/$/, "");
-export const LAYER_MANIFEST_URL = `${TILES_BASE}/layers.json`;
+export const MOSAIC_COLLECTION_URL = `${TILES_BASE}/${settings.mosaicCollection}`;
 
 export const INVENTORY_BASE = String(settings.inventoryBase).replace(/\/$/, "");
 export const INVENTORY_INDEX_URL = `${INVENTORY_BASE}/inventories.json`;

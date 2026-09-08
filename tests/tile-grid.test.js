@@ -19,7 +19,6 @@ const READER = new URL("./fixtures/fake-hyparquet.mjs", import.meta.url).href;
 
 const page = installBrowser({
   files: {
-    "tiles/layers.json": path.join(REPO, "tests", "fixtures", "layers.json"),
     "data/inventories.json": path.join(REPO, "data", "inventories.json"),
   },
   site: { hyparquetUrl: READER },
@@ -38,7 +37,7 @@ test("only the columns the overlay draws are read", async () => {
   fake.reads.length = 0;
   await loadTileGrid();
   assert.deepEqual(fake.reads, [
-    "tiles/tiles.parquet",
+    "tiles/tiles/items.parquet",
     "geometry,glace:mgrs_tile,glace:glacier_fraction,glace:glacier_fraction_buffered",
   ]);
 });
@@ -102,7 +101,7 @@ test("an unreadable index unticks the box and says which file", async () => {
 
   assert.equal(el("grid").checked, false, "re-ticking is a fresh attempt, not a no-op");
   assert.match(el("status").textContent, /Tile grid unavailable/);
-  assert.match(el("status").textContent, /tiles\.parquet/);
+  assert.match(el("status").textContent, /items\.parquet/);
   assert.match(el("status").textContent, /unsupported codec ZSTD/);
   assert.equal(map.getLayer("grid-fill"), undefined, "nothing half-added is left behind");
 });

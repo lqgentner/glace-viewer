@@ -14,12 +14,17 @@ import test from "node:test";
 
 import { captureWarnings, installBrowser, load, REPO, settle } from "./helpers/browser.js";
 
-/* A committed fixture rather than tiles/layers.json, which is a local build
- * artefact and absent in CI. It carries two years and one combination that
- * exists in only one of them, so the disabled-button and no-layer-for-this-year
- * paths are reachable. The real manifest is checked in manifest.test.js. */
-const MANIFESTS = {
-  "tiles/layers.json": path.join(REPO, "tests", "fixtures", "layers.json"),
+/* A committed fixture catalog rather than a local build, which is absent in CI.
+ * It carries two years and one combination built for only one of them, so the
+ * disabled-button and no-layer-for-this-year paths are reachable — and a style
+ * describing only the newer year, as the store publishes one, so the older year
+ * is drawn through the fallback in js/store.js.
+ *
+ * The published catalog itself is exercised in store.test.js and, end to end,
+ * in store-catalog.test.js. */
+const CATALOG = {
+  "http://localhost/tiles/mosaics/collection.json": path.join(REPO, "tests", "fixtures", "two-years", "collection.json"),
+  "http://localhost/tiles/mosaics/style.json": path.join(REPO, "tests", "fixtures", "two-years", "style.json"),
   "data/inventories.json": path.join(REPO, "data", "inventories.json"),
 };
 
@@ -28,7 +33,7 @@ const visible = (map, id) => map.getLayer(id)?.layout?.visibility === "visible";
 
 test("the viewer", async (t) => {
   const page = installBrowser({
-    files: MANIFESTS,
+    files: CATALOG,
     // The tile grid imports its parquet reader; this is the same seam a
     // deployment would use to pin a different CDN. See tile-grid.test.js.
     site: { hyparquetUrl: new URL("./fixtures/fake-hyparquet.mjs", import.meta.url).href },
@@ -100,16 +105,16 @@ test("the viewer", async (t) => {
 
   await t.test("only the selected raster is created", async () => {
     // The head of each axis decides product and polarization; newest year wins.
-    assert.deepEqual(glaceLayers(map), ["glace-coh12_vv_2023"]);
-    assert.ok(visible(map, "glace-coh12_vv_2023"));
+    assert.deepEqual(glaceLayers(map), ["glace-coh12_vv-2023"]);
+    assert.ok(visible(map, "glace-coh12_vv-2023"));
     assert.equal(el("year-value").textContent, "2023");
   });
 
   await t.test("the panel opens on VV, and names the products in words", async () => {
     const faces = (id) => [...el(id).children].map((b) => b.textContent);
     assert.deepEqual(faces("product"), ["Coherence", "Backscatter"]);
-    // The manifest's own spelling stays on the button, so nothing downstream
-    // has to translate back.
+    // The catalog's own spelling stays on the button, so nothing downstream has
+    // to translate back.
     assert.deepEqual(
       [...el("product").children].map((b) => b.dataset.value),
       ["COH12", "RTC"],
@@ -122,9 +127,9 @@ test("the viewer", async (t) => {
     assert.equal(checked("product").dataset.value, "COH12");
   });
 
-  await t.test("a manifest with no QA rasters shows no quantity row", async () => {
-    // The fixture predates them, as any older build does. One button is not a
-    // choice, so the row hides itself rather than standing there inert.
+  await t.test("a catalog with no QA rasters shows no quantity row", async () => {
+    // The fixture publishes none, as any build before them does. One button is
+    // not a choice, so the row hides itself rather than standing there inert.
     assert.equal(el("quantity-row").hidden, true);
     assert.deepEqual([...el("quantity").children].map((b) => b.dataset.value), [""]);
   });
@@ -197,7 +202,7 @@ test("the viewer", async (t) => {
     assert.equal(map.getLayer("earth").layout.visibility, "none");
     assert.equal(map.getLayer("water").layout.visibility, "none");
     assert.equal(map.getLayer("places").layout.visibility, "none", "the label toggle still wins");
-    assert.ok(map.indexOf("world-imagery") < map.indexOf("glace-coh12_vv_2023"));
+    assert.ok(map.indexOf("world-imagery") < map.indexOf("glace-coh12_vv-2023"));
 
     change(el("basemap"), true);
     await settle();
@@ -216,7 +221,7 @@ test("the viewer", async (t) => {
      * it. The fake map does no fetching, so what is assertable is that the page
      * leaves the field alone, and that the credit still appears conditionally:
      * MapLibre keys that on the source, not on where the string came from. */
-    assert.equal(map.getSource("glace-coh12_vv_2023").attribution, undefined);
+    assert.equal(map.getSource("glace-coh12_vv-2023").attribution, undefined);
     assert.equal(map.getSource("terrain").attribution, undefined);
     assert.equal(map.getSource("terrain").url, "https://tiles.mapterhorn.com/tilejson.json");
     assert.match(
@@ -250,7 +255,7 @@ test("the viewer", async (t) => {
   });
 
   await t.test("data draws under the hillshade, and both under the labels", async () => {
-    assert.ok(map.indexOf("glace-coh12_vv_2023") < map.indexOf("hillshade"));
+    assert.ok(map.indexOf("glace-coh12_vv-2023") < map.indexOf("hillshade"));
     assert.ok(map.indexOf("hillshade") < map.indexOf("places"));
     // The grid was ticked before the style loaded, so it was created before the
     // hillshade; it still has to end up above it and below the labels.
@@ -270,20 +275,20 @@ test("the viewer", async (t) => {
 
     const added = glaceLayers(map);
     assert.equal(added.length, 2, "the previous layer is kept for instant scrubbing");
-    assert.deepEqual(added.filter((id) => visible(map, id)), ["glace-rtc_vv_2023"]);
+    assert.deepEqual(added.filter((id) => visible(map, id)), ["glace-rtc_vv-2023"]);
   });
 
   await t.test("opacity applies to the visible raster", async () => {
     input(el("opacity"), "40");
     await settle();
-    assert.equal(map.getLayer("glace-rtc_vv_2023").paint["raster-opacity"], 0.4);
+    assert.equal(map.getLayer("glace-rtc_vv-2023").paint["raster-opacity"], 0.4);
     assert.equal(el("opacity-value").textContent, "40%");
   });
 
   await t.test("a new layer inherits the current opacity", async () => {
     el("pol").querySelector('[data-value="VH"]').click();
     await settle();
-    assert.equal(map.getLayer("glace-rtc_vh_2023").paint["raster-opacity"], 0.4);
+    assert.equal(map.getLayer("glace-rtc_vh-2023").paint["raster-opacity"], 0.4);
   });
 
   await t.test("a year with no archive for this combination is reported", async () => {
@@ -308,7 +313,7 @@ test("the viewer", async (t) => {
 
     button("product", "COH12").click();
     await settle();
-    assert.deepEqual(glaceLayers(map).filter((id) => visible(map, id)), ["glace-coh12_vh_2022"]);
+    assert.deepEqual(glaceLayers(map).filter((id) => visible(map, id)), ["glace-coh12_vh-2022"]);
     assert.equal(el("status").hidden, true, "the message clears once a layer exists again");
 
     /* And now RTC is the one with nothing for this year. That is a gap in the

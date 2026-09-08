@@ -1,5 +1,5 @@
 /*
- * The page when layers.json cannot be reached — the deployed state until the
+ * The page when the catalog cannot be reached — the deployed state until the
  * GLACE archives are published. Its own file because the map is a module
  * singleton, and `node --test` gives each file its own process.
  */
@@ -10,9 +10,9 @@ import test from "node:test";
 
 import { installBrowser, load, REPO, settle } from "./helpers/browser.js";
 
-test("a missing manifest costs only the rasters", async () => {
+test("a missing catalog costs only the rasters", async () => {
   const page = installBrowser({
-    // No tiles/layers.json, so the fetch for it answers 404.
+    // Nothing under tiles/mosaics/, so the fetch for the collection answers 404.
     files: { "data/inventories.json": path.join(REPO, "data", "inventories.json") },
   });
   const { el } = page;

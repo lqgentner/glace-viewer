@@ -1,0 +1,529 @@
+{
+  "type": "Collection",
+  "stac_version": "1.1.0",
+  "stac_extensions": [
+    "https://schemas.portolan-sdi.org/portolan/v0.2.0/schema.json",
+    "https://stac-extensions.github.io/render/v2.0.0/schema.json",
+    "https://stac-extensions.github.io/web-map-links/v1.3.0/schema.json",
+    "https://stac-extensions.github.io/raster/v2.0.0/schema.json",
+    "https://stac-extensions.github.io/projection/v2.0.0/schema.json",
+    "https://stac-extensions.github.io/file/v2.1.0/schema.json",
+    "https://stac-extensions.github.io/alternate-assets/v1.2.0/schema.json",
+    "https://stac-extensions.github.io/version/v1.2.0/schema.json"
+  ],
+  "id": "glace-ch-mosaics",
+  "title": "GLACE mosaics — annual Sentinel-1 composites on a fixed equal-area grid",
+  "description": "One mosaic per year of the GLACE composites, warped from the 10 m MGRS tiles onto ETRS89-LAEA (EPSG:3035) at 40 m. The grid is equal-area, so an area or area-change statistic can be taken from pixel counts without a latitude correction; WebMercator, where a nominal 19.109 m pixel is about 13.2 m on the ground at 46.5 degrees north, cannot do that. Every year sits on the same fixed extent, hard-coded rather than derived from whichever tiles happen to exist, so the series stacks and differences with no alignment step. Twelve single-band analysis rasters per year, in linear units, each a Cloud-Optimized GeoTIFF with 256-pixel blocks and averaged internal overviews. Drawing is served separately by PMTiles archives registered on this collection, tiled on the WebMercatorQuad grid at zoom 13 with MapLibre styles alongside them; both products are resampled from the 10 m tiles, so neither is derived from the other. The observation-count layers become a mean rather than a count under averaging, and are described as such.",
+  "license": "CC-BY-4.0",
+  "keywords": [
+    "Sentinel-1",
+    "SAR",
+    "InSAR coherence",
+    "backscatter",
+    "glaciers",
+    "cryosphere",
+    "Alps",
+    "mosaic"
+  ],
+  "version": "0.1",
+  "providers": [
+    {
+      "name": "European Space Agency / Copernicus",
+      "description": "Operates the Sentinel-1 mission and distributes the SLC data these composites are derived from, through the Copernicus Data Space Ecosystem.",
+      "roles": [
+        "producer",
+        "licensor"
+      ],
+      "url": "https://sentinel.esa.int/web/sentinel/missions/sentinel-1"
+    },
+    {
+      "name": "University of Zurich, Department of Geography",
+      "description": "Produced the composites from Copernicus Sentinel-1 SLC data and derived the annual mosaics. Maintains this catalog. The bytes are served from Source Cooperative storage; corrections go through the catalog's issue tracker.",
+      "roles": [
+        "producer",
+        "processor",
+        "licensor",
+        "host"
+      ],
+      "url": "https://www.geo.uzh.ch/en.html"
+    }
+  ],
+  "extent": {
+    "spatial": {
+      "bbox": [
+        [
+          6.767578125,
+          45.9511496866,
+          10.458984375,
+          47.3983765871
+        ]
+      ]
+    },
+    "temporal": {
+      "interval": [
+        [
+          "2024-07-09T00:00:00Z",
+          "2024-10-07T00:00:00Z"
+        ]
+      ]
+    }
+  },
+  "renders": {
+    "coh12_vv": {
+      "title": "COH12 VV — 12-day coherence, co-polarised",
+      "assets": [
+        "coh12_vv"
+      ],
+      "rescale": [
+        [
+          0.1,
+          0.8
+        ]
+      ],
+      "colormap_name": "magma",
+      "resampling": "average",
+      "nodata": "nan"
+    },
+    "coh12_vh": {
+      "title": "COH12 VH — 12-day coherence, cross-polarised",
+      "assets": [
+        "coh12_vh"
+      ],
+      "rescale": [
+        [
+          0.1,
+          0.6
+        ]
+      ],
+      "colormap_name": "magma",
+      "resampling": "average",
+      "nodata": "nan"
+    },
+    "rtc_vv": {
+      "title": "RTC VV — terrain-corrected backscatter, co-polarised (dB)",
+      "assets": [
+        "rtc_vv"
+      ],
+      "expression": "10*log10(rtc_vv_b1)",
+      "rescale": [
+        [
+          -18.5,
+          -5.0
+        ]
+      ],
+      "colormap_name": "gray",
+      "resampling": "average",
+      "nodata": "nan"
+    },
+    "rtc_vh": {
+      "title": "RTC VH — terrain-corrected backscatter, cross-polarised (dB)",
+      "assets": [
+        "rtc_vh"
+      ],
+      "expression": "10*log10(rtc_vh_b1)",
+      "rescale": [
+        [
+          -26.0,
+          -11.0
+        ]
+      ],
+      "colormap_name": "gray",
+      "resampling": "average",
+      "nodata": "nan"
+    }
+  },
+  "item_assets": {
+    "coh12_vv": {
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "COH12 VV annual mosaic",
+      "roles": [
+        "data",
+        "cloud-optimized"
+      ],
+      "raster:spatial_resolution": 40.0,
+      "bands": [
+        {
+          "name": "coh12_vv",
+          "data_type": "float32",
+          "nodata": "nan"
+        }
+      ]
+    },
+    "coh12_vh": {
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "COH12 VH annual mosaic",
+      "roles": [
+        "data",
+        "cloud-optimized"
+      ],
+      "raster:spatial_resolution": 40.0,
+      "bands": [
+        {
+          "name": "coh12_vh",
+          "data_type": "float32",
+          "nodata": "nan"
+        }
+      ]
+    },
+    "rtc_vv": {
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "RTC VV annual mosaic",
+      "description": "Linear power. Warp averaging and the internal overviews both average in the linear domain, where the mean is physically meaningful; a decibel raster averaged the same way would give log-domain means in every overview level and silently a different quantity from the level above.",
+      "roles": [
+        "data",
+        "cloud-optimized"
+      ],
+      "raster:spatial_resolution": 40.0,
+      "bands": [
+        {
+          "name": "rtc_vv",
+          "data_type": "float32",
+          "nodata": "nan"
+        }
+      ]
+    },
+    "rtc_vh": {
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "RTC VH annual mosaic",
+      "roles": [
+        "data",
+        "cloud-optimized"
+      ],
+      "raster:spatial_resolution": 40.0,
+      "bands": [
+        {
+          "name": "rtc_vh",
+          "data_type": "float32",
+          "nodata": "nan"
+        }
+      ]
+    },
+    "coh12_vv_qa_num": {
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "COH12 VV — mean contributing observations",
+      "description": "A mean rather than a count: the source counts are averaged over roughly 3.6 contributing 10 m pixels per output pixel, so the value is float32 and no longer the same quantity as the tile layer it derives from.",
+      "roles": [
+        "quality"
+      ],
+      "raster:spatial_resolution": 40.0,
+      "bands": [
+        {
+          "name": "num_obs_mean",
+          "data_type": "float32",
+          "nodata": "nan"
+        }
+      ]
+    },
+    "coh12_vv_qa_cqm": {
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "COH12 VV — composite quality metric",
+      "roles": [
+        "quality"
+      ],
+      "raster:spatial_resolution": 40.0,
+      "bands": [
+        {
+          "name": "cqm",
+          "data_type": "float32",
+          "nodata": "nan"
+        }
+      ]
+    },
+    "coh12_vh_qa_num": {
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "COH12 VH — mean contributing observations",
+      "roles": [
+        "quality"
+      ],
+      "raster:spatial_resolution": 40.0,
+      "bands": [
+        {
+          "name": "num_obs_mean",
+          "data_type": "float32",
+          "nodata": "nan"
+        }
+      ]
+    },
+    "coh12_vh_qa_cqm": {
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "COH12 VH — composite quality metric",
+      "roles": [
+        "quality"
+      ],
+      "raster:spatial_resolution": 40.0,
+      "bands": [
+        {
+          "name": "cqm",
+          "data_type": "float32",
+          "nodata": "nan"
+        }
+      ]
+    },
+    "rtc_vv_qa_num": {
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "RTC VV — mean contributing observations",
+      "roles": [
+        "quality"
+      ],
+      "raster:spatial_resolution": 40.0,
+      "bands": [
+        {
+          "name": "num_obs_mean",
+          "data_type": "float32",
+          "nodata": "nan"
+        }
+      ]
+    },
+    "rtc_vv_qa_cqm": {
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "RTC VV — composite quality metric",
+      "roles": [
+        "quality"
+      ],
+      "raster:spatial_resolution": 40.0,
+      "bands": [
+        {
+          "name": "cqm",
+          "data_type": "float32",
+          "nodata": "nan"
+        }
+      ]
+    },
+    "rtc_vh_qa_num": {
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "RTC VH — mean contributing observations",
+      "roles": [
+        "quality"
+      ],
+      "raster:spatial_resolution": 40.0,
+      "bands": [
+        {
+          "name": "num_obs_mean",
+          "data_type": "float32",
+          "nodata": "nan"
+        }
+      ]
+    },
+    "rtc_vh_qa_cqm": {
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "RTC VH — composite quality metric",
+      "roles": [
+        "quality"
+      ],
+      "raster:spatial_resolution": 40.0,
+      "bands": [
+        {
+          "name": "cqm",
+          "data_type": "float32",
+          "nodata": "nan"
+        }
+      ]
+    }
+  },
+  "assets": {
+    "items": {
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/items.parquet",
+      "type": "application/vnd.apache.parquet",
+      "title": "STAC-GeoParquet item mirror",
+      "description": "One row per year. The item JSON under each year directory remains the normative representation.",
+      "roles": [
+        "collection-mirror"
+      ],
+      "alternate": {
+        "s3": {
+          "href": "s3://eu-central-1.opendata.source.coop/lqgentner/glace-ch/mosaics/items.parquet",
+          "alternate:name": "S3"
+        }
+      },
+      "file:size": 316143,
+      "file:checksum": "12208d2632b5b4154f0d77d34e21ad8c71f1370a6cbce8b1f7a12698547059808b1a"
+    },
+    "thumbnail": {
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/thumbnail.png",
+      "type": "image/png",
+      "title": "GLACE mosaics preview",
+      "description": "Rendered from the most recent year's coh12_rgb web-map archive, so the preview obeys the committed MapLibre style by construction.",
+      "roles": [
+        "thumbnail"
+      ],
+      "file:size": 781663,
+      "file:checksum": "12205fd5f949ad6207df7d0afa1648da12e1968ec0a29e71ec664a21df51e61a247b"
+    },
+    "style-default": {
+      "href": "./styles/default.json",
+      "type": "application/vnd.mapbox.style+json",
+      "title": "GLACE web-map style",
+      "description": "Every published web-map layer of the most recent year, the first visible and the rest hidden. Each layer's metadata.portolan:legend carries the colour ramp and value range baked into its archive, which is where those constants live.",
+      "roles": [
+        "style",
+        "default"
+      ],
+      "file:size": 37744,
+      "file:checksum": "1220ff285aa673d09ad6661750d38f1325c92f42c0ce19b272536b31b8069995557d"
+    }
+  },
+  "links": [
+    {
+      "rel": "root",
+      "href": "../catalog.json",
+      "type": "application/json",
+      "title": "GLACE Switzerland (preliminary)"
+    },
+    {
+      "rel": "parent",
+      "href": "../catalog.json",
+      "type": "application/json",
+      "title": "GLACE Switzerland (preliminary)"
+    },
+    {
+      "rel": "describedby",
+      "href": "./README.md",
+      "type": "text/markdown",
+      "title": "GLACE mosaics documentation"
+    },
+    {
+      "rel": "agents",
+      "href": "./AGENTS.md",
+      "type": "text/markdown",
+      "title": "GLACE mosaics agent guide"
+    },
+    {
+      "rel": "license",
+      "href": "https://creativecommons.org/licenses/by/4.0/",
+      "type": "text/html",
+      "title": "CC-BY-4.0"
+    },
+    {
+      "rel": "item",
+      "href": "./2024/item.json",
+      "type": "application/geo+json",
+      "title": "GLACE annual mosaic, 2024"
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/pmtiles/2024/coh12_rgb.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "coh12_rgb web-map tiles, 2024",
+      "pmtiles:layers": [
+        "glace-coh12_rgb-2024"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/pmtiles/2024/coh12_vh.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "coh12_vh web-map tiles, 2024",
+      "pmtiles:layers": [
+        "glace-coh12_vh-2024"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/pmtiles/2024/coh12_vh_qa_cqm.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "coh12_vh_qa_cqm web-map tiles, 2024",
+      "pmtiles:layers": [
+        "glace-coh12_vh_qa_cqm-2024"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/pmtiles/2024/coh12_vh_qa_num.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "coh12_vh_qa_num web-map tiles, 2024",
+      "pmtiles:layers": [
+        "glace-coh12_vh_qa_num-2024"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/pmtiles/2024/coh12_vv.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "coh12_vv web-map tiles, 2024",
+      "pmtiles:layers": [
+        "glace-coh12_vv-2024"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/pmtiles/2024/coh12_vv_qa_cqm.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "coh12_vv_qa_cqm web-map tiles, 2024",
+      "pmtiles:layers": [
+        "glace-coh12_vv_qa_cqm-2024"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/pmtiles/2024/coh12_vv_qa_num.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "coh12_vv_qa_num web-map tiles, 2024",
+      "pmtiles:layers": [
+        "glace-coh12_vv_qa_num-2024"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/pmtiles/2024/rtc_rgb.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "rtc_rgb web-map tiles, 2024",
+      "pmtiles:layers": [
+        "glace-rtc_rgb-2024"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/pmtiles/2024/rtc_vh.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "rtc_vh web-map tiles, 2024",
+      "pmtiles:layers": [
+        "glace-rtc_vh-2024"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/pmtiles/2024/rtc_vh_qa_cqm.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "rtc_vh_qa_cqm web-map tiles, 2024",
+      "pmtiles:layers": [
+        "glace-rtc_vh_qa_cqm-2024"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/pmtiles/2024/rtc_vh_qa_num.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "rtc_vh_qa_num web-map tiles, 2024",
+      "pmtiles:layers": [
+        "glace-rtc_vh_qa_num-2024"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/pmtiles/2024/rtc_vv.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "rtc_vv web-map tiles, 2024",
+      "pmtiles:layers": [
+        "glace-rtc_vv-2024"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/pmtiles/2024/rtc_vv_qa_cqm.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "rtc_vv_qa_cqm web-map tiles, 2024",
+      "pmtiles:layers": [
+        "glace-rtc_vv_qa_cqm-2024"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/pmtiles/2024/rtc_vv_qa_num.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "rtc_vv_qa_num web-map tiles, 2024",
+      "pmtiles:layers": [
+        "glace-rtc_vv_qa_num-2024"
+      ]
+    }
+  ]
+}

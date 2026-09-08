@@ -55,59 +55,66 @@ like a corrupt archive rather than a permissions problem. A COG read in the
 browser needs the same headers, so the one rule covers both, and Source
 Cooperative serves both.
 
-`--tiles-dir` mounts any directory that holds a `layers.json`, which is how a
-build that is not the published store is looked at:
+`--tiles-dir` mounts any directory that holds a catalog — a `mosaics/` beside a
+`tiles/` — which is how a build that is not the published store is looked at:
 
 ```bash
 uv run --locked python scripts/serve.py --tiles-dir <a local build>
 ```
 
-## To do when the updated catalog is published
+## Reading the catalog
 
-**The store is being restructured; this page has to follow.** Nothing is broken
-today — the published `layers.json` is from 2026-09-02 and still current — but
-the catalog repository has retired the manifest by design and stopped writing
-it, so the next publication will not refresh it. The work here is not started.
+**There is no `layers.json` any more.** The store retired it (glace-catalog
+M-26): its writer is deleted, and every field it carried has a standard home
+instead. `js/store.js` reads those homes and hands `js/rasters.js` one record per
+archive — the shape the manifest used to arrive as. Three documents, each
+answering one question:
 
-What changed upstream (`glace-catalog`, `docs/MIGRATION.md` §4 and §9):
+| document | what it answers |
+| --- | --- |
+| `mosaics/collection.json` | which archives exist — one `rel: "pmtiles"` link each — and where the style and the per-year items are |
+| the style it nominates | how each is drawn: ramp, stretch, unit, zooms |
+| each year's `item.json` | the acquisition window under the ramp |
 
-- **`layers.json` is retired** (M-26). Its writer is deleted from
-  `glace-catalog`. Only the `deep-glacier-mapping` copy still produces one, and
-  that copy is scheduled for deletion (P-17) once this page no longer needs it.
-- **Every field has a standard home instead.** Enumerate archives from
-  `mosaics/collection.json`'s `rel="pmtiles"` links; take `bounds`, `minzoom`
-  and `maxzoom` from **the PMTiles header itself**, which already carries them;
-  take dates from the mosaic item.
-- **Display constants come from the MapLibre style** (M-27).
-  `mosaics/styles/default.json` is now a single file declaring all fourteen
-  layers, one visible and thirteen hidden, each carrying `cmap`, `vmin`, `vmax`,
-  `unit`, `decibel` and derived `stops` under `metadata.portolan:legend`. It is
-  the *source of truth* — the build reads the same file to bake the archives —
-  so this page should read it rather than keep any copy.
-- **False-colour stretches are published at last** (P-18), as
-  `type: "channels"` with three `{band, vmin, vmax}` entries.
-  `falseColourChannels()` already expects exactly this shape from `channels`;
-  the numbers just have to come from the style now instead of `layers.json`.
-- **The QA ranges changed** (P-19), re-derived from the published mosaics.
-  QA-NUM is now **0–70, shared by both products**, rather than 0–30: 2021
-  reaches 49 (COH12) and 58 (RTC) because S1B was still flying, and the old
-  ceiling clipped it to a flat block. The range is deliberately *not*
-  per-product — RTC sees more acquisitions than COH12, and a shared ceiling is
-  what makes that visible. QA-CQM is now **−3…3 dB** rather than −6…6, and its
-  ramp is sequential (`cmc.glasgow`), not diverging: CQM is a composite quality
-  indicator where higher is better, and the diverging ramp encoded a misreading
-  of it.
-- **The attribution wording is fixed and per-year**:
-  `University of Zurich, Contains modified Copernicus Sentinel data {year}`,
-  carried by the style's sources and baked into each archive's header. This page
-  builds its own line in `copernicus()` (`js/rasters.js`); that becomes a third
-  copy of something now published, and should be read rather than composed.
-- **The analysis mosaics move to ETRS89-LAEA 40 m** (M-24). The web-map archives
-  stay on WebMercator z13, so nothing about the PMTiles path changes — but
-  `js/cog-rgb.js` reads the *float mosaics*, and its whole cheapness argument is
-  that they share the XYZ grid. **Once the mosaics are LAEA that stops holding**,
-  and the pixel-value readout it provides has no equal-area-safe replacement on
-  this page. Decide whether to retire it or to ask for a float WebMercator COG.
+**The inventory comes from the collection, not from the style**, even though the
+style declares sources of its own. The style asset describes itself as carrying
+"every published web-map layer **of the most recent year**"; the collection lists
+every archive of every year. Enumerating from the style would silently lose every
+year but the newest the moment a second one is published.
+
+The two are joined on **`pmtiles:layers`**, the style layer id each link names —
+`glace-coh12_vv_qa_num-2024`, which carries the archive's stem and its year, and
+which the page then uses as its own MapLibre layer id so the two cannot drift.
+Where the style has no entry for a year, the layer falls back to the same stem in
+whatever year it does describe: the stretch and the ramp are fixed per layer
+rather than per year, deliberately, so [a real change between two years reads as
+a change](#value-ranges-and-colour-maps).
+
+**Bounds are declared nowhere.** They are in each archive's PMTiles header, and
+`pmtiles.Protocol({metadata: true})` puts them in the TileJSON, so a source that
+names none inherits the archive's — in a read the source was making anyway. The
+same is true of the attribution, which is why neither is in the source spec.
+
+`metadata.portolan:legend` is the store's **source of truth** for how a layer is
+drawn — the build reads the same block to bake the archives — so this page keeps
+no copy of a stretch, a ramp or a channel recipe. That includes the false
+colour's three `{band, vmin, vmax}` entries, which the store publishes now
+(P-18); `falseColourChannels()` already expected exactly that shape.
+
+### What is still owed
+
+- **The mosaics are ETRS89-LAEA 40 m** (M-24). The web-map archives are still
+  WebMercator z13, so nothing about the PMTiles path changed — but
+  `js/cog-rgb.js` reads the *float mosaics*, and its whole cheapness argument was
+  that they shared the XYZ grid. **That no longer holds.** The reader still
+  parses and is still tested, and nothing on the page produces such a source, so
+  nothing is broken; but the pixel-value readout it offers has no equal-area-safe
+  replacement here. Decide whether to retire it or to ask for a float
+  WebMercator COG alongside. See [The COG reader](#the-cog-reader).
+- **The per-year attribution is read, never composed.** The style's sources carry
+  `University of Zurich, Contains modified Copernicus Sentinel data {year}` and
+  each archive's header carries the same string; the page declares none and lets
+  MapLibre take the archive's. Nothing to do, recorded so it is not re-added.
 
 ## The published store
 
@@ -115,23 +122,28 @@ The archives live in [`lqgentner/glace-ch`](https://source.coop/lqgentner/glace-
 on Source Cooperative, and `site-config.js` points the page there. It is the
 **Switzerland-only rehearsal build** — the full store's layout and machinery over
 one scope, published to exercise both before the Alps dataset arrives. What
-changes when that lands is the extent and the number of years, not the layout or
-the manifest.
+changes when that lands is the extent and the number of years, not the layout.
 
 ```
 {root}/
-├── layers.json                     # the only file this page reads
-├── catalog.json                    # STAC root: a tiles and a mosaics collection
-└── 2024/
-    ├── mosaics/coh12_vv.tif        # float32 LERC_ZSTD COG, WebMercatorQuad z13
-    └── pmtiles/coh12_vv.pmtiles    # pre-styled RGBA, z5-z13
+├── catalog.json                        # STAC root: a tiles and a mosaics collection
+├── tiles/
+│   ├── collection.json
+│   └── items.parquet                   # the grid's index — see The tile grid
+└── mosaics/
+    ├── collection.json                 # the rel="pmtiles" links this page enumerates
+    ├── styles/default.json             # how each layer is drawn
+    ├── 2024/
+    │   ├── item.json                   # the year, its window and its COG assets
+    │   └── coh12_vv.tif                # float32 LERC_ZSTD COG, ETRS89-LAEA 40 m
+    └── pmtiles/2024/coh12_vv.pmtiles   # pre-styled RGBA, WebMercator z5-z13
 ```
 
 Every layer is published twice under one stem. The page reads the `pmtiles/`
-side of that pair for everything; the `mosaics/` side is what
+side of that pair for everything; the year directory beside it is what
 [the COG reader](#the-cog-reader) would read if it were ever switched on.
 
-**One manifest field carries three different things.** The `polarization` axis
+**One field carries three different things.** The polarization half of a layer id
 holds seven values, not three: `VV`, `VH`, `RGB`, and the four QA rasters
 (`VV_QA_NUM`, `VV_QA_CQM` and their VH pair). So a polarization, a QA role and a
 channel recipe share one field, and `js/rasters.js` splits it back into the two
@@ -140,13 +152,13 @@ The split is a regex anchored to the two roles that exist, so an unrecognised
 suffix stays part of the polarization and is dropped by the `POLARIZATIONS`
 allowlist rather than becoming a fourth button nothing can draw. That drop is
 *silent* — such a layer is correct and merely unpresentable here, not malformed,
-so warning about each would be noise. All 56 entries the store publishes now
-reach the map.
+so warning about each would be noise. All fourteen archives the store publishes
+today reach the map.
 
 **Nothing else in the store needs a product built for it.** The false colour is
 the archive the store published, read like any other; the catalog tile grid is
-read straight out of `tiles.parquet` ([The tile grid](#the-tile-grid)). Neither
-needs a sidecar this repository has to keep in step with the catalogue.
+read straight out of `tiles/items.parquet` ([The tile grid](#the-tile-grid)).
+Neither needs a sidecar this repository has to keep in step with the catalogue.
 
 ## Tests
 
@@ -168,13 +180,14 @@ and nothing is ever bundled.
 | `tests/test_serve.py` | range boundaries, suffix and invalid ranges, `/tiles` containment, cache headers |
 | `tests/test_build_tiles.py` | inventory index validation |
 | `tests/config.test.js` | the defaults -> `site-config.js` -> query precedence chain |
-| `tests/manifest.test.js` | `layers.json` validation, MGRS/UTM parsing |
+| `tests/store.test.js` | the catalog read: the collection/style join, per-layer validation, MGRS/UTM parsing |
+| `tests/layers.test.js` | the layers arranged into the panel's axes, the legend's own text |
 | `tests/ui.test.js` | status priority and keying, escaping in the credit popover |
 | `tests/viewer.test.js` | the page end to end against a fake MapLibre |
-| `tests/store-manifest.test.js` | the published store's own `layers.json`, one year of it verbatim — the polarization split, the QA rasters, the false-colour legend |
+| `tests/store-catalog.test.js` | the published store's own catalog, one year of it verbatim — the polarization split, the QA rasters, the false-colour legend |
 | `tests/cog-rgb.test.js` | the `glace-rgb://` protocol, driven directly |
 | `tests/tile-grid.test.js` | the tile grid, read from the stac-geoparquet index |
-| `tests/viewer-degraded.test.js` | the page with no reachable `layers.json` |
+| `tests/viewer-degraded.test.js` | the page with no reachable catalog |
 | `tests/page-assets.test.js` | every local `src`/`href` in `index.html` exists, and `deploy.yml` stages the directory it is in |
 
 The path and range cases are written to a socket by hand: `http.client` and
@@ -187,15 +200,20 @@ because MapLibre answers each of those with a console warning the page would
 otherwise sail past.
 
 **No test reads `./tiles`.** `viewer.test.js` runs against
-`tests/fixtures/layers.json` and `store-manifest.test.js` against one year of the
-published `layers.json` verbatim, so both cover the same ground in CI as they do
+`tests/fixtures/two-years/` and `store-catalog.test.js` against one year of the
+published catalog verbatim, so both cover the same ground in CI as they do
 locally, and mounting a local build changes no result. The first fixture holds
-one combination that exists in only one of its two years, which is what makes
-the disabled-button and no-layer-for-this-year paths reachable.
+one combination built for only one of its two years, which is what makes the
+disabled-button and no-layer-for-this-year paths reachable — and its style
+describes only the newer year, as the store's does, so the fallback that draws an
+older year through the same constants is exercised by every run.
 
-`store-manifest.test.js` runs the page against a second manifest, and is a
+The store fixture is verbatim but for the item's geometry, which is half a
+megabyte of outline the page never reads.
+
+`store-catalog.test.js` runs the page against a second catalog, and is a
 separate file rather than another subtest for that reason: the modules hold
-state at module scope and the map is a singleton, so a second manifest needs a
+state at module scope and the map is a singleton, so a second catalog needs a
 second process, which `node --test` gives each file.
 
 `cog-rgb.test.js` no longer goes through the panel — nothing there produces a
@@ -220,7 +238,7 @@ committed `data/*.geojson` and none of the `.pmtiles` the page actually loads �
 the site comes up with every overlay 404ing.
 
 Until the GLACE archives are published, the deployed page has no `tiles/`, so
-`layers.json` 404s and the raster controls hide themselves. The basemap, the
+the mosaics collection 404s and the raster controls hide themselves. The basemap, the
 terrain hillshade and the three inventories all still work; point `?tiles=` at
 object storage to get the rest.
 
@@ -300,7 +318,8 @@ under `js/`, loaded straight by the browser.
 | --- | --- |
 | `config.js` | resolves the settings below into archive locations and endpoints |
 | `map.js` | the map, layer ordering, basemap labels, hillshade, 3D terrain |
-| `rasters.js` | the `layers.json` manifest, layer selection, legend |
+| `store.js` | the published catalog: the collection, its style and its items -> one record per archive |
+| `rasters.js` | layer selection, the panel's axes, legend |
 | `cog-rgb.js` | the `glace-rgb://` protocol: COG layers, one archive or two — [unused by the page](#the-cog-reader), still wired up |
 | `tile-grid.js` | the catalog grid, read from the store's geoparquet index |
 | `overlays.js` | glacier inventories, catalog tile grid, popups |
@@ -314,7 +333,7 @@ wired before anything has loaded and every handler that touches the map awaits
 `style.load`, so a box ticked while the basemap is still streaming is honoured
 when the style arrives rather than dropped.
 
-Anything that reaches the page from a manifest or a vector tile — a glacier
+Anything that reaches the page from the catalog or a vector tile — a glacier
 name, a citation, a licence link — is built as DOM nodes rather than as an HTML
 string, so a value containing markup stays a value.
 
@@ -363,12 +382,12 @@ already drawn.
 
 The panel names products the way a reader would rather than the way the archives
 are named — `COH12` reads as **Coherence**, `RTC` as **Backscatter** — while
-`data-value` keeps the manifest's own spelling, so nothing downstream has to
+`data-value` keeps the catalog's own spelling, so nothing downstream has to
 translate back. A product with no entry in `PRODUCT_LABELS` falls back to its own
 name rather than vanishing.
 
 The polarization axis is **derived from the layers and sorted**, not taken as
-declared: the manifest's own `polarizations` list mixes polarizations, QA roles
+declared: the field the catalog spells them in mixes polarizations, QA roles
 and the channel recipe into one field (see [The published
 store](#the-published-store)), and the panel spends that field on two rows. So
 VV is the left-hand button and the one the page opens on whatever order the file
@@ -380,11 +399,11 @@ two QA rasters the store publishes beside it. It is `quantity` in the code and
 in the DOM ids, which is what it selects — the label is the reader's word for it,
 not the axis's name.
 
-| button | manifest | what it is |
+| button | layer id | what it is |
 | --- | --- | --- |
 | Data | no suffix | the coherence or backscatter composite |
 | QA: Count | `_QA_NUM` | the number of observations contributing to each pixel |
-| QA: Quality | `_QA_CQM` | the composite quality map, on a diverging ±6 dB ramp, where higher is better |
+| QA: Quality | `_QA_CQM` | the composite quality map, on a sequential −3…3 dB ramp, where higher is better |
 
 What either quantity *is* is deep-glacier-mapping's to define and document; this
 page only has to name it and say which way is better.
@@ -392,7 +411,7 @@ page only has to name it and say which way is better.
 The faces are short because the row is three wide in a 292px panel, which leaves
 about eleven characters a button — `Measurement` alone overruns it. The full
 names ride on the buttons' tooltips and, at length, under the ramp. The row
-**hides itself when the manifest carries only one quantity**, as every build
+**hides itself when the catalog carries only one quantity**, as every build
 before the QA rasters does; one button is not a choice.
 
 **The false colour and the QA rasters exclude each other**, and the two rows
@@ -419,7 +438,7 @@ Under the ramp sits the description of the selected layer:
 
 ```
 Composite Coherence                 Composite quality map (higher is better)
-12-day baseline                     2024-07-09 to 2024-10-05
+12-day baseline                     2024-07-09 to 2024-10-07
 Local resolution weighted median
 2023-06-01 to 2023-09-30
 ```
@@ -430,14 +449,15 @@ layer is composited. A QA raster is **one line and its window**: neither is a
 composite of the measurement, so neither takes the compositing line, and the
 name plus which way is better is all the panel has to say.
 
-The window comes from `start_date` and `end_date` on the manifest entry, as
-`YYYY-MM-DD`, and the line is skipped when they are absent or malformed. Like
-`cmap` it is descriptive rather than structural, so `validLayer()` does not
-reject a layer for missing it. Upstream, the composite records the window as
+The window comes from the year's STAC item, as the date halves of its
+`start_datetime` and `end_datetime`, and the line is skipped when the item could
+not be read. Like `cmap` it is descriptive rather than structural, so a year
+whose item 404s loses the line and keeps its layers. Upstream, the composite records the window as
 `COMPOSITE_START_DATE` / `COMPOSITE_END_DATE` GeoTIFF tags; `build_overview`
-carries them onto the 40 m overview (which is written from merged arrays, so
-nothing survives unless it is passed through) and `build_pmtiles` reads them
-into the manifest.
+carries them onto the 40 m mosaic (which is written from merged arrays, so
+nothing survives unless it is passed through), and the mosaic's STAC item
+publishes them as `start_datetime` / `end_datetime` — which is where
+`js/store.js` reads them.
 
 ### The false-colour legend
 
@@ -445,39 +465,40 @@ The false colour has no ramp: three channels, each carrying a different
 measurement. The legend names them and, where it can, the stretch each was baked
 with.
 
-**Those numbers are the build's, and this page holds no copy.** A manifest entry
-may carry them as `channels` — three objects in red, green, blue order:
+**Those numbers are the build's, and this page holds no copy.** The style
+carries them under `metadata.portolan:legend` as `type: "channels"` — three
+objects in red, green, blue order:
 
 ```json
 "channels": [
-  { "band": "VV", "vmin": -18.5, "vmax": -5 },
-  { "band": "VH", "vmin": -26, "vmax": -11 },
+  { "band": "RTC VV", "vmin": -18.5, "vmax": -5 },
+  { "band": "RTC VH", "vmin": -26, "vmax": -11 },
   { "band": "VV − VH", "vmin": 4, "vmax": 14 }
 ]
 ```
 
-Validated like everything else that arrives from a manifest, and descriptive
+Validated like everything else that arrives from the catalog, and descriptive
 rather than structural: an unusable one costs the layer its numbers and not its
 place on the map, and is dropped silently, since nothing is wrong with the layer.
+It is also why a false-colour layer is the one that may reach the map with no
+stretch and no stops at all — [`js/store.js`](#reading-the-catalog) requires a
+ramp of every other layer and none of this one.
 
-**The store publishes no such key today**, so the legend names the bands and
-quotes no range. Red and green are the two polarizations; blue is their ratio,
-written as a difference wherever the layer is read in dB and a quotient
-otherwise — read off the manifest's own `units` rather than from a table keyed
-on the product, so there is no per-product constant here to fall out of step.
+**Where a store publishes no such key** the legend names the bands and quotes no
+range. Red and green are the two polarizations; blue is their ratio, written as a
+difference wherever the layer is read in dB and a quotient otherwise — read off
+the layer's own `units` rather than from a table keyed on the product, so there
+is no per-product constant here to fall out of step.
 
-What is *not* done is inference, and the reason is worth keeping. Red and green
-could be lifted from the sibling VV and VH entries, whose stretches are equal to
-the build's today — checked against the published manifest, both products. But
-that is a convention nothing enforces, and blue is recoverable from nothing at
-all: `LayerInfo` carries one scalar `vmin`/`vmax` pair, so `write_pmtiles`
-records `ranges[0]` and drops green and blue. Nor is there anything in the
-archive to fall back on — measured, a PMTiles metadata block holds `name`,
-`type`, `description`, `writer`, `attribution` and `tileSize`, for the
-single-band layers as much as the false colour. The single-band legend's numbers
-have always come from `layers.json`, never from the tiles.
-
-Publishing them is tracked in glace-catalog's `docs/MIGRATION.md`.
+What is *not* done is inference, and the reason is worth keeping now that it is
+moot. Red and green could be lifted from the sibling VV and VH entries, whose
+stretches are equal to the build's — checked against the published style, both
+products. But that is a convention nothing enforces, and blue is recoverable from
+nothing at all. Nor is there anything in the archive to fall back on — measured,
+a PMTiles metadata block holds `name`, `type`, `description`, `writer`,
+`attribution` and `tileSize`, for the single-band layers as much as the false
+colour. The legend's numbers have always come from beside the tiles, never from
+them.
 
 The `SCALE` heading carries an info mark with the colour map's credit, rebuilt
 only when the map actually changes — the button owns a hover popover, and
@@ -586,7 +607,7 @@ and DOM ids. Control defaults live in `index.html` (`value="100"` on opacity,
 that state.
 
 The page always opens on `initialView` when the URL carries no `#hash` — it is
-not re-framed to the data's own bounds once the manifest loads. A deployment
+not re-framed to the data's own bounds once the catalog loads. A deployment
 whose archives sit somewhere else should set `initialView` to match, the same
 way this repository's own default points at the Aletsch Glacier
 (`center: [8.03, 46.51], zoom: 10`) rather than the union of the whole store.
@@ -761,8 +782,9 @@ The stretch and ramp of every layer are **baked into its archive** at build time
 and published in the catalog's MapLibre style,
 `mosaics/styles/default.json`, under each layer's
 `metadata.portolan:legend`. That file is the catalog's single source of truth:
-the build reads it to make its lookup tables, and this page should read it to
-draw a legend rather than keep a copy. (It does not yet — see the to-do above.)
+the build reads it to make its lookup tables, and this page reads it to draw the
+legend rather than keeping a copy — see [Reading the
+catalog](#reading-the-catalog).
 
 | layer | range | colour map |
 | --- | --- | --- |
@@ -823,12 +845,13 @@ read a pixel *value*, and reopening the question is a source spec away — regis
 a recipe with `setRecipe(id, …)` and hand `recipeTiles(id)` to a raster source's
 `tiles`.
 
-**Its premise is about to break.** What made it cheap is that the float mosaics
-sat on the same WebMercatorQuad grid as the XYZ tiles, so a tile was an integer
-window read out of each file and a per-pixel combine — never a reprojection. The
-catalog is moving the mosaics to ETRS89-LAEA 40 m, at which point that stops
-holding. See the to-do at the top of this file; the decision is whether to retire
-the reader or to ask for a float WebMercator COG alongside.
+**Its premise has broken.** What made it cheap is that the float mosaics sat on
+the same WebMercatorQuad grid as the XYZ tiles, so a tile was an integer window
+read out of each file and a per-pixel combine — never a reprojection. The
+published mosaics are ETRS89-LAEA 40 m now (M-24), and that no longer holds.
+Nothing is broken today, since no source uses the reader; what is owed is the
+decision to retire it or to ask for a float WebMercator COG alongside. See [What
+is still owed](#what-is-still-owed).
 
 Two things worth keeping if it ever comes back:
 
@@ -858,7 +881,7 @@ the whole layer draws as one flat block.
 **Catalog tile grid** in the map options draws the MGRS footprints the store is
 built on, shaded by how much of each the glacier inventory covers. It used to be
 a vector PMTiles archive built beside the rasters; the store does not publish
-one, and does not need to. What it publishes is `tiles.parquet`, the
+one, and does not need to. What it publishes is `tiles/items.parquet`, the
 stac-geoparquet mirror of every tile Item, which already carries the footprint
 and both glacier fractions.
 

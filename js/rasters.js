@@ -1,29 +1,29 @@
 /*
- * The GLACE raster layers: the manifest, the controls that select one of them,
- * and the legend that describes it.
+ * The GLACE raster layers: the controls that select one of them, and the legend
+ * that describes it.
  *
- * `layers.json` (written by the store's finalize-catalog step) holds one entry
- * per (product, polarization, year). Only the entry currently on screen has a
- * MapLibre source, and only the entries that have been on screen keep one, so
- * scrubbing through years stays instant without asking for archive metadata
- * nobody looked at.
+ * The layers themselves are read out of the published catalog by js/store.js,
+ * one record per archive. Only the record currently on screen has a MapLibre
+ * source, and only the records that have been on screen keep one, so scrubbing
+ * through years stays instant without asking for archive metadata nobody looked
+ * at.
  *
  * Every layer is drawn from its pre-styled PMTiles archive. The store publishes
  * the float COG each one was styled from as well, and this page used to offer a
  * switch between the two; that comparison is finished and the switch is retired
- * — see "Tile source" in AGENTS.md for what it measured. The reader itself is
- * still in the tree, wired to its protocol, so the question can be reopened
- * without rebuilding it: js/cog-rgb.js.
+ * — see "The COG reader" in AGENTS.md. The reader itself is still in the tree,
+ * wired to its protocol, so the question can be reopened without rebuilding it:
+ * js/cog-rgb.js.
  */
 
-import { LAYER_MANIFEST_URL, TILES_BASE } from "./config.js";
 import { addStacked, map, styleReady } from "./map.js";
+import { FALSE_COLOUR, readStore } from "./store.js";
 import { buildSegmented, clearStatus, creditButton, el, h, setStatus } from "./ui.js";
 
 const STATUS_KEY = "rasters";
 
-/* The manifest names products the way the archives are named; the panel names
- * them the way a reader would. `data-value` keeps the manifest's spelling, so
+/* The catalog names products the way the archives are named; the panel names
+ * them the way a reader would. `data-value` keeps the catalog's spelling, so
  * only the button face changes. A product with no entry here falls back to its
  * own name rather than vanishing. */
 const PRODUCT_LABELS = { COH12: "Coherence", RTC: "Backscatter" };
@@ -41,29 +41,28 @@ const PRODUCT_DETAIL = {
 const COMPOSITING_DETAIL = "Local resolution weighted median";
 
 /* The polarizations this page presents, in the order it presents them: VV is
- * the one to open on, so it belongs on the left whatever order the manifest
- * declares.
+ * the one to open on, so it belongs on the left whatever order the catalog
+ * lists them in.
  *
- * It is an allowlist as well as an order. The manifest's `polarization` field
- * carries more than a polarization — see QUANTITIES below — so this list is
- * matched against what is left once the QA suffix has been taken off. Anything
- * else (an HH/HV build, a QA role this page has no row for) is dropped in
- * validateManifest() rather than left to validLayer(), which would report each
- * one as malformed over something that is not wrong with it.
+ * It is an allowlist as well as an order. The `polarization` field carries more
+ * than a polarization — see QUANTITIES below — so this list is matched against
+ * what is left once the QA suffix has been taken off. Anything else (an HH/HV
+ * build, a QA role this page has no row for) is dropped in indexLayers(), and
+ * silently: such a layer is correct and merely unpresentable here.
  *
  * `RGB` is not a polarization either, but it is a layer a reader picks from
  * this same row, so it sits at the end of it. */
 const POLARIZATIONS = ["VV", "VH", "RGB"];
 
-/* The quantity a layer carries, which the manifest spells as a suffix on the
+/* The quantity a layer carries, which the catalog spells as a suffix on the
  * polarization: `VV` is the measurement itself, `VV_QA_NUM` and `VV_QA_CQM` the
  * two QA rasters the store publishes beside it. So the field names a
  * polarization, a QA role and a channel recipe all at once, and the panel
  * splits it back into the two rows a reader chooses from.
  *
  * The measurement is the *absence* of a suffix, which is why its value is the
- * empty string — `data-value` carries the manifest's own spelling here as
- * everywhere else, and the manifest's spelling for a measurement is nothing.
+ * empty string — `data-value` carries the catalog's own spelling here as
+ * everywhere else, and its spelling for a measurement is nothing.
  *
  * The button faces are short because the row is three wide in a 292px panel;
  * the full names are on the buttons' own tooltips and under the colour ramp. */
@@ -93,14 +92,13 @@ const QUANTITY_NAMES = { QA_NUM: "observation count", QA_CQM: "composite quality
  * the store and read like any other archive. It has no QA raster of its own, so
  * selecting it disables both QA buttons and vice versa — the same rule that
  * disables any other combination nothing was published for. */
-const FALSE_COLOUR = "RGB";
 const isFalseColour = (layer) => layer !== null && layer.polarization === FALSE_COLOUR;
 
 /* The swatch colour of each channel, red green blue, because that is what the
  * legend row is naming — a pixel is as red as its VV is high. */
 const CHANNEL_SWATCHES = ["#e0524f", "#4c9f4c", "#5b8def"];
 
-/* Crameri's scientific colour maps, which the manifest names as `cmc.<map>`.
+/* Crameri's scientific colour maps, which the style names as `cmc.<map>`.
  * The credit is per-layer because the map is. */
 const COLOUR_MAP_CREDIT = {
   citation: "© Fabio Crameri",
@@ -108,8 +106,8 @@ const COLOUR_MAP_CREDIT = {
 };
 
 const state = {
-  manifest: null,
-  /* `product|polarization|year` -> layer, keyed on the manifest's own composite
+  axes: null,
+  /* `product|polarization|year` -> layer, keyed on the catalog's own composite
    * polarization. Built once; the controls ask "does this combination exist" on
    * every keystroke of the year slider. */
   index: new Map(),
@@ -122,7 +120,10 @@ const state = {
   activeKey: null,
 };
 
-const layerId = (layer) => `glace-${layer.id}`;
+/* The style layer id the catalog publishes for the archive, used as-is: it is
+ * already unique across products, quantities and years, and taking the page's
+ * own id from the catalog's means the two cannot drift. */
+const layerId = (layer) => layer.id;
 const key = (product, polarization, year) => `${product}|${polarization}|${year}`;
 
 /* ---------- the polarization field ---------- */
@@ -174,102 +175,54 @@ const GIVES_WAY = { pol: "quantity", quantity: "pol" };
 function fallbackFor(field, value) {
   const other = GIVES_WAY[field];
   if (other === undefined) return undefined;
-  const axis = other === "pol" ? state.manifest.polarizations : state.manifest.quantities;
+  const axis = other === "pol" ? state.axes.polarizations : state.axes.quantities;
   return axis.find((candidate) => layerFor({ [field]: value, [other]: candidate }) !== null);
 }
 
-/* ---------- manifest ---------- */
+/* ---------- the axes ---------- */
 
 const isFiniteNumber = (value) => typeof value === "number" && Number.isFinite(value);
 const isNonEmptyString = (value) => typeof value === "string" && value !== "";
 
-/* Whether the panel has a control that can reach this entry at all. One whose
- * polarization is missing or not a string is left to validLayer(), which reports
- * it; one that names a real layer this page does not present — another
- * polarization, another QA role — is dropped without a word. */
+/* Whether the panel has a control that can reach this layer at all. A layer that
+ * names a real archive this page does not present — another polarization,
+ * another QA role — is dropped without a word: it is correct and merely
+ * unpresentable here, so warning about each would be noise. Whether it can be
+ * *drawn* is js/store.js's question, and answered before this one. */
 function presented(layer) {
-  if (!isNonEmptyString(layer?.polarization)) return true;
   const { pol, quantity } = splitPolarization(layer.polarization);
   return POLARIZATIONS.includes(pol) && QUANTITY_ORDER.includes(quantity);
 }
 
-/* A manifest that parses as JSON is not yet a manifest this page can draw. It
- * is fetched from wherever ?tiles= points, which is a genuine trust boundary,
- * and a structurally valid but incomplete entry would otherwise fail much later
- * as an undefined read somewhere inside MapLibre. Malformed entries are dropped
- * with a warning rather than taking the whole page down: one broken year should
- * not cost the other twenty. */
-function validLayer(layer) {
-  return (
-    layer !== null &&
-    typeof layer === "object" &&
-    isNonEmptyString(layer.id) &&
-    isNonEmptyString(layer.product) &&
-    isNonEmptyString(layer.polarization) &&
-    isNonEmptyString(layer.url) &&
-    isFiniteNumber(layer.year) &&
-    isFiniteNumber(layer.min_zoom) &&
-    isFiniteNumber(layer.max_zoom) &&
-    isFiniteNumber(layer.vmin) &&
-    isFiniteNumber(layer.vmax) &&
-    // A source whose zooms are inverted cannot draw, and a stretch whose ends
-    // are equal or backwards would render the ramp meaninglessly.
-    layer.min_zoom <= layer.max_zoom &&
-    layer.vmin < layer.vmax &&
-    Array.isArray(layer.bounds) &&
-    layer.bounds.length === 4 &&
-    layer.bounds.every(isFiniteNumber) &&
-    Array.isArray(layer.colors) &&
-    layer.colors.every(isNonEmptyString) &&
-    // A ramp is how a single-band layer is drawn, so one is required of it. A
-    // false-colour layer has three channels and no ramp at all, and the store
-    // publishes it with `colors` empty.
-    (layer.colors.length > 0 || isFalseColour(layer))
-  );
-}
+/**
+ * The layers the store published, arranged into the axes the panel offers.
+ *
+ * Every axis is derived from the layers themselves rather than declared
+ * anywhere, so no control can be built for a combination that has no archive
+ * behind it. Product and year keep the order the catalog listed them in — sorted
+ * for the year, which is a number and a slider; the other two are ordered by the
+ * lists above, so VV is the left-hand polarization and the measurement the
+ * left-hand quantity whatever order the catalog used.
+ *
+ * @param {object[]} layers  the records js/store.js read out of the catalog
+ */
+export function indexLayers(layers) {
+  const usable = layers.filter(presented);
+  if (!usable.length) throw new Error("no published layer has a control on this page");
 
-export function validateManifest(raw) {
-  if (raw === null || typeof raw !== "object" || !Array.isArray(raw.layers)) {
-    throw new Error("no layers array");
-  }
-  const layers = raw.layers.filter((layer) => {
-    // Silent, unlike the warning below: this is not a complaint about the entry.
-    if (!presented(layer)) return false;
-    if (validLayer(layer)) return true;
-    console.warn("layers.json: skipping malformed entry", layer);
-    return false;
-  });
-  if (!layers.length) throw new Error("the manifest holds no usable layers");
-
-  /* The manifest also names the products and the years, which is what orders
-   * those controls. Those lists are honoured where they agree with the layers
-   * and derived from the layers where they do not, so a manifest that lists a
-   * product it has no archive for cannot produce a dead button. */
-  const present = (field) => new Set(layers.map((layer) => layer[field]));
-  const axis = (declared, field) => {
-    const have = present(field);
-    const kept = Array.isArray(declared) ? declared.filter((value) => have.has(value)) : [];
-    return kept.length === have.size ? kept : [...have];
-  };
-
-  /* The polarization axis is the one the manifest cannot declare usefully: its
-   * own list mixes polarizations, QA roles and the channel recipe into one
-   * field, and the panel spends them on two rows. Both are derived from the
-   * layers and ordered by the lists above, so VV is the left-hand button and
-   * the measurement the left-hand quantity whatever order the file used. */
-  const split = layers.map((layer) => splitPolarization(layer.polarization));
+  const split = usable.map((layer) => splitPolarization(layer.polarization));
   const polarizations = [...new Set(split.map((at) => at.pol))];
   const quantities = new Set(split.map((at) => at.quantity));
 
   return {
-    layers,
+    layers: usable,
     index: new Map(
-      layers.map((layer) => [key(layer.product, layer.polarization, layer.year), layer]),
+      usable.map((layer) => [key(layer.product, layer.polarization, layer.year), layer]),
     ),
-    products: axis(raw.products, "product"),
+    products: [...new Set(usable.map((layer) => layer.product))],
     polarizations: polarizations.sort((a, b) => POLARIZATIONS.indexOf(a) - POLARIZATIONS.indexOf(b)),
     quantities: QUANTITY_ORDER.filter((quantity) => quantities.has(quantity)),
-    years: axis(raw.years, "year").sort((a, b) => a - b),
+    years: [...new Set(usable.map((layer) => layer.year))].sort((a, b) => a - b),
   };
 }
 
@@ -278,18 +231,19 @@ export function validateManifest(raw) {
 function ensureLayer(layer) {
   const id = layerId(layer);
   if (state.added.has(id)) return;
-  /* No `attribution`: the archive carries its own and a spec that names one
-   * would override it. Still conditional, and still per year, because each year
-   * is its own archive and MapLibre credits a source only while a visible layer
-   * uses it. Zooms and bounds stay declared from the manifest — those the spec
-   * should win. */
+  /* Neither `attribution` nor `bounds`: the archive carries both in its own
+   * header, `pmtiles.Protocol({metadata: true})` puts them in the TileJSON, and
+   * a spec that named either would override the archive rather than add to it.
+   * The credit stays conditional and stays per year for the same reason as
+   * before — each year is its own archive, and MapLibre credits a source only
+   * while a visible layer uses it. The zooms are declared, since the style is
+   * where the catalog states them. */
   map.addSource(id, {
     type: "raster",
-    url: `pmtiles://${TILES_BASE}/${layer.url}`,
+    url: `pmtiles://${layer.url}`,
     tileSize: 256,
-    minzoom: layer.min_zoom,
-    maxzoom: layer.max_zoom,
-    bounds: layer.bounds,
+    minzoom: layer.minZoom,
+    maxzoom: layer.maxZoom,
   });
   addStacked("data", {
     id,
@@ -406,9 +360,9 @@ function updateChannelLegend(layer) {
   );
 }
 
-/* Three `{band, vmin, vmax}`, red green blue, or null where the manifest does
- * not carry them. Checked rather than trusted, like everything else that
- * reaches the page from a manifest — and descriptive rather than structural, so
+/* Three `{band, vmin, vmax}`, red green blue, or null where the style does not
+ * carry them. Checked rather than trusted, like everything else that reaches the
+ * page from the catalog — and descriptive rather than structural, so
  * an unusable one costs the layer its numbers and not its place on the map. It
  * is dropped silently for the same reason a half-written date is: nothing is
  * wrong with the layer. */
@@ -432,18 +386,19 @@ function validChannels(channels) {
  * What each channel of a false-colour layer carries, and over what range.
  *
  * `channels` is the build's own record of what it baked into the archive — the
- * band in each slot and the stretch it was given — so where the manifest
- * publishes it, the legend reports what the tiles were actually made with. This
- * page holds no stretch of its own and no table keyed on the product: those
- * numbers belong to whatever rendered the archive, and a second copy here is a
- * second copy to get wrong.
+ * band in each slot and the stretch it was given — published in the style under
+ * `metadata.portolan:legend`, the same block the build reads. So the legend
+ * reports what the tiles were actually made with. This page holds no stretch of
+ * its own and no table keyed on the product: those numbers belong to whatever
+ * rendered the archive, and a second copy here is a second copy to get wrong.
  *
- * Where it is absent the bands can still be named but their ranges cannot.
- * Red and green are the two polarizations and blue is their ratio, written as a
- * difference wherever the layer is read in dB and a quotient otherwise — one
- * rule in two spellings, read off the manifest's own `units` rather than
- * assumed per product. The ranges are left blank: printing numbers the archive
- * was not necessarily built with is a guess dressed as a legend.
+ * The store publishes them today. Where a store does not, the bands can still be
+ * named but their ranges cannot: red and green are the two polarizations and
+ * blue is their ratio, written as a difference wherever the layer is read in dB
+ * and a quotient otherwise — one rule in two spellings, read off the layer's own
+ * `units` rather than assumed per product. The ranges are left blank, because
+ * printing numbers the archive was not necessarily built with is a guess dressed
+ * as a legend.
  *
  * @param {object} layer
  * @returns {{band: string, vmin?: number, vmax?: number}[]}
@@ -454,22 +409,18 @@ export function falseColourChannels(layer) {
   return [{ band: "VV" }, { band: "VH" }, { band: layer.units === "dB" ? "VV − VH" : "VV / VH" }];
 }
 
-/* An ISO date as the manifest would carry it. Checked rather than trusted: the
- * manifest comes from wherever ?tiles= points, and a half-written date would
- * otherwise print as-is under the ramp. */
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
-const isDate = (value) => isNonEmptyString(value) && ISO_DATE.test(value);
+/* An ISO date as js/store.js reads it off the year's STAC item. */
+const isDate = (value) => isNonEmptyString(value) && /^\d{4}-\d{2}-\d{2}$/.test(value);
 
 /* What sits under the colour ramp: what the layer is and the window it covers.
  *
  * A measurement names its product and how it was composited; a QA raster names
  * itself in one line instead — see QUANTITY_DETAIL.
  *
- * The acquisition window is the one part the manifest may not carry, so the
- * line appears on its own once `start_date` and `end_date` are there and is
- * silently skipped until then. Descriptive rather than structural, like
- * `cmap` — the layer draws identically without it, so it is not something
- * validLayer() should reject a real data layer over. */
+ * The acquisition window is the one part that comes from a document of its own —
+ * the year's STAC item — so the line appears once js/store.js could read that
+ * item and is silently skipped when it could not. Descriptive rather than
+ * structural, like `cmap`: the layer draws identically without it. */
 export function layerDetail(layer) {
   const { quantity } = splitPolarization(layer.polarization);
   const lines =
@@ -479,8 +430,8 @@ export function layerDetail(layer) {
           COMPOSITING_DETAIL,
         ]
       : [...QUANTITY_DETAIL[quantity]];
-  if (isDate(layer.start_date) && isDate(layer.end_date)) {
-    lines.push(`${layer.start_date} to ${layer.end_date}`);
+  if (isDate(layer.startDate) && isDate(layer.endDate)) {
+    lines.push(`${layer.startDate} to ${layer.endDate}`);
   }
   return lines;
 }
@@ -534,10 +485,10 @@ function syncControls() {
     }
   }
   el("year-value").textContent = state.year;
-  el("year").value = state.manifest.years.indexOf(state.year);
+  el("year").value = state.axes.years.indexOf(state.year);
 }
 
-function initControls(manifest) {
+function initControls(axes) {
   const select = (field) => (value) => {
     state[field] = value;
     // The click won; if nothing was published for what it now names, the other
@@ -550,23 +501,23 @@ function initControls(manifest) {
   };
   buildSegmented(
     el("product"),
-    manifest.products.map((product) => ({ value: product, label: productLabel(product) })),
+    axes.products.map((product) => ({ value: product, label: productLabel(product) })),
     select("product"),
   );
 
-  /* Only shown when there is a choice: a manifest published before the QA
+  /* Only shown when there is a choice: a store published before the QA
    * rasters offers one quantity, and a radio group with a single button is
    * furniture, not a control. */
   buildSegmented(
     el("quantity"),
-    QUANTITIES.filter((quantity) => manifest.quantities.includes(quantity.value)),
+    QUANTITIES.filter((quantity) => axes.quantities.includes(quantity.value)),
     select("quantity"),
   );
-  el("quantity-row").hidden = manifest.quantities.length < 2;
+  el("quantity-row").hidden = axes.quantities.length < 2;
 
-  buildSegmented(el("pol"), manifest.polarizations, select("pol"));
+  buildSegmented(el("pol"), axes.polarizations, select("pol"));
 
-  const years = manifest.years;
+  const years = axes.years;
   const slider = el("year");
   slider.min = 0;
   slider.max = Math.max(0, years.length - 1);
@@ -593,7 +544,7 @@ function initControls(manifest) {
 /* ---------- boot ---------- */
 
 /* The rasters are the only part of the page that needs object storage. When the
- * manifest cannot be reached or cannot be understood, hide the controls that
+ * catalog cannot be reached or cannot be understood, hide the controls that
  * describe a raster layer and say so once, rather than leaving dead sliders
  * behind an error message. */
 function noRasters(reason) {
@@ -608,33 +559,31 @@ function noRasters(reason) {
 
 export async function loadRasters() {
   setStatus(STATUS_KEY, "Loading layers…");
-  let manifest;
+  let axes;
   try {
-    const response = await fetch(LAYER_MANIFEST_URL);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    manifest = validateManifest(await response.json());
+    axes = indexLayers(await readStore());
   } catch (error) {
-    noRasters(`${LAYER_MANIFEST_URL} — ${error.message}`);
+    noRasters(error.message);
     return null;
   }
 
-  state.manifest = manifest;
-  state.index = manifest.index;
+  state.axes = axes;
+  state.index = axes.index;
 
   /* The head of each axis rather than whatever the first layer happens to be,
    * so the page opens on the leftmost button of each control — the measurement
    * and VV included. If that combination has no archive, fall back to one that
    * does rather than opening on an empty map. */
-  state.product = manifest.products[0];
-  state.pol = manifest.polarizations[0];
-  state.quantity = manifest.quantities[0];
-  state.year = manifest.years[manifest.years.length - 1];
+  state.product = axes.products[0];
+  state.pol = axes.polarizations[0];
+  state.quantity = axes.quantities[0];
+  state.year = axes.years[axes.years.length - 1];
   if (!selected()) {
     const wanted = joinPolarization(state.pol, state.quantity);
     const fallback =
-      manifest.layers.find(
+      axes.layers.find(
         (layer) => layer.product === state.product && layer.polarization === wanted,
-      ) ?? manifest.layers[0];
+      ) ?? axes.layers[0];
     const { pol, quantity } = splitPolarization(fallback.polarization);
     state.product = fallback.product;
     state.pol = pol;
@@ -642,7 +591,7 @@ export async function loadRasters() {
     state.year = fallback.year;
   }
 
-  initControls(manifest);
+  initControls(axes);
   render();
-  return manifest;
+  return axes;
 }

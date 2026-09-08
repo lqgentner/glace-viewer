@@ -1,0 +1,411 @@
+{
+  "type": "Feature",
+  "stac_version": "1.1.0",
+  "stac_extensions": [
+    "https://stac-extensions.github.io/sar/v1.3.2/schema.json",
+    "https://stac-extensions.github.io/projection/v2.0.0/schema.json",
+    "https://stac-extensions.github.io/raster/v2.0.0/schema.json",
+    "https://stac-extensions.github.io/file/v2.1.0/schema.json",
+    "https://stac-extensions.github.io/version/v1.2.0/schema.json"
+  ],
+  "id": "ch-mosaic-2024",
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          6.8,
+          45.85
+        ],
+        [
+          10.45,
+          45.85
+        ],
+        [
+          10.45,
+          47.32
+        ],
+        [
+          6.8,
+          47.32
+        ],
+        [
+          6.8,
+          45.85
+        ]
+      ]
+    ]
+  },
+  "bbox": [
+    6.796066566434904,
+    45.85497680754794,
+    10.44539311148726,
+    47.31316584658046
+  ],
+  "properties": {
+    "start_datetime": "2024-07-09T00:00:00Z",
+    "end_datetime": "2024-10-07T00:00:00Z",
+    "constellation": "sentinel-1",
+    "instruments": [
+      "c-sar"
+    ],
+    "sar:instrument_mode": "IW",
+    "sar:frequency_band": "C",
+    "sar:polarizations": [
+      "VV",
+      "VH"
+    ],
+    "proj:code": "EPSG:3035",
+    "proj:shape": [
+      4350,
+      7200
+    ],
+    "proj:transform": [
+      40.0,
+      0.0,
+      4069000.0,
+      0.0,
+      -40.0,
+      2698000.0
+    ],
+    "version": "0.1",
+    "glace:build_fingerprint": "2f2a200fffb8383a04b1b0eacb2e9040cca73a53a69205a51a966322a6ba0c5d",
+    "description": "Annual mosaics of the GLACE composites for 2024, on the fixed equal-area grid (EPSG:3035, 40 m) every year of this collection shares.",
+    "datetime": "2024-08-23T00:00:00Z"
+  },
+  "links": [
+    {
+      "rel": "root",
+      "href": "../../catalog.json",
+      "type": "application/json",
+      "title": "GLACE Switzerland"
+    },
+    {
+      "rel": "collection",
+      "href": "../collection.json",
+      "type": "application/json",
+      "title": "GLACE mosaics"
+    },
+    {
+      "rel": "parent",
+      "href": "../collection.json",
+      "type": "application/json",
+      "title": "Annual mosaics"
+    },
+    {
+      "rel": "ceos-ard-specification",
+      "href": "https://ceos.org/ard/files/PFS/SAR/v1.3.1/CEOS-ARD_PFS_SAR_v1.3.1.pdf",
+      "type": "application/pdf",
+      "title": "CEOS-ARD PFS for Synthetic Aperture Radar v1.3.1"
+    }
+  ],
+  "assets": {
+    "coh12_vh": {
+      "href": "coh12_vh.tif",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "coh12_vh annual mosaic",
+      "bands": [
+        {
+          "name": "coh12_vh",
+          "data_type": "float32",
+          "nodata": "nan",
+          "statistics": {
+            "minimum": 0.034948594868183136,
+            "maximum": 0.972464919090271,
+            "mean": 0.23736202422989358,
+            "stddev": 0.13119321387053823,
+            "valid_percent": 28.60978607918263
+          }
+        }
+      ],
+      "file:size": 17270205,
+      "file:checksum": "122034a0d3ca0309bb4908216d88162e12d13887114d4912e072616748056fa7d11e",
+      "raster:spatial_resolution": 40.0,
+      "roles": [
+        "data",
+        "cloud-optimized"
+      ]
+    },
+    "coh12_vh_qa_cqm": {
+      "href": "coh12_vh_qa_cqm.tif",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "coh12_vh_qa_cqm annual mosaic",
+      "bands": [
+        {
+          "name": "coh12_vh_qa_cqm",
+          "data_type": "float32",
+          "nodata": "nan",
+          "statistics": {
+            "minimum": 0.02489924058318138,
+            "maximum": 15722.765625,
+            "mean": 2.641621137541498,
+            "stddev": 16.276629246261358,
+            "valid_percent": 28.60978607918263
+          }
+        }
+      ],
+      "file:size": 23200044,
+      "file:checksum": "1220eee03e20a91330846092a1b664cd884d6674ad6b81e10451e66726a4d11ad845",
+      "raster:spatial_resolution": 40.0,
+      "roles": [
+        "quality"
+      ]
+    },
+    "coh12_vh_qa_num": {
+      "href": "coh12_vh_qa_num.tif",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "coh12_vh_qa_num annual mosaic",
+      "bands": [
+        {
+          "name": "coh12_vh_qa_num",
+          "data_type": "float32",
+          "nodata": "nan",
+          "statistics": {
+            "minimum": 4.874772548675537,
+            "maximum": 26.0,
+            "mean": 20.54633939872197,
+            "stddev": 3.467590454985089,
+            "valid_percent": 28.60978607918263
+          }
+        }
+      ],
+      "file:size": 16691867,
+      "file:checksum": "12205c5b9a5f5dcb5f857be101c3ed3f0c926d5a6c9f11084506e2e935eaa3b97eed",
+      "raster:spatial_resolution": 40.0,
+      "roles": [
+        "quality"
+      ]
+    },
+    "coh12_vv": {
+      "href": "coh12_vv.tif",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "coh12_vv annual mosaic",
+      "bands": [
+        {
+          "name": "coh12_vv",
+          "data_type": "float32",
+          "nodata": "nan",
+          "statistics": {
+            "minimum": 0.03562599793076515,
+            "maximum": 0.9800634384155273,
+            "mean": 0.34996391023908685,
+            "stddev": 0.20136732490653325,
+            "valid_percent": 28.60978607918263
+          }
+        }
+      ],
+      "file:size": 18018199,
+      "file:checksum": "1220ef08d1623f4ec47fb0cf10e1829c6c18e9907e94b1f121baac54991394c05d5b",
+      "raster:spatial_resolution": 40.0,
+      "roles": [
+        "data",
+        "cloud-optimized"
+      ]
+    },
+    "coh12_vv_qa_cqm": {
+      "href": "coh12_vv_qa_cqm.tif",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "coh12_vv_qa_cqm annual mosaic",
+      "bands": [
+        {
+          "name": "coh12_vv_qa_cqm",
+          "data_type": "float32",
+          "nodata": "nan",
+          "statistics": {
+            "minimum": 0.02489924058318138,
+            "maximum": 15722.765625,
+            "mean": 2.644023608269422,
+            "stddev": 16.372279144357062,
+            "valid_percent": 28.60978607918263
+          }
+        }
+      ],
+      "file:size": 23197754,
+      "file:checksum": "12206acf79cb70619a7c7d5d6a9465c3ce1ae3884f8fcbe6416d212ddd7da1c78de0",
+      "raster:spatial_resolution": 40.0,
+      "roles": [
+        "quality"
+      ]
+    },
+    "coh12_vv_qa_num": {
+      "href": "coh12_vv_qa_num.tif",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "coh12_vv_qa_num annual mosaic",
+      "bands": [
+        {
+          "name": "coh12_vv_qa_num",
+          "data_type": "float32",
+          "nodata": "nan",
+          "statistics": {
+            "minimum": 4.929599285125732,
+            "maximum": 26.0,
+            "mean": 20.55902447619941,
+            "stddev": 3.468966364023006,
+            "valid_percent": 28.60978607918263
+          }
+        }
+      ],
+      "file:size": 10141339,
+      "file:checksum": "122080d4476941bda4ee145e65c67b99791923aa0119f325fc90fbe7ecf74df2a5b9",
+      "raster:spatial_resolution": 40.0,
+      "roles": [
+        "quality"
+      ]
+    },
+    "rtc_vh": {
+      "href": "rtc_vh.tif",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "rtc_vh annual mosaic",
+      "bands": [
+        {
+          "name": "rtc_vh",
+          "data_type": "float32",
+          "nodata": "nan",
+          "unit": "linear power",
+          "statistics": {
+            "minimum": 0.00041868770495057106,
+            "maximum": 10.684927940368652,
+            "mean": 0.028117667346453136,
+            "stddev": 0.025732910259523973,
+            "valid_percent": 28.60978607918263
+          }
+        }
+      ],
+      "file:size": 18560003,
+      "file:checksum": "122024349116af224b24cd223a678b8eccc3a93e99208aa3d37b26ed407d7ad3b8ec",
+      "raster:spatial_resolution": 40.0,
+      "roles": [
+        "data",
+        "cloud-optimized"
+      ]
+    },
+    "rtc_vh_qa_cqm": {
+      "href": "rtc_vh_qa_cqm.tif",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "rtc_vh_qa_cqm annual mosaic",
+      "bands": [
+        {
+          "name": "rtc_vh_qa_cqm",
+          "data_type": "float32",
+          "nodata": "nan",
+          "statistics": {
+            "minimum": 0.019764157012104988,
+            "maximum": 68.8956527709961,
+            "mean": 1.8586120940889617,
+            "stddev": 1.428832698166689,
+            "valid_percent": 28.60978607918263
+          }
+        }
+      ],
+      "file:size": 22601800,
+      "file:checksum": "122042916bf8a47a6799fff63c0003321b70b153d2c024dce305067b98b933ce3143",
+      "raster:spatial_resolution": 40.0,
+      "roles": [
+        "quality"
+      ]
+    },
+    "rtc_vh_qa_num": {
+      "href": "rtc_vh_qa_num.tif",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "rtc_vh_qa_num annual mosaic",
+      "bands": [
+        {
+          "name": "rtc_vh_qa_num",
+          "data_type": "float32",
+          "nodata": "nan",
+          "statistics": {
+            "minimum": 6.854053020477295,
+            "maximum": 30.0,
+            "mean": 23.810232400402274,
+            "stddev": 4.158053437303677,
+            "valid_percent": 28.60978607918263
+          }
+        }
+      ],
+      "file:size": 6637987,
+      "file:checksum": "1220daa3580ad160227a9b76d105c80692e9404a48e0c5714d9523865fdacd75c462",
+      "raster:spatial_resolution": 40.0,
+      "roles": [
+        "quality"
+      ]
+    },
+    "rtc_vv": {
+      "href": "rtc_vv.tif",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "rtc_vv annual mosaic",
+      "bands": [
+        {
+          "name": "rtc_vv",
+          "data_type": "float32",
+          "nodata": "nan",
+          "unit": "linear power",
+          "statistics": {
+            "minimum": 0.0015523985493928194,
+            "maximum": 86.63924407958984,
+            "mean": 0.13871253052393206,
+            "stddev": 0.16042914711205747,
+            "valid_percent": 28.60978607918263
+          }
+        }
+      ],
+      "file:size": 22249169,
+      "file:checksum": "122071b98ac2e871a1576da79fc21643a7424a9c93de6fdda0586f2f7b829a84943c",
+      "raster:spatial_resolution": 40.0,
+      "roles": [
+        "data",
+        "cloud-optimized"
+      ]
+    },
+    "rtc_vv_qa_cqm": {
+      "href": "rtc_vv_qa_cqm.tif",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "rtc_vv_qa_cqm annual mosaic",
+      "bands": [
+        {
+          "name": "rtc_vv_qa_cqm",
+          "data_type": "float32",
+          "nodata": "nan",
+          "statistics": {
+            "minimum": 0.019764157012104988,
+            "maximum": 68.8956527709961,
+            "mean": 1.8586013050162118,
+            "stddev": 1.428509577122898,
+            "valid_percent": 28.60978607918263
+          }
+        }
+      ],
+      "file:size": 22594825,
+      "file:checksum": "12206eb2c9a37ac551a50ed37bc79bb924f7308f6a2378220070bafbca6756f39d18",
+      "raster:spatial_resolution": 40.0,
+      "roles": [
+        "quality"
+      ]
+    },
+    "rtc_vv_qa_num": {
+      "href": "rtc_vv_qa_num.tif",
+      "type": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "title": "rtc_vv_qa_num annual mosaic",
+      "bands": [
+        {
+          "name": "rtc_vv_qa_num",
+          "data_type": "float32",
+          "nodata": "nan",
+          "statistics": {
+            "minimum": 6.854053020477295,
+            "maximum": 30.0,
+            "mean": 23.81023401063402,
+            "stddev": 4.158054138327117,
+            "valid_percent": 28.60978607918263
+          }
+        }
+      ],
+      "file:size": 6637891,
+      "file:checksum": "1220657892f2f8eb2db0be5f96298f56ae8a46400cec99982e8ccebea343147c4bf7",
+      "raster:spatial_resolution": 40.0,
+      "roles": [
+        "quality"
+      ]
+    }
+  },
+  "collection": "glace-ch-mosaics"
+}

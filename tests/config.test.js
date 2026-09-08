@@ -19,9 +19,9 @@ const load = async (options) => {
 test("built-in defaults", async () => {
   const config = await load();
   assert.equal(config.TILES_BASE, "tiles");
-  assert.equal(config.LAYER_MANIFEST_URL, "tiles/layers.json");
+  assert.equal(config.MOSAIC_COLLECTION_URL, "tiles/mosaics/collection.json");
   assert.equal(config.INVENTORY_INDEX_URL, "data/inventories.json");
-  assert.equal(config.GRID_INDEX_URL, "tiles/tiles.parquet");
+  assert.equal(config.GRID_INDEX_URL, "tiles/tiles/items.parquet");
   assert.equal(config.BASEMAP_FLAVOR, "dark");
   assert.match(config.WORLD_IMAGERY_URL, /World_Imagery\/MapServer\/tile\/\{z\}\/\{y\}\/\{x\}/);
   assert.deepEqual(config.INITIAL_VIEW, { center: [8.03, 46.51], zoom: 10, maxZoom: 14 });
@@ -39,13 +39,14 @@ test("site config repoints the archives, and everything derived follows", async 
   const config = await load({
     site: {
       tilesBase: "https://s3.example/glace/",
+      mosaicCollection: "collections/mosaics.json",
       gridIndex: "items/tiles.parquet",
       worldImageryUrl: "https://imagery.example/{z}/{x}/{y}.jpg",
     },
   });
   // The trailing slash is trimmed, so the joins below cannot double it.
   assert.equal(config.TILES_BASE, "https://s3.example/glace");
-  assert.equal(config.LAYER_MANIFEST_URL, "https://s3.example/glace/layers.json");
+  assert.equal(config.MOSAIC_COLLECTION_URL, "https://s3.example/glace/collections/mosaics.json");
   assert.equal(config.GRID_INDEX_URL, "https://s3.example/glace/items/tiles.parquet");
   assert.equal(config.WORLD_IMAGERY_URL, "https://imagery.example/{z}/{x}/{y}.jpg");
 });
@@ -80,11 +81,12 @@ test("an empty query parameter does not blank a setting", async () => {
 test("deployment-only settings are not reachable from the address bar", async () => {
   const config = await load({
     search:
-      "?gridIndex=nope&hyparquetUrl=http://evil&cogReaderUrl=http://evil" +
+      "?gridIndex=nope&mosaicCollection=nope&hyparquetUrl=http://evil&cogReaderUrl=http://evil" +
       "&inventoryBase=/etc&initialView=x&terrainTilejson=http://evil",
   });
   // The two reader URLs are imported and executed, so they matter most here.
-  assert.equal(config.GRID_INDEX_URL, "tiles/tiles.parquet");
+  assert.equal(config.GRID_INDEX_URL, "tiles/tiles/items.parquet");
+  assert.equal(config.MOSAIC_COLLECTION_URL, "tiles/mosaics/collection.json");
   assert.match(config.HYPARQUET_URL, /^https:\/\/esm\.sh\//);
   assert.match(config.COG_READER_URL, /^https:\/\/esm\.sh\//);
   assert.equal(config.INVENTORY_BASE, "data");
