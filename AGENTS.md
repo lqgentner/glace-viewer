@@ -101,20 +101,10 @@ no copy of a stretch, a ramp or a channel recipe. That includes the false
 colour's three `{band, vmin, vmax}` entries, which the store publishes now
 (P-18); `falseColourChannels()` already expected exactly that shape.
 
-### What is still owed
-
-- **The mosaics are ETRS89-LAEA 40 m** (M-24). The web-map archives are still
-  WebMercator z13, so nothing about the PMTiles path changed — but
-  `js/cog-rgb.js` reads the *float mosaics*, and its whole cheapness argument was
-  that they shared the XYZ grid. **That no longer holds.** The reader still
-  parses and is still tested, and nothing on the page produces such a source, so
-  nothing is broken; but the pixel-value readout it offers has no equal-area-safe
-  replacement here. Decide whether to retire it or to ask for a float
-  WebMercator COG alongside. See [The COG reader](#the-cog-reader).
-- **The per-year attribution is read, never composed.** The style's sources carry
-  `University of Zurich, Contains modified Copernicus Sentinel data {year}` and
-  each archive's header carries the same string; the page declares none and lets
-  MapLibre take the archive's. Nothing to do, recorded so it is not re-added.
+**The per-year attribution is read, never composed.** The style's sources carry
+`University of Zurich, Contains modified Copernicus Sentinel data {year}`, and
+each archive's header carries the same string; the page declares none and lets
+MapLibre take the archive's. Recorded so a third copy is not re-added here.
 
 ## The published store
 
@@ -845,15 +835,23 @@ read a pixel *value*, and reopening the question is a source spec away — regis
 a recipe with `setRecipe(id, …)` and hand `recipeTiles(id)` to a raster source's
 `tiles`.
 
-**Its premise has broken.** What made it cheap is that the float mosaics sat on
-the same WebMercatorQuad grid as the XYZ tiles, so a tile was an integer window
-read out of each file and a per-pixel combine — never a reprojection. The
-published mosaics are ETRS89-LAEA 40 m now (M-24), and that no longer holds.
-Nothing is broken today, since no source uses the reader; what is owed is the
-decision to retire it or to ask for a float WebMercator COG alongside. See [What
-is still owed](#what-is-still-owed).
+**Its premise does not hold against the mosaics the catalog publishes.** What
+made it cheap is a source on the same WebMercatorQuad grid as the XYZ tiles, so
+that a tile is an integer window read out of each file and a per-pixel combine,
+never a reprojection. The published mosaics are ETRS89-LAEA 40 m (M-24), which is
+the right CRS for what they are for — analysis and area statistics — and no
+oversight to correct. The catalog ships **no COG for web display at all**; the
+PMTiles archives are that product.
 
-Two things worth keeping if it ever comes back:
+**It is kept anyway, deliberately.** The reader is the path by which this page
+would draw web-mercator COGs should they ever replace the pre-styled archives,
+and it costs the page almost nothing to keep: one 15 kB module parsed at startup,
+one entry in MapLibre's protocol map, and no network at all — both
+`@developmentseed/geotiff` and `lerc` are dynamic imports on first use, and
+nothing asks. Retiring it would be a `git revert` away from returning either way;
+the tests below are what keep it from rotting in the meantime.
+
+Two things it is worth knowing about it:
 
 - **The reader is `@developmentseed/geotiff`**, not geotiff.js. It is ESM-only
   with bare specifiers and no UMD build, so it cannot be a `<script>` tag; it is

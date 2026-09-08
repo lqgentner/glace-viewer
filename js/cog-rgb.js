@@ -19,6 +19,14 @@
  * out of each file and a per-pixel combine: never a reprojection, never a
  * resample, never an interpolation.
  *
+ * **The published mosaics no longer satisfy that.** They are ETRS89-LAEA 40 m
+ * now, which is the right CRS for what they are for — analysis and area
+ * statistics — and the catalog ships no COG for web display at all: the
+ * pre-styled PMTiles archives are that product, and nothing on this page
+ * produces a `glace-rgb://` source. This module is kept against web-mercator
+ * COGs replacing those archives, which is the case it was written for. See
+ * "The COG reader" in AGENTS.md.
+ *
  * The reader is @developmentseed/geotiff, which decodes LERC and Zstd through
  * its own direct dependencies rather than through geotiff.js. It is ESM-only
  * with bare specifiers and ships no UMD build, so unlike the page's other
