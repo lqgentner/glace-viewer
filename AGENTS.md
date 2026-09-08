@@ -79,6 +79,7 @@ workflow calls that workflow before staging, so a red suite cannot reach Pages.
 | `tests/viewer-degraded.test.js` | no reachable catalog |
 | `tests/viewer-narrow.test.js` | phone viewport; guards the stylesheet, not the DOM |
 | `tests/viewer-3d-restore.test.js` | a pitched `#hash` comes back in 3D |
+| `tests/viewer-light-flavor.test.js` | `?flavor=light` gets black labels |
 | `tests/page-assets.test.js` | every local `src`/`href` exists and is staged by `deploy.yml` |
 
 Things to know when adding tests:
@@ -231,6 +232,13 @@ Reasons that are not in the code, or that look like bugs until you know them.
   baked into `basemapUrl` in `js/config.js`. Faster than the Source Cooperative
   mirror it replaced. Rotate or scope the key in the Protomaps dashboard, not in
   code. Sprites and glyphs come from the free `basemaps-assets` GitHub mirror.
+- Every label face is pushed to the flavor's extreme — white over black on
+  the dark flavors, black over white on the light ones — set **in the flavor
+  object** before the style is generated, not patched onto the layers after:
+  the generator's halo is 1 px and unblurred, and the 2 px blurred halo the
+  page used to apply drew a grey ring around small labels. The flavor has no
+  halo field for water labels (they keep the water colour) or countries, and
+  POIs keep their kind colours. Labels are not repainted over World Imagery.
 - World Imagery is Esri's XYZ endpoint, created lazily; switching back restores
   the vector style without rebuilding the map.
 - The terrain is Mapterhorn's **zxy endpoint, not its PMTiles**: `planet.pmtiles`

@@ -190,6 +190,19 @@ test("the viewer", async (t) => {
     assert.equal(el("extras-toggle").getAttribute("aria-expanded"), "true");
   });
 
+  await t.test("the dark flavor's labels are lifted through the flavor, not patched after", async () => {
+    // The generator reads label colours from the flavor it is handed, so the
+    // override reaches every text layer with the generator's own 1 px halo —
+    // a wider, blurred one drew a grey ring around small labels.
+    for (const id of ["places", "roads_label"]) {
+      const { paint } = map.getLayer(id);
+      assert.equal(paint["text-color"], "#f8fafc", `${id} face`);
+      assert.equal(paint["text-halo-color"], "#000000", `${id} halo`);
+      assert.equal(paint["text-halo-width"], 1, `${id} keeps the generator's halo width`);
+      assert.equal(paint["text-halo-blur"], undefined, `${id} is not blurred`);
+    }
+  });
+
   await t.test("World Imagery replaces the vector fills but keeps labels independent", async () => {
     const buttons = [...el("basemap-style").children];
     assert.deepEqual(
@@ -197,8 +210,6 @@ test("the viewer", async (t) => {
       ["Vector", "World Imagery"],
     );
     assert.equal(buttons[0].getAttribute("aria-checked"), "true");
-    assert.equal(map.getLayer("places").paint["text-color"], "#f8fafc");
-    assert.equal(map.getLayer("places").paint["text-halo-width"], 2);
     assert.equal(map.getSource("world-imagery"), undefined, "imagery is lazy");
 
     buttons[1].click();
@@ -219,6 +230,8 @@ test("the viewer", async (t) => {
     change(el("basemap"), true);
     await settle();
     assert.equal(map.getLayer("places").layout.visibility, "visible", "labels overlay imagery");
+
+    assert.equal(map.getLayer("places").paint["text-halo-width"], 1, "labels are not repainted over imagery");
 
     buttons[0].click();
     await settle();

@@ -14,10 +14,29 @@ import { JSDOM } from "jsdom";
 
 export const REPO = path.join(import.meta.dirname, "..", "..");
 
+/* The flavors @protomaps/basemaps ships, reduced to the label fields the page
+ * overrides: the generator reads its label paint from these, so what the page
+ * hands it is what the layers get. */
+export const FLAVORS = {
+  dark: {
+    city_label: "#7a7a7a",
+    city_label_halo: "#212121",
+    roads_label_major: "#666666",
+    roads_label_major_halo: "#1f1f1f",
+  },
+  light: {
+    city_label: "#5c5c5c",
+    city_label_halo: "#ffffff",
+    roads_label_major: "#666666",
+    roads_label_major_halo: "#ffffff",
+  },
+};
+
 /* The basemap style @protomaps/basemaps would generate, reduced to the shape
  * the page actually depends on: some non-symbol layers, then the labels that
- * everything else has to stay underneath. */
-export const BASEMAP_LAYERS = [
+ * everything else has to stay underneath. Label paint comes from the flavor,
+ * with the generator's fixed 1 px halo. */
+export const basemapLayers = (flavor) => [
   { id: "earth", type: "background", source: "protomaps" },
   { id: "water", type: "fill", source: "protomaps" },
   {
@@ -25,14 +44,22 @@ export const BASEMAP_LAYERS = [
     type: "symbol",
     source: "protomaps",
     layout: { "text-field": ["get", "name"] },
-    paint: { "text-color": "#94a3b8", "text-halo-color": "#0f172a", "text-halo-width": 1 },
+    paint: {
+      "text-color": flavor.city_label,
+      "text-halo-color": flavor.city_label_halo,
+      "text-halo-width": 1,
+    },
   },
   {
     id: "roads_label",
     type: "symbol",
     source: "protomaps",
     layout: { "text-field": ["get", "name"] },
-    paint: { "text-color": "#94a3b8", "text-halo-color": "#0f172a", "text-halo-width": 1 },
+    paint: {
+      "text-color": flavor.roads_label_major,
+      "text-halo-color": flavor.roads_label_major_halo,
+      "text-halo-width": 1,
+    },
   },
 ];
 
@@ -314,8 +341,8 @@ export function installBrowser({ search = "", site, files = {}, pitch = 0, narro
     }
   };
   globalThis.basemaps = {
-    namedFlavor: () => ({}),
-    layers: () => structuredClone(BASEMAP_LAYERS),
+    namedFlavor: (name) => ({ ...FLAVORS[name] }),
+    layers: (_name, flavor) => basemapLayers(flavor),
   };
 
   globalThis.fetch = async (url) =>
