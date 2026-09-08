@@ -207,9 +207,9 @@ test("the false colour names its channels and the stretch each was baked with", 
   // style. This page holds no stretch of its own, so it is the only way numbers
   // reach that legend.
   assert.deepEqual(cells.filter(Boolean), [
-    "COH12 VV",
+    "VV",
     "0.10 to 0.80",
-    "COH12 VH",
+    "VH",
     "0.10 to 0.60",
     "VV / VH",
     "0.80 to 2.50",

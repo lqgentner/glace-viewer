@@ -85,7 +85,7 @@ test("the false colour carries three channels and no ramp", () => {
   const rgb = byId(layers()).get("glace-coh12_rgb-2024");
   assert.deepEqual(rgb.colors, [], "nothing to interpolate between");
   assert.equal(rgb.channels.length, 3);
-  assert.deepEqual(rgb.channels[0], { band: "COH12 VV", vmin: 0.1, vmax: 0.8 });
+  assert.deepEqual(rgb.channels[0], { band: "VV", vmin: 0.1, vmax: 0.8 });
   assert.equal(rgb.channels[2].band, "VV / VH", "a quotient, since coherence is not read in dB");
 });
 
