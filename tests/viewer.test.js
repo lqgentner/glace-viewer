@@ -75,6 +75,18 @@ test("the viewer", async (t) => {
     assert.ok(map.options.zoom < 11, "the opening view is inside the round part");
   });
 
+  await t.test("the sky comes out once the globe no longer fills the viewport", async () => {
+    // jsdom lays nothing out, so the map's box is given a size by hand.
+    Object.defineProperty(el("map"), "clientWidth", { value: 1600, configurable: true });
+    Object.defineProperty(el("map"), "clientHeight", { value: 1000, configurable: true });
+    map.zoom = 1;
+    map.fire("move");
+    assert.ok(el("map").classList.contains("sky"), "the halo and stars are painted");
+    map.zoom = 10;
+    map.fire("move");
+    assert.equal(el("map").classList.contains("sky"), false, "and not over a glacier");
+  });
+
   await t.test("controls answer before the style has loaded", async () => {
     assert.equal(map.getLayer("hillshade"), undefined, "terrain is not fetched up front");
 
@@ -266,6 +278,7 @@ test("the viewer", async (t) => {
   await t.test("the view opens on the configured default rather than the data's own bounds", async () => {
     assert.deepEqual(map.options.center, [8.03, 46.51]);
     assert.equal(map.options.zoom, 10);
+    assert.equal(map.options.minZoom, 1, "and cannot zoom out past a whole earth");
   });
 
   await t.test("changing product adds the new raster and hides the old", async () => {

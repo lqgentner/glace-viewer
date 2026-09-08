@@ -22,6 +22,7 @@ import {
   WORLD_IMAGERY_URL,
 } from "./config.js";
 import { cogRgbProtocol } from "./cog-rgb.js";
+import { installSky } from "./sky.js";
 
 /* `metadata: true` so each archive's own TileJSON reaches MapLibre, which is
  * what carries its attribution. Costs one small read per archive — 167 B on a
@@ -141,11 +142,15 @@ export const map = new maplibregl.Map({
   style,
   center: INITIAL_VIEW.center,
   zoom: INITIAL_VIEW.zoom,
+  minZoom: INITIAL_VIEW.minZoom,
   maxZoom: INITIAL_VIEW.maxZoom,
   // The view lives in the URL, so a hash overrides the opening view above.
   hash: true,
   attributionControl: false,
 });
+/* The halo around the globe, painted by style.css from the numbers this keeps
+ * on #map. See js/sky.js. */
+installSky(map, map.getContainer());
 map.addControl(new maplibregl.NavigationControl({ visualizePitch: false }), "top-right");
 // The panel is above this corner, and on a short viewport it would reach it —
 // #panel-shell in style.css stops short of the bottom by exactly the room this

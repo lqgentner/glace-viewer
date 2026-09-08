@@ -73,8 +73,10 @@ const DEFAULTS = {
   },
 
   /* Where the map opens when the URL carries no #hash naming a view. Centred
-   * on the Aletsch Glacier, matching #10/46.51/8.03. */
-  initialView: { center: [8.03, 46.51], zoom: 10, maxZoom: 14 },
+   * on the Aletsch Glacier, matching #10/46.51/8.03. `minZoom` stops the
+   * globe short of a marble: at z1 the whole earth is on screen with its halo
+   * around it, and MapLibre would otherwise go on to z-2. */
+  initialView: { center: [8.03, 46.51], zoom: 10, minZoom: 1, maxZoom: 14 },
 };
 
 /* The subset a reader is expected to switch by hand, and the parameter name for

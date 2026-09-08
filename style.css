@@ -31,6 +31,36 @@ html, body {
 
 #map { position: absolute; inset: 0; }
 
+/* The sky around the globe. MapLibre clears its canvas to transparent and
+   paints the basemap's background on the globe alone, so #map's own background
+   is what shows around the disc: a halo at the limb over deep space. The disc's
+   centre and radius are custom properties js/sky.js writes on `move`; the class
+   is on only while some of the viewport lies outside the globe, so at reading
+   zooms this rule never applies and the page paints --bg as before.
+
+   The halo is one broad haze rather than a bright rim with a tail: a single
+   light blue-grey (the dark flavor's water, #31353f, lifted toward white)
+   whose opacity falls off exponentially with distance from the limb, halving
+   every 0.3 radii, so the fade is even from the first pixel out and no band
+   shows. It starts well under half strength: at 0.55 it read as a lit edge. Space is --bg with a touch more blue at the centre, so the class
+   switching on changes nothing but the halo. */
+#map.sky {
+  background:
+    radial-gradient(
+      circle at var(--globe-x) var(--globe-y),
+      transparent var(--globe-r),
+      rgba(178, 196, 228, 0.42) var(--globe-r),
+      rgba(178, 196, 228, 0.33) calc(var(--globe-r) * 1.1),
+      rgba(178, 196, 228, 0.23) calc(var(--globe-r) * 1.25),
+      rgba(178, 196, 228, 0.14) calc(var(--globe-r) * 1.5),
+      rgba(178, 196, 228, 0.07) calc(var(--globe-r) * 1.8),
+      rgba(178, 196, 228, 0.03) calc(var(--globe-r) * 2.2),
+      rgba(178, 196, 228, 0.01) calc(var(--globe-r) * 2.6),
+      transparent calc(var(--globe-r) * 3)
+    ),
+    radial-gradient(ellipse at center, #141a28, var(--bg) 70%);
+}
+
 /* Frosted glass, following joshwcomeau.com/css/backdrop-filter: a translucent
    tint sitting on a blurred copy of whatever the panel covers. Blurring drains
    saturation and lifts brightness, so `saturate` puts the colour back and

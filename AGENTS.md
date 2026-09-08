@@ -19,6 +19,7 @@ under `js/`, loaded straight by the browser. `node_modules` is dev-only.
 | `js/cog-rgb.js` | the `glace-rgb://` COG protocol — wired up, unused |
 | `js/tile-grid.js` | the catalog tile grid, from the store's geoparquet index |
 | `js/overlays.js` | glacier inventories, tile grid overlay, popups |
+| `js/sky.js` | the globe's silhouette on screen, for the halo `style.css` paints |
 | `js/ui.js` | status line, credit popovers, safe DOM helpers, segmented controls |
 | `js/app.js` | control wiring and startup |
 | `scripts/serve.py` | dev server with `Range` support and per-type caching |
@@ -74,6 +75,7 @@ workflow calls that workflow before staging, so a red suite cannot reach Pages.
 | `tests/store-catalog.test.js` | the page against one year of the published catalog, verbatim |
 | `tests/cog-rgb.test.js` | the `glace-rgb://` protocol, driven directly |
 | `tests/tile-grid.test.js` | the tile grid from a fake parquet reader |
+| `tests/sky.test.js` | the silhouette against an independent camera model, the sky's gate |
 | `tests/viewer-degraded.test.js` | no reachable catalog |
 | `tests/viewer-narrow.test.js` | phone viewport; guards the stylesheet, not the DOM |
 | `tests/viewer-3d-restore.test.js` | a pitched `#hash` comes back in 3D |
@@ -254,6 +256,37 @@ Reasons that are not in the code, or that look like bugs until you know them.
 - `projection: globe` in MapLibre 5 is a zoom interpolation (globe to z11,
   mercator from z12). Costs: no fog matrices (unused) and zoom-around-cursor
   degrades to zoom-around-centre while the globe shows.
+
+### The sky
+
+Once the globe no longer fills the viewport the page paints a halo at the limb
+over deep space. It began as Leonel Dias's
+[Canvas 2D technique](https://leoneljdias.github.io/posts/globe-atmosphere-halo-comets/)
+(also GeoLibre's atmosphere plugin); what remains of it is the idea of finding
+the disc by projecting points around the limb, credited in `js/sky.js`. The
+canvases, the gradient and the blend are gone, and its starfield with parallax
+and its comets were built and taken out again: decoration, and a flat sky does
+not turn the way a real one does behind an orbiting camera.
+
+- It is `#map`'s CSS background: MapLibre clears to transparent and draws the
+  basemap's `background` layer on the globe alone, so the element behind shows
+  around the disc. `js/sky.js` writes the disc as custom properties on `move`;
+  `style.css` draws. The comets were the only reason for the original's 60 Hz
+  loop, so there is none, and the `sky` class is on only while a corner of the
+  viewport lies outside the disc — a pan over a glacier writes nothing.
+- **Do not gate on `map.getProjection().type === "globe"`** as the plugin
+  does: in MapLibre 5 that is the stylesheet's spec, `globe` at z13 as at z1.
+- The limb is sampled at the visible horizon, not 90° from the centre; the
+  header of `js/sky.js` says why, and `sky.test.js` checks it against an
+  independent pinhole camera. The field of view and globe scaling it assumes
+  are MapLibre's fixed defaults; the page never calls `setFov`.
+- The globe's radius is `512·2^z / 2π / cos(lat)` px, a third larger over
+  Switzerland than at the equator. On 1920×1080 the corners clear the disc
+  below about z3 and the whole globe shows below about z2, so most visits
+  never see the sky and it must cost them nothing. `minZoom: 1` in
+  `initialView` stops the globe short of a marble.
+- The halo is one colour with an exponential opacity falloff, after Google
+  Maps' globe, rather than the article's bright rim and tail, which banded.
 
 ### Attribution
 
