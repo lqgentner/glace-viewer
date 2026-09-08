@@ -12,6 +12,7 @@
 
 import { GRID_INDEX_URL, INVENTORY_BASE, INVENTORY_INDEX_URL } from "./config.js";
 import { addStacked, map, styleReady } from "./map.js";
+import { isNonEmptyString } from "./store.js";
 import { loadTileGrid } from "./tile-grid.js";
 import { clearStatus, collapsible, creditButton, el, h, setStatus } from "./ui.js";
 
@@ -107,9 +108,7 @@ class LazyOverlay {
  * and the outlines draw as the first tiles land. */
 const inventories = new Map();
 
-const isNonEmptyString = (value) => typeof value === "string" && value !== "";
-
-/* The index is fetched, so it gets the same treatment as the raster manifest:
+/* The index is fetched, so it gets the same treatment as the raster catalog:
  * an entry missing the fields the overlay is built from is dropped rather than
  * allowed to fail later inside MapLibre. */
 function validateInventoryIndex(raw) {

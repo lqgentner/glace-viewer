@@ -1,34 +1,17 @@
 /*
  * The catalog tile grid, read out of the store's own item index.
  *
- * The grid used to be a vector PMTiles archive built alongside the rasters.
- * The store does not publish one — what it publishes is `tiles.parquet`, the
- * stac-geoparquet mirror of every tile Item, which already carries the
- * footprint and the glacier fractions the overlay draws. Reading that directly
- * means the grid needs no product of its own: one fewer thing to build, and one
- * fewer thing that can be stale with respect to the catalogue it describes.
+ * The store publishes no grid archive; `tiles/items.parquet`, the
+ * stac-geoparquet mirror of every tile Item, already carries each footprint and
+ * both glacier fractions, so the grid is read from that and cannot disagree
+ * with the catalogue it describes.
  *
- * hyparquet is what reads it. Like the COG reader it is ESM-only and imported
- * on demand — the grid is off until a reader ticks the box, so nothing is
- * fetched for a page that never asks. Unlike the COG reader it needs no
- * companion codec package: the store's index is SNAPPY, which hyparquet decodes
- * on its own. A store written with ZSTD pages would need
- * `hyparquet-compressors` alongside, and would fail loudly here rather than
- * quietly — the overlay reports what it could not read.
- *
- * Only four columns are read of the ~200 the index carries. Parquet is
- * column-major, so that is four small byte ranges — measured at 9 kB of the
- * 200 kB of column data — and it cuts the decode from ~290 ms to ~5 ms.
- *
- * It does not save the *fetch*, and it is worth being exact about why: this
- * index's footer is ~121 kB, because ~200 columns of STAC metadata carry that
- * much schema and statistics, and hyparquet reads generously to find it rather
- * than pay a second round trip. So the 321 kB file comes down whole whatever
- * the projection asks for. The ratio moves the other way on a larger store,
- * where the data dwarfs the footer.
- *
- * Either way it is paid once, when the box is first ticked. The archive this
- * replaced fetched tiles per viewport for as long as the overlay was on.
+ * hyparquet reads it, imported on demand the first time the box is ticked. The
+ * store's index is SNAPPY, which hyparquet decodes on its own; a ZSTD index
+ * would need `hyparquet-compressors` beside it and fails loudly here. Only four
+ * columns are read, which is what makes the decode 5 ms rather than 290 — the
+ * fetch itself is the whole file either way. Measurements and the reasoning
+ * are under "The tile grid" in AGENTS.md.
  */
 
 import { GRID_INDEX_URL, HYPARQUET_URL } from "./config.js";
@@ -53,7 +36,7 @@ const isPolygon = (geometry) =>
 
 /* A number the paint expression can interpolate over, or null. The index is
  * fetched from wherever ?tiles= points, so its columns get the same treatment
- * as the raster manifest's fields rather than being trusted. */
+ * as the catalog's fields rather than being trusted. */
 const fraction = (value) =>
   typeof value === "number" && Number.isFinite(value) ? value : null;
 

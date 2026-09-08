@@ -49,7 +49,7 @@
         <div id="panel-body">
 
           <!-- Everything that describes a raster layer. Hidden as a block when
-               layers.json cannot be reached, since none of it means anything then. -->
+               the catalog cannot be reached, since none of it means anything then. -->
           <div id="raster-controls">
             <section class="control">
               <label for="product">Product</label>
@@ -57,8 +57,8 @@
             </section>
 
             <!-- The measurement, or one of the two QA rasters the store
-                 publishes beside it. Hidden unless the manifest carries more
-                 than one, since a manifest written before the QA layers offers
+                 publishes beside it. Hidden unless the catalog carries more
+                 than one, since a store built before the QA rasters offers
                  no choice at all — see js/rasters.js. -->
             <section class="control" id="quantity-row" hidden>
               <label for="quantity">Layer</label>

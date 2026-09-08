@@ -3,7 +3,7 @@
  * per-layer attribution popover and the segmented control builder.
  *
  * Nothing here knows about the map. Everything that ends up on the page goes
- * through `h()` or `textContent`: inventory metadata, raster manifests and
+ * through `h()` or `textContent`: inventory metadata, the raster catalog and
  * vector-tile properties are all data the page does not author, and a glacier
  * name or a citation containing markup must not be able to become markup.
  */
@@ -33,7 +33,7 @@ export function h(tag, props = {}, ...children) {
   return node;
 }
 
-/* `href` is the one place where a string from a manifest is still interpreted
+/* `href` is the one place where a string from the inventory index is still interpreted
  * rather than displayed, and `javascript:` in an href executes on click. Only
  * the schemes a citation link can legitimately use are honoured; anything else
  * degrades to plain text rather than to a live link. */
@@ -48,7 +48,7 @@ function externalLink(url, label) {
 /* ---------- status line ---------- */
 
 /* Several independent things report into one status element: the raster
- * manifest, each inventory and the tile grid. They finish in whatever order the
+ * catalog, each inventory and the tile grid. They finish in whatever order the
  * network gives them, so a single shared string means one overlay loading
  * successfully can wipe an unrelated failure off the screen. Entries are keyed
  * by who wrote them instead, and the most important one is displayed: errors
@@ -80,8 +80,8 @@ function paintStatus() {
 
 /* Each entry is either a bare value, which is also its own label — years,
  * polarizations — or a `{ value, label }` pair where the name on the button is
- * not the name in the manifest, as for the products. `data-value` always
- * carries the manifest's own spelling, so nothing downstream has to translate
+ * not the name in the catalog, as for the products. `data-value` always
+ * carries the catalog's own spelling, so nothing downstream has to translate
  * back.
  *
  * A pair may also carry a `title`, for a row whose faces had to be shortened to

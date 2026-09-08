@@ -11,8 +11,7 @@
  *
  * The recipes below are written out rather than derived, but their numbers are
  * the published store's: the stretches and colour stops come from
- * `fixtures/store/style.json`, the MapLibre style the catalog publishes, which
- * is where those constants live now that `layers.json` is retired.
+ * `fixtures/store/style.json`, the MapLibre style the catalog publishes.
  *
  * The reader is swapped for `fixtures/fake-geotiff.mjs` through the
  * `cogReaderUrl` setting, which is the same seam a deployment would use to pin
@@ -200,7 +199,7 @@ test("neighbouring tiles share the source tiles they straddle", async () => {
 });
 
 /* The colour a value lands on, computed independently of the module: a
- * piecewise-linear walk over the manifest's stops, clamped at both ends. */
+ * piecewise-linear walk over the style's stops, clamped at both ends. */
 function rampAt(colors, [low, high], value) {
   const stops = colors.map((hex) => [1, 3, 5].map((at) => parseInt(hex.slice(at, at + 2), 16)));
   const last = stops.length - 1;

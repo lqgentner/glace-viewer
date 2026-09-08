@@ -2,22 +2,15 @@
  * The GLACE raster layers: the controls that select one of them, and the legend
  * that describes it.
  *
- * The layers themselves are read out of the published catalog by js/store.js,
- * one record per archive. Only the record currently on screen has a MapLibre
- * source, and only the records that have been on screen keep one, so scrubbing
- * through years stays instant without asking for archive metadata nobody looked
- * at.
- *
- * Every layer is drawn from its pre-styled PMTiles archive. The store publishes
- * the float COG each one was styled from as well, and this page used to offer a
- * switch between the two; that comparison is finished and the switch is retired
- * — see "The COG reader" in AGENTS.md. The reader itself is still in the tree,
- * wired to its protocol, so the question can be reopened without rebuilding it:
- * js/cog-rgb.js.
+ * The layers are read out of the catalog by js/store.js, one record per
+ * archive. Only the record on screen has a MapLibre source, and only records
+ * that have been on screen keep one, so scrubbing through years stays instant.
+ * Every layer is drawn from its pre-styled PMTiles archive; the COG reader in
+ * js/cog-rgb.js is wired up but unused — see "The COG reader" in AGENTS.md.
  */
 
 import { addStacked, map, styleReady } from "./map.js";
-import { FALSE_COLOUR, readStore } from "./store.js";
+import { FALSE_COLOUR, isFiniteNumber, isNonEmptyString, readStore } from "./store.js";
 import { buildSegmented, clearStatus, creditButton, el, h, setStatus } from "./ui.js";
 
 const STATUS_KEY = "rasters";
@@ -65,34 +58,27 @@ const POLARIZATIONS = ["VV", "VH", "RGB"];
  * everywhere else, and its spelling for a measurement is nothing.
  *
  * The button faces are short because the row is three wide in a 292px panel;
- * the full names are on the buttons' own tooltips and under the colour ramp. */
+ * the full names are on the buttons' own tooltips and under the colour ramp.
+ * `title` is the button's tooltip and, for a QA raster, the one-line
+ * description under the ramp; `name` is how it reads inside the status line. */
 const MEASUREMENT = "";
 const QUANTITIES = [
   { value: MEASUREMENT, label: "Data", title: "The measurement itself" },
-  { value: "QA_NUM", label: "QA: Count", title: "Number of contributing observations" },
-  { value: "QA_CQM", label: "QA: Quality", title: "Composite quality map" },
+  {
+    value: "QA_NUM",
+    label: "QA: Count",
+    title: "Number of contributing observations",
+    name: "observation count",
+  },
+  {
+    value: "QA_CQM",
+    label: "QA: Quality",
+    title: "Composite quality map (higher is better)",
+    name: "composite quality map",
+  },
 ];
 const QUANTITY_ORDER = QUANTITIES.map((quantity) => quantity.value);
-
-/* What each QA raster is, for the description under the ramp — where there is
- * room for the name that did not fit on a button. One line each: neither is a
- * composite of the measurement, so neither takes the compositing line, and
- * which way is better is the only thing the panel has to say about reading the
- * ramp. */
-const QUANTITY_DETAIL = {
-  QA_NUM: ["Number of contributing observations"],
-  QA_CQM: ["Composite quality map (higher is better)"],
-};
-
-/* The same two, as they read inside a sentence — the status line when the
- * selected combination has no archive for the year on screen. */
-const QUANTITY_NAMES = { QA_NUM: "observation count", QA_CQM: "composite quality map" };
-
-/* The false-colour composite of the two polarizations, published pre-styled by
- * the store and read like any other archive. It has no QA raster of its own, so
- * selecting it disables both QA buttons and vice versa — the same rule that
- * disables any other combination nothing was published for. */
-const isFalseColour = (layer) => layer !== null && layer.polarization === FALSE_COLOUR;
+const quantityOf = (value) => QUANTITIES.find((quantity) => quantity.value === value);
 
 /* The swatch colour of each channel, red green blue, because that is what the
  * legend row is naming — a pixel is as red as its VV is high. */
@@ -107,10 +93,6 @@ const COLOUR_MAP_CREDIT = {
 
 const state = {
   axes: null,
-  /* `product|polarization|year` -> layer, keyed on the catalog's own composite
-   * polarization. Built once; the controls ask "does this combination exist" on
-   * every keystroke of the year slider. */
-  index: new Map(),
   product: null,
   pol: null,
   quantity: MEASUREMENT,
@@ -120,10 +102,6 @@ const state = {
   activeKey: null,
 };
 
-/* The style layer id the catalog publishes for the archive, used as-is: it is
- * already unique across products, quantities and years, and taking the page's
- * own id from the catalog's means the two cannot drift. */
-const layerId = (layer) => layer.id;
 const key = (product, polarization, year) => `${product}|${polarization}|${year}`;
 
 /* ---------- the polarization field ---------- */
@@ -142,7 +120,7 @@ function splitPolarization(value) {
 const joinPolarization = (pol, quantity) => (quantity === MEASUREMENT ? pol : `${pol}_${quantity}`);
 
 const findLayer = (product, pol, quantity, year) =>
-  state.index.get(key(product, joinPolarization(pol, quantity), year)) ?? null;
+  state.axes.index.get(key(product, joinPolarization(pol, quantity), year)) ?? null;
 
 /** The layer the controls currently describe, or null where none was published. */
 const selected = () => findLayer(state.product, state.pol, state.quantity, state.year);
@@ -181,9 +159,6 @@ function fallbackFor(field, value) {
 
 /* ---------- the axes ---------- */
 
-const isFiniteNumber = (value) => typeof value === "number" && Number.isFinite(value);
-const isNonEmptyString = (value) => typeof value === "string" && value !== "";
-
 /* Whether the panel has a control that can reach this layer at all. A layer that
  * names a real archive this page does not present — another polarization,
  * another QA role — is dropped without a word: it is correct and merely
@@ -216,6 +191,8 @@ export function indexLayers(layers) {
 
   return {
     layers: usable,
+    /* `product|polarization|year` -> layer: the controls ask "does this
+     * combination exist" on every keystroke of the year slider. */
     index: new Map(
       usable.map((layer) => [key(layer.product, layer.polarization, layer.year), layer]),
     ),
@@ -229,7 +206,8 @@ export function indexLayers(layers) {
 /* ---------- map layers ---------- */
 
 function ensureLayer(layer) {
-  const id = layerId(layer);
+  // The catalog's own style layer id, so the page's id and the catalog's cannot drift.
+  const id = layer.id;
   if (state.added.has(id)) return;
   /* Neither `attribution` nor `bounds`: the archive carries both in its own
    * header, `pmtiles.Protocol({metadata: true})` puts them in the TileJSON, and
@@ -280,7 +258,7 @@ map.on("error", (event) => {
 
 /* What the controls currently name, as it reads inside a sentence. */
 function selectionName() {
-  const quantity = QUANTITY_NAMES[state.quantity];
+  const quantity = quantityOf(state.quantity)?.name;
   const what = `${productLabel(state.product)} ${state.pol}`;
   return quantity ? `${what} ${quantity}` : `${what} layer`;
 }
@@ -306,7 +284,7 @@ function render() {
  * Repeated calls settle in order, so the last selection wins. */
 async function showOnMap(active) {
   await styleReady;
-  const wanted = active ? layerId(active) : null;
+  const wanted = active ? active.id : null;
   if (state.activeKey && state.activeKey !== wanted) {
     map.setLayoutProperty(state.activeKey, "visibility", "none");
     state.activeKey = null;
@@ -326,7 +304,7 @@ const round = (value, span) => value.toFixed(Math.abs(span) < 5 ? 2 : 1);
  * one of the two is ever shown, so the other is hidden rather than left holding
  * whatever the last layer put there. */
 function updateLegend(layer) {
-  const falseColour = isFalseColour(layer);
+  const falseColour = layer.polarization === FALSE_COLOUR;
   el("legend-bar").hidden = falseColour;
   el("legend-labels").hidden = falseColour;
   el("legend-channels").hidden = !falseColour;
@@ -415,7 +393,7 @@ const isDate = (value) => isNonEmptyString(value) && /^\d{4}-\d{2}-\d{2}$/.test(
 /* What sits under the colour ramp: what the layer is and the window it covers.
  *
  * A measurement names its product and how it was composited; a QA raster names
- * itself in one line instead — see QUANTITY_DETAIL.
+ * itself in one line instead — its `title` from QUANTITIES.
  *
  * The acquisition window is the one part that comes from a document of its own —
  * the year's STAC item — so the line appears once js/store.js could read that
@@ -429,7 +407,7 @@ export function layerDetail(layer) {
           ...(PRODUCT_DETAIL[layer.product] ?? [`${productLabel(layer.product)} composite`]),
           COMPOSITING_DETAIL,
         ]
-      : [...QUANTITY_DETAIL[quantity]];
+      : [quantityOf(quantity).title];
   if (isDate(layer.startDate) && isDate(layer.endDate)) {
     lines.push(`${layer.startDate} to ${layer.endDate}`);
   }
@@ -568,7 +546,6 @@ export async function loadRasters() {
   }
 
   state.axes = axes;
-  state.index = axes.index;
 
   /* The head of each axis rather than whatever the first layer happens to be,
    * so the page opens on the leftmost button of each control — the measurement

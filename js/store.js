@@ -1,48 +1,28 @@
 /*
  * Where the raster layers come from: the published catalog, read directly.
  *
- * There used to be a `layers.json` beside the archives — one entry per (product,
- * polarization, year), carrying the URL, the zooms, the stretch and the ramp.
- * The store retired it: every field it held now has a standard home, and a
- * sidecar that restates them is a copy to fall out of step with. So this module
- * reads those homes instead, and hands js/rasters.js the same shape the manifest
- * used to arrive as.
- *
- * Three reads, and each answers exactly one question:
+ * The store publishes no manifest of its own — every field the page needs has
+ * a standard home in the catalog — so this module reads those homes and hands
+ * js/rasters.js one record per archive. Three documents, each answering one
+ * question:
  *
  *   mosaics/collection.json   which archives exist — one `rel: "pmtiles"` link
- *                             each — and where the style and the per-year items
- *                             are
- *   the style it points at    how each layer is drawn: the ramp, the stretch,
- *                             the unit, the zooms. It is the same file the build
- *                             reads to bake the archives, so it cannot disagree
- *                             with them
+ *                             each — and where the style and the items are
+ *   the style it points at    how each layer is drawn: ramp, stretch, unit, zooms
  *   each year's item.json     the acquisition window under the ramp
  *
- * **Why the archives are enumerated from the collection and not from the style,**
- * which lists sources of its own: the style is documented as carrying "every
- * published web-map layer of the most recent year". The collection lists every
- * archive of every year. Reading the inventory from the style would therefore
- * lose every year but the newest the moment a second one is published.
- *
- * The two are joined on `pmtiles:layers`, the style layer id each link names —
- * `glace-coh12_vv-2024`, which carries the archive's stem and its year. Where
- * the style has no entry for that year, the layer falls back to the entry for
- * the same stem in whatever year the style does describe: the stretch and the
- * ramp are fixed per layer rather than per year, deliberately and by the store's
- * own documentation, so that a real change between two years is visible as a
- * change rather than absorbed into a rescaled colour bar.
- *
- * Bounds are the one thing nothing here declares. The PMTiles header already
- * carries them, and `pmtiles.Protocol` puts them in the TileJSON it answers
- * with, so a source that names no bounds of its own inherits the archive's —
- * for free, in a read the source was making anyway.
+ * The archives are enumerated from the collection, not from the style, because
+ * the style carries only the most recent year. The two are joined on
+ * `pmtiles:layers`, and a year the style does not describe falls back to the
+ * same stem in the year it does — the stretch and ramp are fixed per layer on
+ * purpose. Bounds and attribution are declared nowhere: the PMTiles header
+ * carries both. See "Reading the catalog" in AGENTS.md.
  */
 
 import { MOSAIC_COLLECTION_URL } from "./config.js";
 
-const isFiniteNumber = (value) => typeof value === "number" && Number.isFinite(value);
-const isNonEmptyString = (value) => typeof value === "string" && value !== "";
+export const isFiniteNumber = (value) => typeof value === "number" && Number.isFinite(value);
+export const isNonEmptyString = (value) => typeof value === "string" && value !== "";
 
 async function readJson(url) {
   const response = await fetch(url);

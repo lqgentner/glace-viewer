@@ -38,12 +38,9 @@ from typing import IO
 from urllib.parse import unquote
 
 RANGE_RE = re.compile(r"^bytes=(\d*)-(\d*)$")
-# Page-shell files and the small manifests are re-read on every reload; tiles
+# Page-shell files and the small JSON documents are re-read on every reload; tiles
 # and archives are not.
 NO_STORE_SUFFIXES = frozenset({"", ".html", ".js", ".css", ".json"})
-# The inventory overlays are megabytes each and change only when the exporter is
-# re-run, so they revalidate instead of being re-sent.
-REVALIDATE_SUFFIXES = frozenset({".geojson"})
 
 
 class RangeRequestHandler(SimpleHTTPRequestHandler):
@@ -145,18 +142,11 @@ class RangeRequestHandler(SimpleHTTPRequestHandler):
         ``js/app.js`` and ``style.css`` are edited between reloads. Without ``no-store``
         the browser reuses a stale script and the page silently keeps rendering the
         previous version.
-
-        The ``.geojson`` overlays are the exception: several megabytes apiece, but
-        rewritten only when the exporter runs. ``no-cache`` still forces a
-        revalidation on every reload, so a re-export is picked up at once, while an
-        unchanged file costs a ``304`` instead of the whole body.
         """
         self.send_header("Accept-Ranges", "bytes")
         suffix = Path(self.path.split("?", 1)[0]).suffix
         if suffix in NO_STORE_SUFFIXES:
             self.send_header("Cache-Control", "no-store, must-revalidate")
-        elif suffix in REVALIDATE_SUFFIXES:
-            self.send_header("Cache-Control", "no-cache")
         super().end_headers()
 
 

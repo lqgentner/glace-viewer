@@ -1,38 +1,21 @@
 /*
  * The COG layers, behind a MapLibre protocol of our own.
  *
- * `glace-rgb://` serves both of them: a single-band mosaic through a colour
- * ramp, and the false-colour composite of two. Its URL names a *recipe* rather
- * than an archive, which is what lets one tile be read from two files — the
- * thing a one-URL-is-one-GeoTIFF protocol cannot do, and the reason this module
- * exists at all. Having the single-band layers come through it too is what
- * gives them one reader, one decoded-tile cache and one colour path instead of
- * two of each.
+ * `glace-rgb://` serves a single-band mosaic through a colour ramp, or the
+ * false-colour composite of two. Its URL names a *recipe* rather than an
+ * archive, which is what lets one tile be read from two files.
  *
- * What makes it cheap is the store's canonical grid. Every mosaic of a scope is
- * written on the WebMercatorQuad grid at one zoom, so VV and VH share a size,
- * an origin, a blocking and an overview count: tile (x, y) of one covers
- * exactly the ground of tile (x, y) of the other. The grid also lines up with
- * the XYZ pyramid — measured on `glace-ch`, the image origin sits 1 088 000 by
- * 734 720 pixels from the WebMercator origin at z13, and halving stays integral
- * through all seven overview levels. So a tile here is an integer window read
- * out of each file and a per-pixel combine: never a reprojection, never a
- * resample, never an interpolation.
- *
- * **The published mosaics no longer satisfy that.** They are ETRS89-LAEA 40 m
- * now, which is the right CRS for what they are for — analysis and area
- * statistics — and the catalog ships no COG for web display at all: the
- * pre-styled PMTiles archives are that product, and nothing on this page
- * produces a `glace-rgb://` source. This module is kept against web-mercator
- * COGs replacing those archives, which is the case it was written for. See
+ * Its premise is a source on the WebMercatorQuad grid at one zoom, so that VV
+ * and VH share a size, an origin and an overview count, and a tile is an
+ * integer window read out of each file — never a reprojection or a resample.
+ * The published mosaics are ETRS89-LAEA 40 m and no longer satisfy that, and
+ * nothing on the page produces a `glace-rgb://` source. The module is kept
+ * against web-mercator COGs one day replacing the pre-styled archives; see
  * "The COG reader" in AGENTS.md.
  *
- * The reader is @developmentseed/geotiff, which decodes LERC and Zstd through
- * its own direct dependencies rather than through geotiff.js. It is ESM-only
- * with bare specifiers and ships no UMD build, so unlike the page's other
- * libraries it cannot be a `<script>` tag; it is imported dynamically, from a
- * CDN that resolves the bare specifiers, the first time a false-colour layer is
- * actually shown. A deployment that never selects one never fetches it.
+ * The reader is @developmentseed/geotiff: ESM-only with bare specifiers, so it
+ * is imported from a CDN the first time a tile is asked for rather than loaded
+ * as a <script> tag.
  */
 
 import { COG_READER_URL } from "./config.js";
@@ -226,13 +209,12 @@ const blankTile = async () => (blank ??= await encode(new Uint8ClampedArray(TILE
 const channel = (value, [low, high]) =>
   Math.max(0, Math.min(255, Math.round((255 * (value - low)) / (high - low))));
 
-/* A piecewise-linear ramp over the manifest's colour stops.
+/* A piecewise-linear ramp over the style's colour stops.
  *
  * The stops are a colour map already sampled — seventeen of them for the
- * store's layers — so interpolating between them reproduces the map closely
- * enough that the two sources draw the same picture, which is the point of
- * being able to switch between them. Values outside the stretch clamp to its
- * ends, as the ramp baked into the PMTiles does. */
+ * store's layers — so interpolating between them reproduces the ramp the
+ * archives were baked with. Values outside the stretch clamp to its ends, as
+ * the ramp baked into the PMTiles does. */
 function rampScale({ colors, range: [low, high] }) {
   const stops = colors.map((hex) => [1, 3, 5].map((at) => parseInt(hex.slice(at, at + 2), 16)));
   const last = stops.length - 1;
@@ -256,9 +238,9 @@ function rampScale({ colors, range: [low, high] }) {
  * here is what makes the two sources agree. */
 const read = (stored, decibel) => (decibel ? 10 * Math.log10(stored) : stored);
 
-/* An exact zero is absent data. The reasoning, and the measurement behind it,
- * is in js/rasters.js: every browser reader drops LERC's validity mask, and a
- * zero is what an invalid pixel decodes to. */
+/* An exact zero is absent data. Every browser reader drops LERC's validity
+ * mask, and a zero is what an invalid pixel decodes to — measured, see "The COG
+ * reader" in AGENTS.md. */
 const absent = (value) => value === 0 || !Number.isFinite(value);
 
 /* One archive through a colour ramp. */

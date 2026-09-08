@@ -39,6 +39,4 @@ jobs:
       # jsdom is the only dependency, and it is dev-only; nothing is bundled or
       # published. `npm ci` so the lockfile decides the version.
       - run: npm ci
-      # The raster manifest is a local build artefact, so the cases that need
-      # tiles/layers.json skip themselves here rather than failing.
       - run: npm test

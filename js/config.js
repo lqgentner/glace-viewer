@@ -10,17 +10,13 @@
  *
  * Only things a different deployment might reasonably point elsewhere live
  * here. Paint expressions, layout constants, the click radius and DOM ids stay
- * in the modules that use them; they are code, not configuration. So does the
- * fit padding, which is derived from `#panel`'s width in style.css and would
- * drift from it the moment it became a knob.
+ * in the modules that use them; they are code, not configuration.
  */
 
 const DEFAULTS = {
   /* The root of the published STAC catalog: the page reads the mosaics
    * collection under it for the raster layers, and the tiles collection's item
-   * index for the catalog grid. It was a directory of PMTiles beside a
-   * `layers.json` until the store retired that manifest; nothing about the
-   * archives moved, but where the page learns of them did — see js/store.js. */
+   * index for the catalog grid — see js/store.js. */
   tilesBase: "tiles",
   /* The inventory archives are build outputs committed beside the page, so by
    * default they are served from the same origin as index.html. */
@@ -37,17 +33,13 @@ const DEFAULTS = {
   gridIndex: "tiles/items.parquet",
 
   /* The COG reader behind js/cog-rgb.js, imported the first time a
-   * `glace-rgb://` tile is asked for — which nothing on the page does today,
-   * the tile-source switch having been retired in favour of the pre-styled
-   * archives. It is ESM-only with bare specifiers and ships no UMD build, so
-   * unlike the page's other libraries it cannot be a <script> tag — the CDN is
-   * what resolves its dependencies. Deliberately absent from
-   * QUERY_PARAMS below: this URL is executed, so it is a deployment decision
-   * and must not be settable from the address bar.
+   * `glace-rgb://` tile is asked for — which nothing on the page does today.
+   * ESM-only with bare specifiers, so it cannot be a <script> tag; the CDN
+   * resolves its dependencies. Absent from QUERY_PARAMS below on purpose: this
+   * URL is executed, so it must not be settable from the address bar.
    *
    * `?external=lerc` leaves `import("lerc")` bare for the import map in
-   * index.html to resolve — see the comment there for why it must not come from
-   * this CDN. Change the two together. */
+   * index.html — see the comment there. Change the two together. */
   cogReaderUrl: "https://esm.sh/@developmentseed/geotiff@0.7.0?external=lerc",
 
 

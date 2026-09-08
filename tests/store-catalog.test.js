@@ -155,7 +155,7 @@ test("a QA raster brings its own ramp, stretch and colour-map credit", async () 
 
 test("the acquisition window comes from the year's STAC item", () => {
   // The only thing read out of a third document, and the one field of it the
-  // panel shows. `layers.json` used to carry a copy.
+  // panel shows.
   const item = JSON.parse(fs.readFileSync(path.join(FIXTURES, "item-2024.json"), "utf8"));
   assert.equal(item.properties.start_datetime, "2024-07-09T00:00:00Z");
   assert.equal(item.properties.end_datetime, "2024-10-07T00:00:00Z");

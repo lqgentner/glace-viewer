@@ -180,11 +180,6 @@ class FakeMap {
     return this.hits;
   }
 
-  fitBounds(bounds, options) {
-    this.calls.push("fitBounds");
-    this.fitted = { bounds, options };
-  }
-
   /** Index of a layer in draw order; -1 when it does not exist. */
   indexOf(id) {
     return this.order.indexOf(id);

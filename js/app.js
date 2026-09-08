@@ -1,9 +1,8 @@
 /*
  * GLACE quick-look viewer — startup and control wiring.
  *
- * The tile directory defaults to ./tiles and can be pointed anywhere with
- * ?tiles=<base-url>, which is how a GitHub Pages copy of this page reads
- * archives hosted on object storage.
+ * The catalog is read from wherever `tilesBase` points — site-config.js on the
+ * deployed page, or `?tiles=<base-url>` from the address bar.
  *
  * Every control is wired here, before anything has loaded, and every handler
  * that touches the map waits on `styleReady` rather than being attached late.
@@ -83,7 +82,7 @@ function initControls() {
 
 async function boot() {
   initControls();
-  // The inventory list is independent of the map and the raster manifest, so it
+  // The inventory list is independent of the map and the raster catalog, so it
   // is built at once: waiting for them made the panel jump as it grew.
   loadInventories();
 

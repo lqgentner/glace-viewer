@@ -27,7 +27,7 @@ test("built-in defaults", async () => {
   assert.deepEqual(config.INITIAL_VIEW, { center: [8.03, 46.51], zoom: 10, maxZoom: 14 });
 });
 
-test("the committed empty template changes nothing", async () => {
+test("an empty site config changes nothing", async () => {
   const withTemplate = await load({ site: {} });
   const bare = await load();
   assert.equal(withTemplate.TILES_BASE, bare.TILES_BASE);

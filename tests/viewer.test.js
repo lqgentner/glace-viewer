@@ -264,7 +264,6 @@ test("the viewer", async (t) => {
   });
 
   await t.test("the view opens on the configured default rather than the data's own bounds", async () => {
-    assert.equal(map.fitted, undefined, "fitBounds is not called when the URL carries no hash");
     assert.deepEqual(map.options.center, [8.03, 46.51]);
     assert.equal(map.options.zoom, 10);
   });

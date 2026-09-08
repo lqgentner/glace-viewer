@@ -451,7 +451,6 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   font-variant-numeric: tabular-nums;
 }
 #layer-info:empty { margin: 0; }
-.muted { color: var(--muted); }
 
 #status {
   position: absolute;
@@ -512,7 +511,6 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
 }
 /* Keep the checkbox and colour swatch aligned with the first line of the name. */
 .inventory input[type="checkbox"] { margin-top: 2px; }
-.inventory .swatch { margin-top: 7px; }
 .inventory label {
   flex: 1;
   font-size: 13px;
@@ -523,6 +521,7 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
 .inventory .swatch {
   width: 14px;
   height: 3px;
+  margin-top: 7px;
   border-radius: 2px;
   flex: none;
 }
@@ -551,7 +550,7 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
 .credit:hover { color: var(--accent); }
 .inventory .credit { margin-top: 2px; }
 
-/* Detached from the panel (see app.js): fixed, so a long citation cannot put a
+/* Detached from the panel (see ui.js): fixed, so a long citation cannot put a
    scrollbar on the sidebar, and free to be wider than it. */
 .credit-popover {
   position: fixed;
@@ -560,7 +559,7 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   max-width: calc(100vw - 16px);
   /* No overflow clipping: it would cut off the caret, which is drawn just
      outside the box. The citations are a few lines at this width, so the box
-     sizes to content and the flip-below logic in app.js handles tight space. */
+     sizes to content and the flip-below logic in ui.js handles tight space. */
   padding: 10px 12px;
   font-size: 11px;
   line-height: 1.5;
