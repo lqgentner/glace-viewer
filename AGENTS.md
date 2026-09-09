@@ -44,10 +44,11 @@ uv run --locked python scripts/serve.py        # -> http://localhost:8000/
 - `http.server` cannot serve PMTiles (no `Range`), hence `serve.py`. It sends
   the page shell `no-store` so a stale `js/app.js` never renders silently.
 - The page reads the published store by default (`site-config.js`). To read a
-  local build: `ln -s <build>/glace-store/2024/pmtiles tiles` and open
-  `?tiles=tiles`, or `serve.py --tiles-dir <dir>` for a directory holding a
-  whole catalog. `tiles` is gitignored without a trailing slash because it is
-  usually a symlink, which git sees as a file.
+  build: `ln -s <store root> tiles` and open `?tiles=tiles`, or `serve.py
+  --tiles-dir <dir>`. Either way it is the catalog root that is served: the
+  archives sit in `mosaics/{year}/` beside the COGs, so there is no separate
+  directory of them to point at. `tiles` is gitignored without a trailing slash
+  because it is usually a symlink, which git sees as a file.
 - Any bucket the page reads must allow anonymous reads and send CORS
   `ExposeHeaders` for `Content-Range`, `Content-Length`, `Accept-Ranges` and
   `ETag`. Without them a PMTiles read fails looking like a corrupt archive,
@@ -131,28 +132,35 @@ layout.
 │   └── items.parquet                   # the grid's index, stac-geoparquet
 └── mosaics/
     ├── collection.json                 # rel="pmtiles" links: the inventory this page reads
-    ├── styles/default.json             # how each layer is drawn (metadata.portolan:legend)
-    ├── 2024/item.json + coh12_vv.tif   # float32 LERC_ZSTD COG, ETRS89-LAEA 40 m
-    └── pmtiles/2024/coh12_vv.pmtiles   # pre-styled RGBA, WebMercator z5-z13
+    ├── styles/2024.json                # how each layer is drawn, one style per year
+    └── 2024/
+        ├── item.json
+        ├── coh12_vv.tif                # float32 LERC_ZSTD COG, ETRS89-LAEA 40 m
+        └── coh12_vv_viz.pmtiles        # pre-styled RGBA, WebMercator z5-z13
 ```
 
-Every layer is published twice under one stem; the page draws only the
-`pmtiles/` side. The catalog ships **no COG for web display** — the archives are
+Every layer is published twice in one directory, the rendering under a `_viz`
+stem and registered on its item with the `visual` role; the page draws only the
+`_viz` side. The catalog ships **no COG for web display** — the archives are
 that product — and needs no sidecar from this repository.
 
 ### Reading the catalog
 
-`layers.json` is gone (glace-catalog M-26); `js/store.js` reads three documents
-instead — the mosaics collection (which archives exist), the style it nominates
-(how each is drawn), each year's item (the acquisition window). Decisions the
-code relies on:
+`layers.json` is gone (glace-catalog M-26); `js/store.js` reads the mosaics
+collection (which archives exist), the styles it nominates (how each is drawn)
+and each year's item (the acquisition window). Decisions the code relies on:
 
-- **Enumerate archives from the collection, not the style.** The style carries
-  only the most recent year; the collection lists every year.
+- **Enumerate archives from the collection, not the styles.** The collection is
+  the inventory; a style describes one year.
+- **One style per published year** (glace-catalog M-35), registered as
+  `style-{year}` with the href `./styles/{year}.json`; the latest year's asset
+  also carries the `default` role. The page reads every one of them and draws a
+  layer from the style of its own year.
 - The join key is `pmtiles:layers`, the style layer id (`glace-coh12_vv_qa_num-2024`),
-  which the page also uses as its MapLibre layer id. A year the style lacks
-  falls back to the same stem in the year it has: stretch and ramp are fixed per
-  layer, deliberately (see [Value ranges](#value-ranges-and-colour-maps)).
+  which the page also uses as its MapLibre layer id. A year the collection
+  publishes no style for falls back to the same stem in the default style:
+  stretch and ramp are fixed per layer, deliberately (see
+  [Value ranges](#value-ranges-and-colour-maps)).
 - `metadata.portolan:legend` is the source of truth for ramp, stretch, unit and
   the false colour's three `{band, vmin, vmax}` channels. This page keeps no
   copy of any of them.

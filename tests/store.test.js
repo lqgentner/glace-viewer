@@ -17,7 +17,7 @@ import test from "node:test";
 import { captureWarnings, installBrowser, load, REPO } from "./helpers/browser.js";
 
 installBrowser();
-const { readStore, storeLayers } = await load("js/store.js");
+const { readStore, storeLayers, styleHrefs } = await load("js/store.js");
 
 const read = (...where) =>
   JSON.parse(fs.readFileSync(path.join(REPO, "tests", "fixtures", ...where), "utf8"));
@@ -240,5 +240,66 @@ test("a collection that nominates no style says so", async () => {
     await assert.rejects(readStore(), /names no style asset/);
   } finally {
     fs.rmSync(bare);
+  }
+});
+
+test("the style assets are read by the year each one describes", () => {
+  const perYear = structuredClone(collection);
+  perYear.assets = {
+    "style-2023": { href: "./styles/2023.json", roles: ["style"] },
+    "style-2024": { href: "./styles/2024.json", roles: ["style", "default"] },
+  };
+  assert.deepEqual(
+    [...styleHrefs(perYear)],
+    [
+      [2023, "./styles/2023.json"],
+      [2024, "./styles/2024.json"],
+      ["default", "./styles/2024.json"],
+    ],
+  );
+});
+
+test("a year with its own style is drawn from that style, not from the default", async () => {
+  /* One style per published year is what the store writes, and the years differ
+   * only in the year they name — except where a range was re-derived, and then
+   * the older year must keep the constants its own archive was baked with. */
+  const at = (file) => path.join(REPO, "tests", "fixtures", "store", file);
+  const perYear = structuredClone(collection);
+  perYear.assets = {
+    "style-2023": { href: "./styles/2023.json", roles: ["style"] },
+    "style-2024": { href: "./styles/2024.json", roles: ["style", "default"] },
+  };
+  perYear.links = [
+    ...collection.links.filter((link) => link.rel !== "item"),
+    ...collection.links
+      .filter((link) => link.rel === "pmtiles")
+      .map((link) => ({
+        ...link,
+        href: link.href.replace("/2024/", "/2023/"),
+        "pmtiles:layers": link["pmtiles:layers"].map((id) => id.replace("-2024", "-2023")),
+      })),
+  ];
+  const older = structuredClone(style);
+  older.layers = older.layers.map((layer) => ({ ...layer, id: layer.id.replace("-2024", "-2023") }));
+  older.layers.find((layer) => layer.id === "glace-coh12_vv-2023").metadata[
+    "portolan:legend"
+  ].vmax = 0.5;
+
+  const files = {
+    "http://localhost/tiles/mosaics/collection.json": at("collection-per-year.json"),
+    "http://localhost/tiles/mosaics/styles/2023.json": at("style-2023.json"),
+    "http://localhost/tiles/mosaics/styles/2024.json": at("style.json"),
+  };
+  fs.writeFileSync(at("collection-per-year.json"), JSON.stringify(perYear));
+  fs.writeFileSync(at("style-2023.json"), JSON.stringify(older));
+  try {
+    installBrowser({ files });
+    const found = byId(await readStore());
+    assert.equal(found.size, 28, "both years of every archive reach the map");
+    assert.equal(found.get("glace-coh12_vv-2023").vmax, 0.5, "from its own year's style");
+    assert.equal(found.get("glace-coh12_vv-2024").vmax, 0.8);
+  } finally {
+    fs.rmSync(at("collection-per-year.json"));
+    fs.rmSync(at("style-2023.json"));
   }
 });

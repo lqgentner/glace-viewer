@@ -7,16 +7,17 @@
  * question:
  *
  *   mosaics/collection.json   which archives exist — one `rel: "pmtiles"` link
- *                             each — and where the style and the items are
- *   the style it points at    how each layer is drawn: ramp, stretch, unit, zooms
+ *                             each — and where the styles and the items are
+ *   one style per year        how each layer is drawn: ramp, stretch, unit, zooms
  *   each year's item.json     the acquisition window under the ramp
  *
- * The archives are enumerated from the collection, not from the style, because
- * the style carries only the most recent year. The two are joined on
- * `pmtiles:layers`, and a year the style does not describe falls back to the
- * same stem in the year it does — the stretch and ramp are fixed per layer on
- * purpose. Bounds and attribution are declared nowhere: the PMTiles header
- * carries both. See "Reading the catalog" in AGENTS.md.
+ * The archives are enumerated from the collection, not from the styles, because
+ * the collection is the inventory. The two are joined on `pmtiles:layers`: a
+ * layer is drawn from the style of its own year, and a year the collection
+ * publishes no style for falls back to the default style's same stem — the
+ * stretch and ramp are fixed per layer on purpose. Bounds and attribution are
+ * declared nowhere: the PMTiles header carries both. See "Reading the catalog"
+ * in AGENTS.md.
  */
 
 import { MOSAIC_COLLECTION_URL } from "./config.js";
@@ -74,17 +75,28 @@ function archives(collection, collectionUrl) {
   return found;
 }
 
-/* The style the collection nominates: the asset with the `style` role. Its
- * `default` companion is what a catalog with several styles marks as the one to
- * open with, so it is preferred where both exist. */
-function styleHref(collection) {
-  const assets = Object.values(collection?.assets ?? {}).filter(
-    (asset) =>
-      Array.isArray(asset?.roles) && asset.roles.includes("style") && isNonEmptyString(asset.href),
-  );
-  const chosen = assets.find((asset) => asset.roles.includes("default")) ?? assets[0];
-  if (chosen === undefined) throw new Error("the mosaics collection names no style asset");
-  return chosen.href;
+/* The styles the collection nominates, keyed by the year each one describes and,
+ * under "default", the one a client should open with.
+ *
+ * The store publishes one style per year — the year is the only generated part of
+ * a reviewed template — so the key and the filename both end in it. A collection
+ * with a single undated style lands under "default" alone, which is the fallback
+ * every year then uses.
+ *
+ * @param {object} collection  the mosaics collection
+ * @returns {Map<number|string, string>}
+ */
+export function styleHrefs(collection) {
+  const out = new Map();
+  for (const [key, asset] of Object.entries(collection?.assets ?? {})) {
+    if (!Array.isArray(asset?.roles) || !asset.roles.includes("style")) continue;
+    if (!isNonEmptyString(asset.href)) continue;
+    const year = /(\d{4})(?:\.json)?$/.exec(asset.href) ?? /(\d{4})$/.exec(key);
+    if (year) out.set(Number(year[1]), asset.href);
+    if (asset.roles.includes("default")) out.set("default", asset.href);
+  }
+  if (out.size === 0) throw new Error("the mosaics collection names no style asset");
+  return out;
 }
 
 /* How one layer is drawn, keyed by style layer id and, as a fallback, by stem.
@@ -176,15 +188,28 @@ function acquisitionWindow(item) {
  *
  * @param {object} collection  the mosaics collection
  * @param {string} collectionUrl  where it was read from, for relative hrefs
- * @param {object} style  the MapLibre style it nominates
+ * @param {object|Map<number|string, object>} style  the MapLibre style it
+ *   nominates, or one per year keyed as styleHrefs() keys them
  * @param {Map<number, object>} windows  year -> {startDate, endDate}
  * @returns {object[]}
  */
 export function storeLayers(collection, collectionUrl, style, windows = new Map()) {
-  const { byId, byStem } = legends(style);
+  /* One style or many: a single document is the default for every year, which is
+   * what a collection that publishes one undated style means. */
+  const styles = style instanceof Map ? style : new Map([["default", style]]);
+  const drawn = new Map([...styles].map(([key, document]) => [key, legends(document)]));
+  const fallback = drawn.get("default");
   const layers = [];
   for (const archive of archives(collection, collectionUrl)) {
-    const legend = byId.get(archive.id) ?? byStem.get(archive.stem);
+    const own = drawn.get(archive.year);
+    /* The year's own style first, then the default's: the stretch and the ramp
+     * are fixed per layer on purpose, so a year the collection has no style for
+     * is drawn with the same constants rather than dropped. */
+    const legend =
+      own?.byId.get(archive.id) ??
+      fallback?.byId.get(archive.id) ??
+      own?.byStem.get(archive.stem) ??
+      fallback?.byStem.get(archive.stem);
     if (legend === undefined) {
       console.warn("store: no style entry describes", archive.id);
       continue;
@@ -212,16 +237,25 @@ export async function readStore() {
   const collectionUrl = new URL(MOSAIC_COLLECTION_URL, location.href).href;
   const collection = await readJson(collectionUrl);
 
-  /* The style and every year's item are independent of each other, so they go
+  /* The styles and every year's item are independent of each other, so they go
    * out together rather than one after the next. A year whose item does not
-   * answer costs that year its date line and nothing else, which is why these
-   * are settled rather than awaited. */
-  const style = readJson(resolve(styleHref(collection), collectionUrl));
+   * answer costs that year its date line and nothing else, which is why those
+   * are settled rather than awaited; a style that does not answer is fatal, the
+   * way it always was.
+   *
+   * Distinct hrefs, not distinct keys: the latest year is registered twice, once
+   * by its year and once as the default, and one document is one request. */
+  const hrefs = styleHrefs(collection);
+  const unique = [...new Set(hrefs.values())];
+  const requests = unique.map((href) => readJson(resolve(href, collectionUrl)));
 
   const items = (collection?.links ?? [])
     .filter((link) => link?.rel === "item" && isNonEmptyString(link.href))
     .map((link) => readJson(resolve(link.href, collectionUrl)).catch(() => null));
-  const [drawnAs, ...settled] = await Promise.all([style, ...items]);
+  const answered = await Promise.all([...requests, ...items]);
+  const documents = new Map(unique.map((href, index) => [href, answered[index]]));
+  const drawnAs = new Map([...hrefs].map(([key, href]) => [key, documents.get(href)]));
+  const settled = answered.slice(unique.length);
 
   const windows = new Map();
   for (const item of settled) {
