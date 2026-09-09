@@ -11,7 +11,7 @@
  *
  * The recipes below are written out rather than derived, but their numbers are
  * the published store's: the stretches and colour stops come from
- * `fixtures/store/style.json`, the MapLibre style the catalog publishes.
+ * `fixtures/store/style-2024.json`, the MapLibre style the catalog publishes.
  *
  * The reader is swapped for `fixtures/fake-geotiff.mjs` through the
  * `cogReaderUrl` setting, which is the same seam a deployment would use to pin
@@ -29,7 +29,7 @@ import test from "node:test";
 import { installBrowser, load, REPO } from "./helpers/browser.js";
 
 const style = JSON.parse(
-  fs.readFileSync(path.join(REPO, "tests", "fixtures", "store", "style.json"), "utf8"),
+  fs.readFileSync(path.join(REPO, "tests", "fixtures", "store", "style-2024.json"), "utf8"),
 );
 const legendOf = (stem) =>
   style.layers.find((layer) => layer.id === `glace-${stem}-2024`).metadata["portolan:legend"];
@@ -100,11 +100,11 @@ test("a tile is the two archives combined, channel by channel", async () => {
     "one tile from each archive, at the same index, from the full-resolution level",
   );
 
-  /* VV 0.5 over a 0.10–0.80 stretch, VH 0.25 over 0.10–0.60, and the blue
-   * channel their quotient, 2.0, over 0.75–2.75. */
+  /* VV 0.5 over the style's 0.10–0.75 stretch, VH 0.25 over 0.10–0.55, and the
+   * blue channel their quotient, 2.0, over 0.75–2.75. */
   assert.deepEqual(pixel(rgba, 1), [
-    channel(0.5, [0.1, 0.8]),
-    channel(0.25, [0.1, 0.6]),
+    channel(0.5, [0.1, 0.75]),
+    channel(0.25, [0.1, 0.55]),
     channel(2.0, [0.75, 2.75]),
     255,
   ]);
@@ -121,8 +121,8 @@ test("backscatter is combined in dB, where its stretch lives", async () => {
   const vv = 10 * Math.log10(0.05);
   const vh = 10 * Math.log10(0.0125);
   assert.deepEqual(pixel(rgba, 1), [
-    channel(vv, [-18.5, -5]),
-    channel(vh, [-26, -11]),
+    channel(vv, [-16.5, -4]),
+    channel(vh, [-23.5, -11]),
     channel(vv - vh, [3.5, 11]),
     255,
   ]);

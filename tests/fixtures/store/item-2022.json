@@ -8,7 +8,7 @@
     "https://stac-extensions.github.io/file/v2.1.0/schema.json",
     "https://stac-extensions.github.io/version/v1.2.0/schema.json"
   ],
-  "id": "ch-mosaic-2024",
+  "id": "ch-mosaic-2022",
   "geometry": null,
   "bbox": [
     6.796066566434904,
@@ -17,8 +17,8 @@
     47.31316584658046
   ],
   "properties": {
-    "start_datetime": "2024-07-09T00:00:00Z",
-    "end_datetime": "2024-10-07T00:00:00Z",
+    "start_datetime": "2022-06-20T00:00:00Z",
+    "end_datetime": "2022-09-18T00:00:00Z",
     "constellation": "sentinel-1",
     "instruments": [
       "c-sar"
@@ -43,9 +43,9 @@
       2698000.0
     ],
     "version": "0.1",
-    "glace:build_fingerprint": "566f97b7e50adb7698741259197ea15214a5bb3fd6ff27ba484122f63cf8cb33",
-    "description": "Annual mosaics of the GLACE composites for 2024, on the fixed equal-area grid (EPSG:3035, 40 m) every year of this collection shares.",
-    "datetime": "2024-08-23T00:00:00Z"
+    "glace:build_fingerprint": "d968edfda0d6d0463e609e5f6a2efc35c31938256bd2f40fca615c28f9a6b90d",
+    "description": "Annual mosaics of the GLACE composites for 2022, on the fixed equal-area grid (EPSG:3035, 40 m) every year of this collection shares.",
+    "datetime": "2022-08-04T00:00:00Z"
   },
   "links": [
     {
@@ -78,9 +78,9 @@
       "href": "coh12_rgb_viz.pmtiles",
       "type": "application/vnd.pmtiles",
       "title": "coh12_rgb web-map tiles",
-      "description": "Pre-styled 8-bit WebP rendering of coh12_rgb on WebMercatorQuad z5-z13, stretched 0.1-0.75 as the collection's style for 2024 declares. Not for analysis: read coh12_vv.tif and coh12_vh.tif.",
-      "file:size": 26827992,
-      "file:checksum": "122084ece5778539b32edb57802466f1040963bc9fe959212d7e5deb541474efd7c4",
+      "description": "Pre-styled 8-bit WebP rendering of coh12_rgb on WebMercatorQuad z5-z13, stretched 0.1-0.75 as the collection's style for 2022 declares. Not for analysis: read coh12_vv.tif and coh12_vh.tif.",
+      "file:size": 27035071,
+      "file:checksum": "1220b0a8b3332569272637442c0b636640d18c08e66c2b8cb6b806028477b3a554ea",
       "proj:code": "EPSG:3857",
       "roles": [
         "visual"
@@ -96,16 +96,16 @@
           "data_type": "float32",
           "nodata": "nan",
           "statistics": {
-            "maximum": 0.972464919090271,
-            "mean": 0.23736202422989358,
-            "minimum": 0.034948594868183136,
-            "stddev": 0.13119321387053823,
+            "maximum": 0.9810740351676941,
+            "mean": 0.28088257368444697,
+            "minimum": 0.0354437381029129,
+            "stddev": 0.15896778945745235,
             "valid_percent": 28.60978607918263
           }
         }
       ],
-      "file:size": 17270205,
-      "file:checksum": "122034a0d3ca0309bb4908216d88162e12d13887114d4912e072616748056fa7d11e",
+      "file:size": 17661591,
+      "file:checksum": "1220bf9a38d50b3ed756d97d05d4e0f719039f31fcdf73d464f784e8a7f10ee318d8",
       "raster:spatial_resolution": 40.0,
       "roles": [
         "data",
@@ -122,16 +122,16 @@
           "data_type": "float32",
           "nodata": "nan",
           "statistics": {
-            "maximum": 15722.765625,
-            "mean": 2.641621137541498,
-            "minimum": 0.02489924058318138,
-            "stddev": 16.276629246261358,
+            "maximum": 17980.982421875,
+            "mean": 2.4990976094370887,
+            "minimum": 0.025052815675735474,
+            "stddev": 16.641238877449105,
             "valid_percent": 28.60978607918263
           }
         }
       ],
-      "file:size": 23200044,
-      "file:checksum": "1220eee03e20a91330846092a1b664cd884d6674ad6b81e10451e66726a4d11ad845",
+      "file:size": 22998326,
+      "file:checksum": "122013e6cc68a1bdfb17f32d5785d8a1c5ee423fd2f0a90ae32d3048a280245b3c08",
       "raster:spatial_resolution": 40.0,
       "roles": [
         "quality"
@@ -141,9 +141,9 @@
       "href": "coh12_vh_qa_cqm_viz.pmtiles",
       "type": "application/vnd.pmtiles",
       "title": "coh12_vh_qa_cqm web-map tiles",
-      "description": "Pre-styled 8-bit WebP rendering of coh12_vh_qa_cqm on WebMercatorQuad z5-z13, stretched -3-10 dB through cmc.glasgow as the collection's style for 2024 declares. Not for analysis: read coh12_vh_qa_cqm.tif.",
-      "file:size": 21675095,
-      "file:checksum": "12204232f7d5ef7078ee44fec90fc2021487f0c54acf2a254095ad21a54d6df68cfd",
+      "description": "Pre-styled 8-bit WebP rendering of coh12_vh_qa_cqm on WebMercatorQuad z5-z13, stretched -3-10 dB through cmc.glasgow as the collection's style for 2022 declares. Not for analysis: read coh12_vh_qa_cqm.tif.",
+      "file:size": 20826366,
+      "file:checksum": "1220cd63711ce70103036bd98e61e5e3a32c732fd0a0f7de43d5fdf7ea67382b929c",
       "proj:code": "EPSG:3857",
       "roles": [
         "visual"
@@ -160,15 +160,15 @@
           "nodata": "nan",
           "statistics": {
             "maximum": 26.0,
-            "mean": 20.54633939872197,
-            "minimum": 4.874772548675537,
-            "stddev": 3.467590454985089,
+            "mean": 19.127407713190962,
+            "minimum": 3.9374570846557617,
+            "stddev": 3.5632530431831557,
             "valid_percent": 28.60978607918263
           }
         }
       ],
-      "file:size": 16691867,
-      "file:checksum": "12205c5b9a5f5dcb5f857be101c3ed3f0c926d5a6c9f11084506e2e935eaa3b97eed",
+      "file:size": 15653091,
+      "file:checksum": "12202d242802df00f10f26a51835b3e8352ed725360703fdb0f3419c2d1a8e846925",
       "raster:spatial_resolution": 40.0,
       "roles": [
         "quality"
@@ -178,9 +178,9 @@
       "href": "coh12_vh_qa_num_viz.pmtiles",
       "type": "application/vnd.pmtiles",
       "title": "coh12_vh_qa_num web-map tiles",
-      "description": "Pre-styled 8-bit WebP rendering of coh12_vh_qa_num on WebMercatorQuad z5-z13, stretched 0-90 through cmc.glasgow as the collection's style for 2024 declares. Not for analysis: read coh12_vh_qa_num.tif.",
-      "file:size": 1364825,
-      "file:checksum": "122040f416cadf710993554c5fe9c4ddfd9aeab2d484a043972e00132e80f3800b2c",
+      "description": "Pre-styled 8-bit WebP rendering of coh12_vh_qa_num on WebMercatorQuad z5-z13, stretched 0-90 through cmc.glasgow as the collection's style for 2022 declares. Not for analysis: read coh12_vh_qa_num.tif.",
+      "file:size": 1239924,
+      "file:checksum": "12207f2cffaf5a581521a13cb219648ab8dd13771da50b921b5eb3db4097907175ea",
       "proj:code": "EPSG:3857",
       "roles": [
         "visual"
@@ -190,9 +190,9 @@
       "href": "coh12_vh_viz.pmtiles",
       "type": "application/vnd.pmtiles",
       "title": "coh12_vh web-map tiles",
-      "description": "Pre-styled 8-bit WebP rendering of coh12_vh on WebMercatorQuad z5-z13, stretched 0.1-0.55 through cmc.lipari as the collection's style for 2024 declares. Not for analysis: read coh12_vh.tif.",
-      "file:size": 26733817,
-      "file:checksum": "1220e1e7789b791bcbd6331a978eaba3fd87c12cbe75961e432362500392e4c024da",
+      "description": "Pre-styled 8-bit WebP rendering of coh12_vh on WebMercatorQuad z5-z13, stretched 0.1-0.55 through cmc.lipari as the collection's style for 2022 declares. Not for analysis: read coh12_vh.tif.",
+      "file:size": 27803072,
+      "file:checksum": "1220596da869e4e9a556c2412ebd7fc07aa069698534d7e103e8785a954db359d4b9",
       "proj:code": "EPSG:3857",
       "roles": [
         "visual"
@@ -208,16 +208,16 @@
           "data_type": "float32",
           "nodata": "nan",
           "statistics": {
-            "maximum": 0.9800634384155273,
-            "mean": 0.34996391023908685,
-            "minimum": 0.03562599793076515,
-            "stddev": 0.20136732490653325,
+            "maximum": 0.9779447913169861,
+            "mean": 0.39930181918588925,
+            "minimum": 0.03853938728570938,
+            "stddev": 0.2251316210253277,
             "valid_percent": 28.60978607918263
           }
         }
       ],
-      "file:size": 18018199,
-      "file:checksum": "1220ef08d1623f4ec47fb0cf10e1829c6c18e9907e94b1f121baac54991394c05d5b",
+      "file:size": 18160618,
+      "file:checksum": "122067da8807346a88e6c3c469b0e2cf76ec317c14d9beba34df483b87e7f439a5d2",
       "raster:spatial_resolution": 40.0,
       "roles": [
         "data",
@@ -234,16 +234,16 @@
           "data_type": "float32",
           "nodata": "nan",
           "statistics": {
-            "maximum": 15722.765625,
-            "mean": 2.644023608269422,
-            "minimum": 0.02489924058318138,
-            "stddev": 16.372279144357062,
+            "maximum": 17969.435546875,
+            "mean": 2.498560962951952,
+            "minimum": 0.025052815675735474,
+            "stddev": 16.63169654498181,
             "valid_percent": 28.60978607918263
           }
         }
       ],
-      "file:size": 23197754,
-      "file:checksum": "12206acf79cb70619a7c7d5d6a9465c3ce1ae3884f8fcbe6416d212ddd7da1c78de0",
+      "file:size": 22997956,
+      "file:checksum": "1220646ff0aec440fe8162b43b7b782f7edf04ca3f199556d9e5b50a3fd742c70e76",
       "raster:spatial_resolution": 40.0,
       "roles": [
         "quality"
@@ -253,9 +253,9 @@
       "href": "coh12_vv_qa_cqm_viz.pmtiles",
       "type": "application/vnd.pmtiles",
       "title": "coh12_vv_qa_cqm web-map tiles",
-      "description": "Pre-styled 8-bit WebP rendering of coh12_vv_qa_cqm on WebMercatorQuad z5-z13, stretched -3-10 dB through cmc.glasgow as the collection's style for 2024 declares. Not for analysis: read coh12_vv_qa_cqm.tif.",
-      "file:size": 21663512,
-      "file:checksum": "1220cfc301e140b6da5144d9fcf494e1fc5a1d1162dc642fc39907254d03c9133a80",
+      "description": "Pre-styled 8-bit WebP rendering of coh12_vv_qa_cqm on WebMercatorQuad z5-z13, stretched -3-10 dB through cmc.glasgow as the collection's style for 2022 declares. Not for analysis: read coh12_vv_qa_cqm.tif.",
+      "file:size": 20812488,
+      "file:checksum": "1220218500681d919958cb7dbb376860f5b0d85622a6a8d6f261ca4df1df97a18976",
       "proj:code": "EPSG:3857",
       "roles": [
         "visual"
@@ -272,15 +272,15 @@
           "nodata": "nan",
           "statistics": {
             "maximum": 26.0,
-            "mean": 20.55902447619941,
-            "minimum": 4.929599285125732,
-            "stddev": 3.468966364023006,
+            "mean": 19.138577910180988,
+            "minimum": 4.0,
+            "stddev": 3.564773778605459,
             "valid_percent": 28.60978607918263
           }
         }
       ],
-      "file:size": 10141339,
-      "file:checksum": "122080d4476941bda4ee145e65c67b99791923aa0119f325fc90fbe7ecf74df2a5b9",
+      "file:size": 9527906,
+      "file:checksum": "1220b12f37c9aa71cbc000732967e2cd1044da176ea5539a631ec3c6e94f11f1a2c2",
       "raster:spatial_resolution": 40.0,
       "roles": [
         "quality"
@@ -290,9 +290,9 @@
       "href": "coh12_vv_qa_num_viz.pmtiles",
       "type": "application/vnd.pmtiles",
       "title": "coh12_vv_qa_num web-map tiles",
-      "description": "Pre-styled 8-bit WebP rendering of coh12_vv_qa_num on WebMercatorQuad z5-z13, stretched 0-90 through cmc.glasgow as the collection's style for 2024 declares. Not for analysis: read coh12_vv_qa_num.tif.",
-      "file:size": 1359288,
-      "file:checksum": "122039041a0c0497af2c6177722775f64ee0dd87d9a84a6ef48a32d4f1a762c71bde",
+      "description": "Pre-styled 8-bit WebP rendering of coh12_vv_qa_num on WebMercatorQuad z5-z13, stretched 0-90 through cmc.glasgow as the collection's style for 2022 declares. Not for analysis: read coh12_vv_qa_num.tif.",
+      "file:size": 1232410,
+      "file:checksum": "1220411f6997ab8a5e72bf5a7bb979a79a411e4e22286439604232d626119740f1de",
       "proj:code": "EPSG:3857",
       "roles": [
         "visual"
@@ -302,9 +302,9 @@
       "href": "coh12_vv_viz.pmtiles",
       "type": "application/vnd.pmtiles",
       "title": "coh12_vv web-map tiles",
-      "description": "Pre-styled 8-bit WebP rendering of coh12_vv on WebMercatorQuad z5-z13, stretched 0.1-0.75 through cmc.lipari as the collection's style for 2024 declares. Not for analysis: read coh12_vv.tif.",
-      "file:size": 24711746,
-      "file:checksum": "122020871aafaa7f09915cf7b4ead417009d4a3f230d2972014cd6f1b7ba24959d9d",
+      "description": "Pre-styled 8-bit WebP rendering of coh12_vv on WebMercatorQuad z5-z13, stretched 0.1-0.75 through cmc.lipari as the collection's style for 2022 declares. Not for analysis: read coh12_vv.tif.",
+      "file:size": 24894708,
+      "file:checksum": "12206b214e152d7b92b1026a86ae78217ad839b9a2d893becb7387413a76d14e283b",
       "proj:code": "EPSG:3857",
       "roles": [
         "visual"
@@ -314,9 +314,9 @@
       "href": "rtc_rgb_viz.pmtiles",
       "type": "application/vnd.pmtiles",
       "title": "rtc_rgb web-map tiles",
-      "description": "Pre-styled 8-bit WebP rendering of rtc_rgb on WebMercatorQuad z5-z13, stretched -16.5--4 dB as the collection's style for 2024 declares. Not for analysis: read rtc_vv.tif and rtc_vh.tif.",
-      "file:size": 40501783,
-      "file:checksum": "1220986196a3237c34680882e7e96f7f37892b73ed059bd2bd77d554deeceb406ab2",
+      "description": "Pre-styled 8-bit WebP rendering of rtc_rgb on WebMercatorQuad z5-z13, stretched -16.5--4 dB as the collection's style for 2022 declares. Not for analysis: read rtc_vv.tif and rtc_vh.tif.",
+      "file:size": 41057828,
+      "file:checksum": "12209d007b2fdb517ffa9f778dc15543c563b6e60ea09d626b8d261a111e4cd96e09",
       "proj:code": "EPSG:3857",
       "roles": [
         "visual"
@@ -333,16 +333,16 @@
           "nodata": "nan",
           "unit": "linear power",
           "statistics": {
-            "maximum": 10.684927940368652,
-            "mean": 0.028117667346453136,
-            "minimum": 0.00041868770495057106,
-            "stddev": 0.025732910259523973,
+            "maximum": 13.22424030303955,
+            "mean": 0.030079540526161703,
+            "minimum": 0.0005115942913107574,
+            "stddev": 0.028209288648260354,
             "valid_percent": 28.60978607918263
           }
         }
       ],
-      "file:size": 18560003,
-      "file:checksum": "122024349116af224b24cd223a678b8eccc3a93e99208aa3d37b26ed407d7ad3b8ec",
+      "file:size": 18771625,
+      "file:checksum": "122086b7e5fee73733287f33b94de2cb339101f93abb02c8b6e6f7d6a32d30b88b02",
       "raster:spatial_resolution": 40.0,
       "roles": [
         "data",
@@ -359,16 +359,16 @@
           "data_type": "float32",
           "nodata": "nan",
           "statistics": {
-            "maximum": 68.8956527709961,
-            "mean": 1.8586120940889617,
-            "minimum": 0.019764157012104988,
-            "stddev": 1.428832698166689,
+            "maximum": 192.7893524169922,
+            "mean": 1.7877478192186824,
+            "minimum": 0.019436132162809372,
+            "stddev": 1.3656791843735885,
             "valid_percent": 28.60978607918263
           }
         }
       ],
-      "file:size": 22601800,
-      "file:checksum": "122042916bf8a47a6799fff63c0003321b70b153d2c024dce305067b98b933ce3143",
+      "file:size": 22472074,
+      "file:checksum": "12201fa409426e153df8a00d0fcc19b0679f782ffe1af6a3c088cc51ae79112e996a",
       "raster:spatial_resolution": 40.0,
       "roles": [
         "quality"
@@ -378,9 +378,9 @@
       "href": "rtc_vh_qa_cqm_viz.pmtiles",
       "type": "application/vnd.pmtiles",
       "title": "rtc_vh_qa_cqm web-map tiles",
-      "description": "Pre-styled 8-bit WebP rendering of rtc_vh_qa_cqm on WebMercatorQuad z5-z13, stretched -4-8 dB through cmc.glasgow as the collection's style for 2024 declares. Not for analysis: read rtc_vh_qa_cqm.tif.",
-      "file:size": 23485244,
-      "file:checksum": "1220e6dfe8fe7faee8a0edb8def29adab3e430b50ae8c8c0b939a23c954b24455e86",
+      "description": "Pre-styled 8-bit WebP rendering of rtc_vh_qa_cqm on WebMercatorQuad z5-z13, stretched -4-8 dB through cmc.glasgow as the collection's style for 2022 declares. Not for analysis: read rtc_vh_qa_cqm.tif.",
+      "file:size": 22932998,
+      "file:checksum": "1220cd928c2a5464203e7f2ba357db21957c86dcb15eec6fb82713cd983687a17504",
       "proj:code": "EPSG:3857",
       "roles": [
         "visual"
@@ -397,15 +397,15 @@
           "nodata": "nan",
           "statistics": {
             "maximum": 30.0,
-            "mean": 23.810232400402274,
-            "minimum": 6.854053020477295,
-            "stddev": 4.158053437303677,
+            "mean": 22.541035180064462,
+            "minimum": 5.978515148162842,
+            "stddev": 4.2618896233306796,
             "valid_percent": 28.60978607918263
           }
         }
       ],
-      "file:size": 6637987,
-      "file:checksum": "1220daa3580ad160227a9b76d105c80692e9404a48e0c5714d9523865fdacd75c462",
+      "file:size": 6433068,
+      "file:checksum": "1220651bcd42eb9c45935d630215427684bc384112c4b7a51e5d731d5d5123a21080",
       "raster:spatial_resolution": 40.0,
       "roles": [
         "quality"
@@ -415,9 +415,9 @@
       "href": "rtc_vh_qa_num_viz.pmtiles",
       "type": "application/vnd.pmtiles",
       "title": "rtc_vh_qa_num web-map tiles",
-      "description": "Pre-styled 8-bit WebP rendering of rtc_vh_qa_num on WebMercatorQuad z5-z13, stretched 0-90 through cmc.glasgow as the collection's style for 2024 declares. Not for analysis: read rtc_vh_qa_num.tif.",
-      "file:size": 1946973,
-      "file:checksum": "122064c5798439cfc5c6c5cb2fd1d61d61fbacb33ddd4fa2c9b856e03b6e09d0aa45",
+      "description": "Pre-styled 8-bit WebP rendering of rtc_vh_qa_num on WebMercatorQuad z5-z13, stretched 0-90 through cmc.glasgow as the collection's style for 2022 declares. Not for analysis: read rtc_vh_qa_num.tif.",
+      "file:size": 1863326,
+      "file:checksum": "1220891292a1c45c3c3c5a69fa4132efcbb045b5b8117170b3b5a1ad0033afa0d295",
       "proj:code": "EPSG:3857",
       "roles": [
         "visual"
@@ -427,9 +427,9 @@
       "href": "rtc_vh_viz.pmtiles",
       "type": "application/vnd.pmtiles",
       "title": "rtc_vh web-map tiles",
-      "description": "Pre-styled 8-bit WebP rendering of rtc_vh on WebMercatorQuad z5-z13, stretched -23.5--11 dB through cmc.grayC as the collection's style for 2024 declares. Not for analysis: read rtc_vh.tif.",
-      "file:size": 32353571,
-      "file:checksum": "122002362c4766112b4fa34043835103a9436efe30e841d7e07f75d7bd3f7ce34efe",
+      "description": "Pre-styled 8-bit WebP rendering of rtc_vh on WebMercatorQuad z5-z13, stretched -23.5--11 dB through cmc.grayC as the collection's style for 2022 declares. Not for analysis: read rtc_vh.tif.",
+      "file:size": 33066781,
+      "file:checksum": "1220092d7c29e51750acb3c2136d086285075c2dc7b52afac023b0ae0beb801fdc53",
       "proj:code": "EPSG:3857",
       "roles": [
         "visual"
@@ -446,16 +446,16 @@
           "nodata": "nan",
           "unit": "linear power",
           "statistics": {
-            "maximum": 86.63924407958984,
-            "mean": 0.13871253052393206,
-            "minimum": 0.0015523985493928194,
-            "stddev": 0.16042914711205747,
+            "maximum": 96.27769470214844,
+            "mean": 0.1473465252944669,
+            "minimum": 0.0015684154350310564,
+            "stddev": 0.17586043366116808,
             "valid_percent": 28.60978607918263
           }
         }
       ],
-      "file:size": 22249169,
-      "file:checksum": "122071b98ac2e871a1576da79fc21643a7424a9c93de6fdda0586f2f7b829a84943c",
+      "file:size": 22412633,
+      "file:checksum": "1220968a12238bc54447131ef83ee24df1ec67e712b84abfc57ab4dab80922e0d87a",
       "raster:spatial_resolution": 40.0,
       "roles": [
         "data",
@@ -472,16 +472,16 @@
           "data_type": "float32",
           "nodata": "nan",
           "statistics": {
-            "maximum": 68.8956527709961,
-            "mean": 1.8586013050162118,
-            "minimum": 0.019764157012104988,
-            "stddev": 1.428509577122898,
+            "maximum": 192.7893524169922,
+            "mean": 1.787550267318993,
+            "minimum": 0.019436132162809372,
+            "stddev": 1.3617714245476056,
             "valid_percent": 28.60978607918263
           }
         }
       ],
-      "file:size": 22594825,
-      "file:checksum": "12206eb2c9a37ac551a50ed37bc79bb924f7308f6a2378220070bafbca6756f39d18",
+      "file:size": 22481424,
+      "file:checksum": "12207f09f1877604cac3e0331ca5bded9f1bca7f3f217b0c7991ba075c89fec9e94c",
       "raster:spatial_resolution": 40.0,
       "roles": [
         "quality"
@@ -491,9 +491,9 @@
       "href": "rtc_vv_qa_cqm_viz.pmtiles",
       "type": "application/vnd.pmtiles",
       "title": "rtc_vv_qa_cqm web-map tiles",
-      "description": "Pre-styled 8-bit WebP rendering of rtc_vv_qa_cqm on WebMercatorQuad z5-z13, stretched -4-8 dB through cmc.glasgow as the collection's style for 2024 declares. Not for analysis: read rtc_vv_qa_cqm.tif.",
-      "file:size": 23490858,
-      "file:checksum": "1220bcf6965b71df600434012dc88b9d5849d564949d09451b10297c9a04831c9a2c",
+      "description": "Pre-styled 8-bit WebP rendering of rtc_vv_qa_cqm on WebMercatorQuad z5-z13, stretched -4-8 dB through cmc.glasgow as the collection's style for 2022 declares. Not for analysis: read rtc_vv_qa_cqm.tif.",
+      "file:size": 22930675,
+      "file:checksum": "1220732fde6f7a105c3959433a89cef7b0055afbb10a9b8c4c4f0fe039fa48c43b1b",
       "proj:code": "EPSG:3857",
       "roles": [
         "visual"
@@ -510,15 +510,15 @@
           "nodata": "nan",
           "statistics": {
             "maximum": 30.0,
-            "mean": 23.81023401063402,
-            "minimum": 6.854053020477295,
-            "stddev": 4.158054138327117,
+            "mean": 22.541036738210362,
+            "minimum": 5.978515148162842,
+            "stddev": 4.261890350442662,
             "valid_percent": 28.60978607918263
           }
         }
       ],
-      "file:size": 6637891,
-      "file:checksum": "1220657892f2f8eb2db0be5f96298f56ae8a46400cec99982e8ccebea343147c4bf7",
+      "file:size": 6433054,
+      "file:checksum": "12204cd543cd9fd8c5ce8e66aa9921d2ce8e290028941fc5ecd8077bfce64b16c783",
       "raster:spatial_resolution": 40.0,
       "roles": [
         "quality"
@@ -528,9 +528,9 @@
       "href": "rtc_vv_qa_num_viz.pmtiles",
       "type": "application/vnd.pmtiles",
       "title": "rtc_vv_qa_num web-map tiles",
-      "description": "Pre-styled 8-bit WebP rendering of rtc_vv_qa_num on WebMercatorQuad z5-z13, stretched 0-90 through cmc.glasgow as the collection's style for 2024 declares. Not for analysis: read rtc_vv_qa_num.tif.",
-      "file:size": 1946981,
-      "file:checksum": "122046e37aae9fb29791a94fcba4d78f27d794d9acb9e39b5f079316c069f1fca6b2",
+      "description": "Pre-styled 8-bit WebP rendering of rtc_vv_qa_num on WebMercatorQuad z5-z13, stretched 0-90 through cmc.glasgow as the collection's style for 2022 declares. Not for analysis: read rtc_vv_qa_num.tif.",
+      "file:size": 1863253,
+      "file:checksum": "1220f2d116eb6c3dcf994905b9f0a2cde698e7bb4ed885dff5a020dae586c73f5133",
       "proj:code": "EPSG:3857",
       "roles": [
         "visual"
@@ -540,9 +540,9 @@
       "href": "rtc_vv_viz.pmtiles",
       "type": "application/vnd.pmtiles",
       "title": "rtc_vv web-map tiles",
-      "description": "Pre-styled 8-bit WebP rendering of rtc_vv on WebMercatorQuad z5-z13, stretched -16.5--4 dB through cmc.grayC as the collection's style for 2024 declares. Not for analysis: read rtc_vv.tif.",
-      "file:size": 33414812,
-      "file:checksum": "1220f9bffd28b5dba2f9d3eaae6e2dcb89440b692e9574688b1f26037a4d31062d04",
+      "description": "Pre-styled 8-bit WebP rendering of rtc_vv on WebMercatorQuad z5-z13, stretched -16.5--4 dB through cmc.grayC as the collection's style for 2022 declares. Not for analysis: read rtc_vv.tif.",
+      "file:size": 34094882,
+      "file:checksum": "1220598a1206d0b75fc4a54c23b871c550135025fddbfddd31e367c42d6ebf42b9c6",
       "proj:code": "EPSG:3857",
       "roles": [
         "visual"

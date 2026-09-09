@@ -13,7 +13,7 @@
   ],
   "id": "glace-ch-mosaics",
   "title": "GLACE mosaics — annual Sentinel-1 composites on a fixed equal-area grid",
-  "description": "One mosaic per year of the GLACE composites, warped from the 10 m MGRS tiles onto ETRS89-LAEA (EPSG:3035) at 40 m. The grid is equal-area, so an area or area-change statistic can be taken from pixel counts without a latitude correction; WebMercator, where a nominal 19.109 m pixel is about 13.2 m on the ground at 46.5 degrees north, cannot do that. Every year sits on the same fixed extent, hard-coded rather than derived from whichever tiles happen to exist, so the series stacks and differences with no alignment step. Twelve single-band analysis rasters per year, in linear units, each a Cloud-Optimized GeoTIFF with 256-pixel blocks and averaged internal overviews. Drawing is served separately by PMTiles archives registered on this collection, tiled on the WebMercatorQuad grid at zoom 13 with MapLibre styles alongside them; both products are resampled from the 10 m tiles, so neither is derived from the other. The observation-count layers become a mean rather than a count under averaging, and are described as such.",
+  "description": "One mosaic per year of the GLACE composites, warped from the 10 m MGRS tiles onto ETRS89-LAEA (EPSG:3035) at 40 m. The grid is equal-area, so an area or area-change statistic can be taken from pixel counts without a latitude correction; WebMercator, where a nominal 19.109 m pixel is about 13.2 m on the ground at 46.5 degrees north, cannot do that. Every year sits on the same fixed extent, hard-coded rather than derived from whichever tiles happen to exist, so the series stacks and differences with no alignment step. Twelve single-band analysis rasters per year, in linear units, each a Cloud-Optimized GeoTIFF with 256-pixel blocks and averaged internal overviews. Drawing is served separately by fourteen PMTiles archives per year, tiled on the WebMercatorQuad grid at zoom 13: each is an asset of that year's item with the visual role, named {stem}_viz.pmtiles beside the raster it renders, registered on this collection as a rel pmtiles link, and drawn by the MapLibre style this collection publishes for that year. Both products are resampled from the 10 m tiles, so neither is derived from the other. The observation-count layers become a mean rather than a count under averaging, and are described as such.",
   "license": "CC-BY-4.0",
   "keywords": [
     "Sentinel-1",
@@ -62,7 +62,7 @@
     "temporal": {
       "interval": [
         [
-          "2024-07-09T00:00:00Z",
+          "2021-07-11T00:00:00Z",
           "2024-10-07T00:00:00Z"
         ]
       ]
@@ -318,6 +318,132 @@
           "nodata": "nan"
         }
       ]
+    },
+    "coh12_vv_viz": {
+      "type": "application/vnd.pmtiles",
+      "title": "coh12_vv web-map tiles",
+      "description": "Pre-styled 8-bit WebP rendering of coh12_vv on WebMercatorQuad z5-z13, stretched as the year's style declares. Not for analysis: read coh12_vv.tif.",
+      "roles": [
+        "visual"
+      ],
+      "proj:code": "EPSG:3857"
+    },
+    "coh12_vh_viz": {
+      "type": "application/vnd.pmtiles",
+      "title": "coh12_vh web-map tiles",
+      "description": "Pre-styled 8-bit WebP rendering of coh12_vh on WebMercatorQuad z5-z13, stretched as the year's style declares. Not for analysis: read coh12_vh.tif.",
+      "roles": [
+        "visual"
+      ],
+      "proj:code": "EPSG:3857"
+    },
+    "rtc_vv_viz": {
+      "type": "application/vnd.pmtiles",
+      "title": "rtc_vv web-map tiles",
+      "description": "Pre-styled 8-bit WebP rendering of rtc_vv on WebMercatorQuad z5-z13, stretched as the year's style declares. Not for analysis: read rtc_vv.tif.",
+      "roles": [
+        "visual"
+      ],
+      "proj:code": "EPSG:3857"
+    },
+    "rtc_vh_viz": {
+      "type": "application/vnd.pmtiles",
+      "title": "rtc_vh web-map tiles",
+      "description": "Pre-styled 8-bit WebP rendering of rtc_vh on WebMercatorQuad z5-z13, stretched as the year's style declares. Not for analysis: read rtc_vh.tif.",
+      "roles": [
+        "visual"
+      ],
+      "proj:code": "EPSG:3857"
+    },
+    "coh12_rgb_viz": {
+      "type": "application/vnd.pmtiles",
+      "title": "coh12_rgb web-map tiles",
+      "description": "Pre-styled 8-bit WebP rendering of coh12_rgb on WebMercatorQuad z5-z13, stretched as the year's style declares. Not for analysis: read coh12_vv.tif and coh12_vh.tif.",
+      "roles": [
+        "visual"
+      ],
+      "proj:code": "EPSG:3857"
+    },
+    "rtc_rgb_viz": {
+      "type": "application/vnd.pmtiles",
+      "title": "rtc_rgb web-map tiles",
+      "description": "Pre-styled 8-bit WebP rendering of rtc_rgb on WebMercatorQuad z5-z13, stretched as the year's style declares. Not for analysis: read rtc_vv.tif and rtc_vh.tif.",
+      "roles": [
+        "visual"
+      ],
+      "proj:code": "EPSG:3857"
+    },
+    "coh12_vv_qa_num_viz": {
+      "type": "application/vnd.pmtiles",
+      "title": "coh12_vv_qa_num web-map tiles",
+      "description": "Pre-styled 8-bit WebP rendering of coh12_vv_qa_num on WebMercatorQuad z5-z13, stretched as the year's style declares. Not for analysis: read coh12_vv_qa_num.tif.",
+      "roles": [
+        "visual"
+      ],
+      "proj:code": "EPSG:3857"
+    },
+    "coh12_vh_qa_num_viz": {
+      "type": "application/vnd.pmtiles",
+      "title": "coh12_vh_qa_num web-map tiles",
+      "description": "Pre-styled 8-bit WebP rendering of coh12_vh_qa_num on WebMercatorQuad z5-z13, stretched as the year's style declares. Not for analysis: read coh12_vh_qa_num.tif.",
+      "roles": [
+        "visual"
+      ],
+      "proj:code": "EPSG:3857"
+    },
+    "rtc_vv_qa_num_viz": {
+      "type": "application/vnd.pmtiles",
+      "title": "rtc_vv_qa_num web-map tiles",
+      "description": "Pre-styled 8-bit WebP rendering of rtc_vv_qa_num on WebMercatorQuad z5-z13, stretched as the year's style declares. Not for analysis: read rtc_vv_qa_num.tif.",
+      "roles": [
+        "visual"
+      ],
+      "proj:code": "EPSG:3857"
+    },
+    "rtc_vh_qa_num_viz": {
+      "type": "application/vnd.pmtiles",
+      "title": "rtc_vh_qa_num web-map tiles",
+      "description": "Pre-styled 8-bit WebP rendering of rtc_vh_qa_num on WebMercatorQuad z5-z13, stretched as the year's style declares. Not for analysis: read rtc_vh_qa_num.tif.",
+      "roles": [
+        "visual"
+      ],
+      "proj:code": "EPSG:3857"
+    },
+    "coh12_vv_qa_cqm_viz": {
+      "type": "application/vnd.pmtiles",
+      "title": "coh12_vv_qa_cqm web-map tiles",
+      "description": "Pre-styled 8-bit WebP rendering of coh12_vv_qa_cqm on WebMercatorQuad z5-z13, stretched as the year's style declares. Not for analysis: read coh12_vv_qa_cqm.tif.",
+      "roles": [
+        "visual"
+      ],
+      "proj:code": "EPSG:3857"
+    },
+    "coh12_vh_qa_cqm_viz": {
+      "type": "application/vnd.pmtiles",
+      "title": "coh12_vh_qa_cqm web-map tiles",
+      "description": "Pre-styled 8-bit WebP rendering of coh12_vh_qa_cqm on WebMercatorQuad z5-z13, stretched as the year's style declares. Not for analysis: read coh12_vh_qa_cqm.tif.",
+      "roles": [
+        "visual"
+      ],
+      "proj:code": "EPSG:3857"
+    },
+    "rtc_vv_qa_cqm_viz": {
+      "type": "application/vnd.pmtiles",
+      "title": "rtc_vv_qa_cqm web-map tiles",
+      "description": "Pre-styled 8-bit WebP rendering of rtc_vv_qa_cqm on WebMercatorQuad z5-z13, stretched as the year's style declares. Not for analysis: read rtc_vv_qa_cqm.tif.",
+      "roles": [
+        "visual"
+      ],
+      "proj:code": "EPSG:3857"
+    },
+    "rtc_vh_qa_cqm_viz": {
+      "type": "application/vnd.pmtiles",
+      "title": "rtc_vh_qa_cqm web-map tiles",
+      "description": "Pre-styled 8-bit WebP rendering of rtc_vh_qa_cqm on WebMercatorQuad z5-z13, stretched as the year's style declares. Not for analysis: read rtc_vh_qa_cqm.tif.",
+      "roles": [
+        "visual"
+      ],
+      "proj:code": "EPSG:3857"
     }
   },
   "assets": {
@@ -335,31 +461,64 @@
           "alternate:name": "S3"
         }
       },
-      "file:size": 316143,
-      "file:checksum": "12208d2632b5b4154f0d77d34e21ad8c71f1370a6cbce8b1f7a12698547059808b1a"
+      "file:size": 385139,
+      "file:checksum": "1220836fc99e1d2c9c77cdbe724b1ba4ba742aa8b7422dce269a06979dee0ad31974"
     },
     "thumbnail": {
       "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/thumbnail.png",
       "type": "image/png",
       "title": "GLACE mosaics preview",
-      "description": "Rendered from the most recent year's coh12_rgb web-map archive, so the preview obeys the committed MapLibre style by construction.",
+      "description": "Rendered from the most recent year's coh12_rgb_viz.pmtiles archive, so the preview obeys the committed MapLibre style by construction.",
       "roles": [
         "thumbnail"
       ],
-      "file:size": 781663,
-      "file:checksum": "12205fd5f949ad6207df7d0afa1648da12e1968ec0a29e71ec664a21df51e61a247b"
+      "file:size": 792651,
+      "file:checksum": "12204508844b30d34a8827f2f0c5e63a92db5eb71d6aca6c3573156878ca3ee941a2"
     },
-    "style-default": {
-      "href": "./styles/default.json",
+    "style-2021": {
+      "href": "./styles/2021.json",
       "type": "application/vnd.mapbox.style+json",
-      "title": "GLACE web-map style",
-      "description": "Every published web-map layer of the most recent year, the first visible and the rest hidden. Each layer's metadata.portolan:legend carries the colour ramp and value range baked into its archive, which is where those constants live.",
+      "title": "GLACE web-map style (2021)",
+      "description": "Every published web-map layer of 2021, the first visible and the rest hidden. Each layer's metadata.portolan:legend carries the colour ramp and value range baked into its archive, which is where those constants live.",
+      "roles": [
+        "style"
+      ],
+      "file:size": 37641,
+      "file:checksum": "122020f236a74607ffb067956ffe1f3076e9580936ad582ae418a54a686912bd468c"
+    },
+    "style-2022": {
+      "href": "./styles/2022.json",
+      "type": "application/vnd.mapbox.style+json",
+      "title": "GLACE web-map style (2022)",
+      "description": "Every published web-map layer of 2022, the first visible and the rest hidden. Each layer's metadata.portolan:legend carries the colour ramp and value range baked into its archive, which is where those constants live.",
+      "roles": [
+        "style"
+      ],
+      "file:size": 37641,
+      "file:checksum": "1220651bed65797b8a0a6d0739bacdeee43bb4488ae23b28c1547bc275b85125c592"
+    },
+    "style-2023": {
+      "href": "./styles/2023.json",
+      "type": "application/vnd.mapbox.style+json",
+      "title": "GLACE web-map style (2023)",
+      "description": "Every published web-map layer of 2023, the first visible and the rest hidden. Each layer's metadata.portolan:legend carries the colour ramp and value range baked into its archive, which is where those constants live.",
+      "roles": [
+        "style"
+      ],
+      "file:size": 37641,
+      "file:checksum": "122036dc04e1942b643a069d2e0ccfb2fb6d34ae80c3f0db8a636bdf4fc883f48b81"
+    },
+    "style-2024": {
+      "href": "./styles/2024.json",
+      "type": "application/vnd.mapbox.style+json",
+      "title": "GLACE web-map style (2024)",
+      "description": "Every published web-map layer of 2024, the first visible and the rest hidden. Each layer's metadata.portolan:legend carries the colour ramp and value range baked into its archive, which is where those constants live.",
       "roles": [
         "style",
         "default"
       ],
-      "file:size": 37744,
-      "file:checksum": "1220ff285aa673d09ad6661750d38f1325c92f42c0ce19b272536b31b8069995557d"
+      "file:size": 37641,
+      "file:checksum": "1220655faa2c33dd72a934bbf378ce632e4f01dce1a540e3e4a8bf5e9d44262bbb39"
     }
   },
   "links": [
@@ -395,13 +554,409 @@
     },
     {
       "rel": "item",
+      "href": "./2021/item.json",
+      "type": "application/geo+json",
+      "title": "GLACE annual mosaic, 2021"
+    },
+    {
+      "rel": "item",
+      "href": "./2022/item.json",
+      "type": "application/geo+json",
+      "title": "GLACE annual mosaic, 2022"
+    },
+    {
+      "rel": "item",
+      "href": "./2023/item.json",
+      "type": "application/geo+json",
+      "title": "GLACE annual mosaic, 2023"
+    },
+    {
+      "rel": "item",
       "href": "./2024/item.json",
       "type": "application/geo+json",
       "title": "GLACE annual mosaic, 2024"
     },
     {
       "rel": "pmtiles",
-      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/pmtiles/2024/coh12_rgb.pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2021/coh12_rgb_viz.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "coh12_rgb web-map tiles, 2021",
+      "pmtiles:layers": [
+        "glace-coh12_rgb-2021"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2021/coh12_vh_qa_cqm_viz.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "coh12_vh_qa_cqm web-map tiles, 2021",
+      "pmtiles:layers": [
+        "glace-coh12_vh_qa_cqm-2021"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2021/coh12_vh_qa_num_viz.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "coh12_vh_qa_num web-map tiles, 2021",
+      "pmtiles:layers": [
+        "glace-coh12_vh_qa_num-2021"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2021/coh12_vh_viz.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "coh12_vh web-map tiles, 2021",
+      "pmtiles:layers": [
+        "glace-coh12_vh-2021"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2021/coh12_vv_qa_cqm_viz.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "coh12_vv_qa_cqm web-map tiles, 2021",
+      "pmtiles:layers": [
+        "glace-coh12_vv_qa_cqm-2021"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2021/coh12_vv_qa_num_viz.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "coh12_vv_qa_num web-map tiles, 2021",
+      "pmtiles:layers": [
+        "glace-coh12_vv_qa_num-2021"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2021/coh12_vv_viz.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "coh12_vv web-map tiles, 2021",
+      "pmtiles:layers": [
+        "glace-coh12_vv-2021"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2021/rtc_rgb_viz.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "rtc_rgb web-map tiles, 2021",
+      "pmtiles:layers": [
+        "glace-rtc_rgb-2021"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2021/rtc_vh_qa_cqm_viz.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "rtc_vh_qa_cqm web-map tiles, 2021",
+      "pmtiles:layers": [
+        "glace-rtc_vh_qa_cqm-2021"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2021/rtc_vh_qa_num_viz.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "rtc_vh_qa_num web-map tiles, 2021",
+      "pmtiles:layers": [
+        "glace-rtc_vh_qa_num-2021"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2021/rtc_vh_viz.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "rtc_vh web-map tiles, 2021",
+      "pmtiles:layers": [
+        "glace-rtc_vh-2021"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2021/rtc_vv_qa_cqm_viz.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "rtc_vv_qa_cqm web-map tiles, 2021",
+      "pmtiles:layers": [
+        "glace-rtc_vv_qa_cqm-2021"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2021/rtc_vv_qa_num_viz.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "rtc_vv_qa_num web-map tiles, 2021",
+      "pmtiles:layers": [
+        "glace-rtc_vv_qa_num-2021"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2021/rtc_vv_viz.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "rtc_vv web-map tiles, 2021",
+      "pmtiles:layers": [
+        "glace-rtc_vv-2021"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2022/coh12_rgb_viz.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "coh12_rgb web-map tiles, 2022",
+      "pmtiles:layers": [
+        "glace-coh12_rgb-2022"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2022/coh12_vh_qa_cqm_viz.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "coh12_vh_qa_cqm web-map tiles, 2022",
+      "pmtiles:layers": [
+        "glace-coh12_vh_qa_cqm-2022"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2022/coh12_vh_qa_num_viz.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "coh12_vh_qa_num web-map tiles, 2022",
+      "pmtiles:layers": [
+        "glace-coh12_vh_qa_num-2022"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2022/coh12_vh_viz.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "coh12_vh web-map tiles, 2022",
+      "pmtiles:layers": [
+        "glace-coh12_vh-2022"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2022/coh12_vv_qa_cqm_viz.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "coh12_vv_qa_cqm web-map tiles, 2022",
+      "pmtiles:layers": [
+        "glace-coh12_vv_qa_cqm-2022"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2022/coh12_vv_qa_num_viz.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "coh12_vv_qa_num web-map tiles, 2022",
+      "pmtiles:layers": [
+        "glace-coh12_vv_qa_num-2022"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2022/coh12_vv_viz.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "coh12_vv web-map tiles, 2022",
+      "pmtiles:layers": [
+        "glace-coh12_vv-2022"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2022/rtc_rgb_viz.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "rtc_rgb web-map tiles, 2022",
+      "pmtiles:layers": [
+        "glace-rtc_rgb-2022"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2022/rtc_vh_qa_cqm_viz.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "rtc_vh_qa_cqm web-map tiles, 2022",
+      "pmtiles:layers": [
+        "glace-rtc_vh_qa_cqm-2022"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2022/rtc_vh_qa_num_viz.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "rtc_vh_qa_num web-map tiles, 2022",
+      "pmtiles:layers": [
+        "glace-rtc_vh_qa_num-2022"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2022/rtc_vh_viz.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "rtc_vh web-map tiles, 2022",
+      "pmtiles:layers": [
+        "glace-rtc_vh-2022"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2022/rtc_vv_qa_cqm_viz.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "rtc_vv_qa_cqm web-map tiles, 2022",
+      "pmtiles:layers": [
+        "glace-rtc_vv_qa_cqm-2022"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2022/rtc_vv_qa_num_viz.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "rtc_vv_qa_num web-map tiles, 2022",
+      "pmtiles:layers": [
+        "glace-rtc_vv_qa_num-2022"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2022/rtc_vv_viz.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "rtc_vv web-map tiles, 2022",
+      "pmtiles:layers": [
+        "glace-rtc_vv-2022"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2023/coh12_rgb_viz.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "coh12_rgb web-map tiles, 2023",
+      "pmtiles:layers": [
+        "glace-coh12_rgb-2023"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2023/coh12_vh_qa_cqm_viz.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "coh12_vh_qa_cqm web-map tiles, 2023",
+      "pmtiles:layers": [
+        "glace-coh12_vh_qa_cqm-2023"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2023/coh12_vh_qa_num_viz.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "coh12_vh_qa_num web-map tiles, 2023",
+      "pmtiles:layers": [
+        "glace-coh12_vh_qa_num-2023"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2023/coh12_vh_viz.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "coh12_vh web-map tiles, 2023",
+      "pmtiles:layers": [
+        "glace-coh12_vh-2023"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2023/coh12_vv_qa_cqm_viz.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "coh12_vv_qa_cqm web-map tiles, 2023",
+      "pmtiles:layers": [
+        "glace-coh12_vv_qa_cqm-2023"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2023/coh12_vv_qa_num_viz.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "coh12_vv_qa_num web-map tiles, 2023",
+      "pmtiles:layers": [
+        "glace-coh12_vv_qa_num-2023"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2023/coh12_vv_viz.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "coh12_vv web-map tiles, 2023",
+      "pmtiles:layers": [
+        "glace-coh12_vv-2023"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2023/rtc_rgb_viz.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "rtc_rgb web-map tiles, 2023",
+      "pmtiles:layers": [
+        "glace-rtc_rgb-2023"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2023/rtc_vh_qa_cqm_viz.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "rtc_vh_qa_cqm web-map tiles, 2023",
+      "pmtiles:layers": [
+        "glace-rtc_vh_qa_cqm-2023"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2023/rtc_vh_qa_num_viz.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "rtc_vh_qa_num web-map tiles, 2023",
+      "pmtiles:layers": [
+        "glace-rtc_vh_qa_num-2023"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2023/rtc_vh_viz.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "rtc_vh web-map tiles, 2023",
+      "pmtiles:layers": [
+        "glace-rtc_vh-2023"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2023/rtc_vv_qa_cqm_viz.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "rtc_vv_qa_cqm web-map tiles, 2023",
+      "pmtiles:layers": [
+        "glace-rtc_vv_qa_cqm-2023"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2023/rtc_vv_qa_num_viz.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "rtc_vv_qa_num web-map tiles, 2023",
+      "pmtiles:layers": [
+        "glace-rtc_vv_qa_num-2023"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2023/rtc_vv_viz.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "rtc_vv web-map tiles, 2023",
+      "pmtiles:layers": [
+        "glace-rtc_vv-2023"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2024/coh12_rgb_viz.pmtiles",
       "type": "application/vnd.pmtiles",
       "title": "coh12_rgb web-map tiles, 2024",
       "pmtiles:layers": [
@@ -410,16 +965,7 @@
     },
     {
       "rel": "pmtiles",
-      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/pmtiles/2024/coh12_vh.pmtiles",
-      "type": "application/vnd.pmtiles",
-      "title": "coh12_vh web-map tiles, 2024",
-      "pmtiles:layers": [
-        "glace-coh12_vh-2024"
-      ]
-    },
-    {
-      "rel": "pmtiles",
-      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/pmtiles/2024/coh12_vh_qa_cqm.pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2024/coh12_vh_qa_cqm_viz.pmtiles",
       "type": "application/vnd.pmtiles",
       "title": "coh12_vh_qa_cqm web-map tiles, 2024",
       "pmtiles:layers": [
@@ -428,7 +974,7 @@
     },
     {
       "rel": "pmtiles",
-      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/pmtiles/2024/coh12_vh_qa_num.pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2024/coh12_vh_qa_num_viz.pmtiles",
       "type": "application/vnd.pmtiles",
       "title": "coh12_vh_qa_num web-map tiles, 2024",
       "pmtiles:layers": [
@@ -437,16 +983,16 @@
     },
     {
       "rel": "pmtiles",
-      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/pmtiles/2024/coh12_vv.pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2024/coh12_vh_viz.pmtiles",
       "type": "application/vnd.pmtiles",
-      "title": "coh12_vv web-map tiles, 2024",
+      "title": "coh12_vh web-map tiles, 2024",
       "pmtiles:layers": [
-        "glace-coh12_vv-2024"
+        "glace-coh12_vh-2024"
       ]
     },
     {
       "rel": "pmtiles",
-      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/pmtiles/2024/coh12_vv_qa_cqm.pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2024/coh12_vv_qa_cqm_viz.pmtiles",
       "type": "application/vnd.pmtiles",
       "title": "coh12_vv_qa_cqm web-map tiles, 2024",
       "pmtiles:layers": [
@@ -455,7 +1001,7 @@
     },
     {
       "rel": "pmtiles",
-      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/pmtiles/2024/coh12_vv_qa_num.pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2024/coh12_vv_qa_num_viz.pmtiles",
       "type": "application/vnd.pmtiles",
       "title": "coh12_vv_qa_num web-map tiles, 2024",
       "pmtiles:layers": [
@@ -464,7 +1010,16 @@
     },
     {
       "rel": "pmtiles",
-      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/pmtiles/2024/rtc_rgb.pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2024/coh12_vv_viz.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "coh12_vv web-map tiles, 2024",
+      "pmtiles:layers": [
+        "glace-coh12_vv-2024"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2024/rtc_rgb_viz.pmtiles",
       "type": "application/vnd.pmtiles",
       "title": "rtc_rgb web-map tiles, 2024",
       "pmtiles:layers": [
@@ -473,16 +1028,7 @@
     },
     {
       "rel": "pmtiles",
-      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/pmtiles/2024/rtc_vh.pmtiles",
-      "type": "application/vnd.pmtiles",
-      "title": "rtc_vh web-map tiles, 2024",
-      "pmtiles:layers": [
-        "glace-rtc_vh-2024"
-      ]
-    },
-    {
-      "rel": "pmtiles",
-      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/pmtiles/2024/rtc_vh_qa_cqm.pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2024/rtc_vh_qa_cqm_viz.pmtiles",
       "type": "application/vnd.pmtiles",
       "title": "rtc_vh_qa_cqm web-map tiles, 2024",
       "pmtiles:layers": [
@@ -491,7 +1037,7 @@
     },
     {
       "rel": "pmtiles",
-      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/pmtiles/2024/rtc_vh_qa_num.pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2024/rtc_vh_qa_num_viz.pmtiles",
       "type": "application/vnd.pmtiles",
       "title": "rtc_vh_qa_num web-map tiles, 2024",
       "pmtiles:layers": [
@@ -500,16 +1046,16 @@
     },
     {
       "rel": "pmtiles",
-      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/pmtiles/2024/rtc_vv.pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2024/rtc_vh_viz.pmtiles",
       "type": "application/vnd.pmtiles",
-      "title": "rtc_vv web-map tiles, 2024",
+      "title": "rtc_vh web-map tiles, 2024",
       "pmtiles:layers": [
-        "glace-rtc_vv-2024"
+        "glace-rtc_vh-2024"
       ]
     },
     {
       "rel": "pmtiles",
-      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/pmtiles/2024/rtc_vv_qa_cqm.pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2024/rtc_vv_qa_cqm_viz.pmtiles",
       "type": "application/vnd.pmtiles",
       "title": "rtc_vv_qa_cqm web-map tiles, 2024",
       "pmtiles:layers": [
@@ -518,11 +1064,20 @@
     },
     {
       "rel": "pmtiles",
-      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/pmtiles/2024/rtc_vv_qa_num.pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2024/rtc_vv_qa_num_viz.pmtiles",
       "type": "application/vnd.pmtiles",
       "title": "rtc_vv_qa_num web-map tiles, 2024",
       "pmtiles:layers": [
         "glace-rtc_vv_qa_num-2024"
+      ]
+    },
+    {
+      "rel": "pmtiles",
+      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/2024/rtc_vv_viz.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "rtc_vv web-map tiles, 2024",
+      "pmtiles:layers": [
+        "glace-rtc_vv-2024"
       ]
     }
   ]

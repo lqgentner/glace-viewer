@@ -327,15 +327,18 @@ the style; this page draws the legend from the same block.
 
 | layer | range | colour map |
 | --- | --- | --- |
-| COH12 VV / VH | `[0.10, 0.80]` / `[0.10, 0.60]` | `cmc.lipari` |
-| RTC VV / VH | `[-18.5, -5]` / `[-26, -11]` dB | `cmc.grayC` |
-| QA-NUM, all four | `[0, 70]` | `cmc.turku` |
-| QA-CQM, all four | `[-3, 3]` dB, higher is better | `cmc.glasgow` |
+| COH12 VV / VH | `[0.10, 0.75]` / `[0.10, 0.55]` | `cmc.lipari` |
+| RTC VV / VH | `[-16.5, -4]` / `[-23.5, -11]` dB | `cmc.grayC` |
+| QA-NUM, all four | `[0, 90]` | `cmc.glasgow` |
+| QA-CQM | `[-3, 10]` dB COH12, `[-4, 8]` dB RTC, higher is better | `cmc.glasgow` |
 | false colour | three channels from `portolan:legend` | — |
 
 - **Ranges are fixed per layer on purpose.** A per-year percentile stretch
-  would hide a real change between years. QA-NUM spans 0–70 rather than the
-  observed 26–30 because 2021 reaches 58 with S1B still flying.
+  would hide a real change between years. Every range was remeasured on the
+  warped 2021–2024 display mosaics on 2026-09-09 (2–98 %, averaged over the
+  years). QA-NUM spans 0–90 rather than the observed 26–30 because 2021
+  reaches 58 with S1B still flying and 2026 flies three satellites. QA-CQM is
+  one-sided and keeps its measured range: 0 dB is not a meaningful middle.
 - 17 stops per ramp: at nine, linear sRGB interpolation drifted up to 8/255
   through lipari's midrange; seventeen keeps it under 4/255.
 - The false colour's legend numbers come only from the published channels;

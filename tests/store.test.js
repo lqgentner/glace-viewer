@@ -23,8 +23,18 @@ const read = (...where) =>
   JSON.parse(fs.readFileSync(path.join(REPO, "tests", "fixtures", ...where), "utf8"));
 const COLLECTION_URL = "https://tiles.example/glace/mosaics/collection.json";
 
-const collection = read("store", "collection.json");
-const style = read("store", "style.json");
+/* The published collection lists four years; the unit cases below reason about
+ * one, so the base is its 2024 slice: that year's links and that year's style,
+ * which is the one the collection marks as the default. */
+const published = read("store", "collection.json");
+const collection = {
+  ...published,
+  assets: Object.fromEntries(
+    Object.entries(published.assets).filter(([key]) => !key.startsWith("style-") || key === "style-2024"),
+  ),
+  links: published.links.filter((link) => link.rel !== "pmtiles" || link.href.includes("/2024/")),
+};
+const style = read("store", "style-2024.json");
 
 const layers = (over = {}) =>
   storeLayers(
@@ -56,7 +66,7 @@ test("the archive URL comes from the link, resolved against the collection", () 
   const layer = byId(layers()).get("glace-coh12_vv-2024");
   assert.equal(
     layer.url,
-    "https://data.source.coop/lqgentner/glace-ch/mosaics/pmtiles/2024/coh12_vv.pmtiles",
+    "https://data.source.coop/lqgentner/glace-ch/mosaics/2024/coh12_vv_viz.pmtiles",
   );
 });
 
@@ -64,20 +74,20 @@ test("the ramp, the stretch and the zooms come from the style", () => {
   const found = byId(layers());
   const vv = found.get("glace-coh12_vv-2024");
   assert.equal(vv.cmap, "cmc.lipari");
-  assert.deepEqual([vv.vmin, vv.vmax], [0.1, 0.8]);
+  assert.deepEqual([vv.vmin, vv.vmax], [0.1, 0.75]);
   assert.equal(vv.units, "");
   assert.equal(vv.colors.length, 17, "seventeen stops, as the store records them");
   assert.deepEqual([vv.minZoom, vv.maxZoom], [5, 13]);
 
   const cqm = found.get("glace-rtc_vv_qa_cqm-2024");
   assert.equal(cqm.cmap, "cmc.glasgow", "a sequential ramp: higher is better");
-  assert.deepEqual([cqm.vmin, cqm.vmax], [-3, 3]);
+  assert.deepEqual([cqm.vmin, cqm.vmax], [-4, 8]);
   assert.equal(cqm.units, "dB");
 
   const num = found.get("glace-rtc_vv_qa_num-2024");
   // Shared by both products on purpose, so that RTC seeing more acquisitions
   // than COH12 is visible rather than flattened by a per-product ceiling.
-  assert.deepEqual([num.vmin, num.vmax], [0, 70]);
+  assert.deepEqual([num.vmin, num.vmax], [0, 90]);
   assert.deepEqual([byId(layers()).get("glace-coh12_vv_qa_num-2024").vmin, num.vmin], [0, 0]);
 });
 
@@ -85,7 +95,7 @@ test("the false colour carries three channels and no ramp", () => {
   const rgb = byId(layers()).get("glace-coh12_rgb-2024");
   assert.deepEqual(rgb.colors, [], "nothing to interpolate between");
   assert.equal(rgb.channels.length, 3);
-  assert.deepEqual(rgb.channels[0], { band: "VV", vmin: 0.1, vmax: 0.8 });
+  assert.deepEqual(rgb.channels[0], { band: "VV", vmin: 0.1, vmax: 0.75 });
   assert.equal(rgb.channels[2].band, "VV / VH", "a quotient, since coherence is not read in dB");
 });
 
@@ -120,7 +130,7 @@ test("a year the style does not describe falls back to the same layer's stops", 
     const layer = found.get("glace-coh12_vv-2021");
     assert.equal(layer.year, 2021);
     assert.equal(layer.cmap, "cmc.lipari");
-    assert.deepEqual([layer.vmin, layer.vmax], [0.1, 0.8]);
+    assert.deepEqual([layer.vmin, layer.vmax], [0.1, 0.75]);
     assert.match(layer.url, /\/2021\//, "and its own archive");
   });
   assert.deepEqual(warnings, [], "an older year is expected, not a complaint");
@@ -130,7 +140,7 @@ test("a layer nothing describes is dropped with a warning", async () => {
   const extra = structuredClone(collection);
   extra.links.push({
     rel: "pmtiles",
-    href: "https://tiles.example/glace/mosaics/pmtiles/2024/hh.pmtiles",
+    href: "https://tiles.example/glace/mosaics/2024/hh_viz.pmtiles",
     "pmtiles:layers": ["glace-coh12_hh-2024"],
   });
   const warnings = await captureWarnings(() => {
@@ -207,13 +217,17 @@ test("the three documents are read end to end", async () => {
   installBrowser({
     files: {
       "http://localhost/tiles/mosaics/collection.json": at("collection.json"),
-      "http://localhost/tiles/mosaics/styles/default.json": at("style.json"),
-      "http://localhost/tiles/mosaics/2024/item.json": at("item-2024.json"),
+      ...Object.fromEntries(
+        [2021, 2022, 2023, 2024].flatMap((year) => [
+          [`http://localhost/tiles/mosaics/styles/${year}.json`, at(`style-${year}.json`)],
+          [`http://localhost/tiles/mosaics/${year}/item.json`, at(`item-${year}.json`)],
+        ]),
+      ),
     },
   });
 
   const found = byId(await readStore());
-  assert.equal(found.size, 14);
+  assert.equal(found.size, 56, "four years of fourteen archives");
   const layer = found.get("glace-rtc_vv-2024");
   assert.equal(layer.cmap, "cmc.grayC");
   assert.deepEqual(
@@ -287,19 +301,19 @@ test("a year with its own style is drawn from that style, not from the default",
 
   const files = {
     "http://localhost/tiles/mosaics/collection.json": at("collection-per-year.json"),
-    "http://localhost/tiles/mosaics/styles/2023.json": at("style-2023.json"),
-    "http://localhost/tiles/mosaics/styles/2024.json": at("style.json"),
+    "http://localhost/tiles/mosaics/styles/2023.json": at("tmp-style-2023.json"),
+    "http://localhost/tiles/mosaics/styles/2024.json": at("style-2024.json"),
   };
   fs.writeFileSync(at("collection-per-year.json"), JSON.stringify(perYear));
-  fs.writeFileSync(at("style-2023.json"), JSON.stringify(older));
+  fs.writeFileSync(at("tmp-style-2023.json"), JSON.stringify(older));
   try {
     installBrowser({ files });
     const found = byId(await readStore());
     assert.equal(found.size, 28, "both years of every archive reach the map");
     assert.equal(found.get("glace-coh12_vv-2023").vmax, 0.5, "from its own year's style");
-    assert.equal(found.get("glace-coh12_vv-2024").vmax, 0.8);
+    assert.equal(found.get("glace-coh12_vv-2024").vmax, 0.75);
   } finally {
     fs.rmSync(at("collection-per-year.json"));
-    fs.rmSync(at("style-2023.json"));
+    fs.rmSync(at("tmp-style-2023.json"));
   }
 });

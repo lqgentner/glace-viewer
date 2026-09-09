@@ -2,11 +2,11 @@
  * The page against the GLACE store's own catalog, as published.
  *
  * `tests/fixtures/store/` is copied from
- * https://data.source.coop/lqgentner/glace-ch — one year of the mosaics
- * collection, the MapLibre style it nominates, and that year's item, verbatim
- * but for the item's geometry, which is half a megabyte of outline the page
- * never reads. So this file is where the page meets the catalog the store
- * actually writes rather than one written to suit it.
+ * https://data.source.coop/lqgentner/glace-ch — the mosaics collection, the
+ * four MapLibre styles it registers, one per published year, and the four
+ * year items, verbatim but for each item's geometry, which is half a megabyte
+ * of outline the page never reads. So this file is where the page meets the
+ * catalog the store actually writes rather than one written to suit it.
  *
  * Two things are load-bearing and neither is obvious from the code alone. The
  * archive inventory is a set of `rel: "pmtiles"` links on the collection, while
@@ -32,10 +32,15 @@ const collection = JSON.parse(fs.readFileSync(path.join(FIXTURES, "collection.js
 /* Where each document is looked for. The style and the item are reached through
  * the collection's own asset and links, so these URLs are the catalog's to
  * decide rather than this page's. */
+const YEARS = [2021, 2022, 2023, 2024];
 const CATALOG = {
   "http://localhost/tiles/mosaics/collection.json": path.join(FIXTURES, "collection.json"),
-  "http://localhost/tiles/mosaics/styles/default.json": path.join(FIXTURES, "style.json"),
-  "http://localhost/tiles/mosaics/2024/item.json": path.join(FIXTURES, "item-2024.json"),
+  ...Object.fromEntries(
+    YEARS.flatMap((year) => [
+      [`http://localhost/tiles/mosaics/styles/${year}.json`, path.join(FIXTURES, `style-${year}.json`)],
+      [`http://localhost/tiles/mosaics/${year}/item.json`, path.join(FIXTURES, `item-${year}.json`)],
+    ]),
+  ),
   "data/inventories.json": path.join(REPO, "data", "inventories.json"),
 };
 
@@ -81,8 +86,8 @@ test("the seven-value polarization field becomes two rows", () => {
   );
   assert.equal(el("quantity-row").hidden, false, "there is more than one to choose from");
 
-  // 14 archives in, and every one of them reachable: 2 products x (2 x 3 + RGB).
-  assert.equal(archives.length, 14);
+  // 14 archives per year, 2 products x (2 x 3 + RGB), over four published years.
+  assert.equal(archives.length, 56);
   assert.deepEqual(
     [...el("product").children].map((b) => b.dataset.value),
     ["COH12", "RTC"],
@@ -99,7 +104,7 @@ test("a source names the archive the collection linked, and declares no bounds",
   const source = page.map.getSource("glace-coh12_vv-2024");
   assert.equal(
     source.url,
-    "pmtiles://https://data.source.coop/lqgentner/glace-ch/mosaics/pmtiles/2024/coh12_vv.pmtiles",
+    "pmtiles://https://data.source.coop/lqgentner/glace-ch/mosaics/2024/coh12_vv_viz.pmtiles",
   );
   assert.deepEqual([source.minzoom, source.maxzoom], [5, 13], "the zooms the style states");
   // Both of these are in the archive's own header, and a spec that named either
@@ -114,7 +119,7 @@ test("a QA raster is its own archive, drawn in the same slot", async () => {
 
   assert.equal(
     map.getSource("glace-coh12_vv_qa_num-2024").url,
-    "pmtiles://https://data.source.coop/lqgentner/glace-ch/mosaics/pmtiles/2024/coh12_vv_qa_num.pmtiles",
+    "pmtiles://https://data.source.coop/lqgentner/glace-ch/mosaics/2024/coh12_vv_qa_num_viz.pmtiles",
   );
   assert.equal(map.getLayer("glace-coh12_vv_qa_num-2024").layout.visibility, "visible");
   assert.equal(
@@ -127,21 +132,22 @@ test("a QA raster is its own archive, drawn in the same slot", async () => {
 
 test("a QA raster brings its own ramp, stretch and colour-map credit", async () => {
   await pick("quantity", "QA_NUM");
-  // 0-70 rather than the observed 26-30 of recent years, and shared by both
-  // products: 2021 reaches 58 because S1B was still flying, and one ceiling for
-  // every year and both products is what keeps the difference legible.
+  // 0-90 rather than the observed 26-30 of recent years, and shared by both
+  // products: 2021 reaches 58 because S1B was still flying, 2026 flies three
+  // satellites, and one ceiling for every year and both products is what keeps
+  // the difference legible.
   assert.equal(el("legend-min").textContent, "0.0");
-  assert.equal(el("legend-max").textContent, "70.0");
+  assert.equal(el("legend-max").textContent, "90.0");
   assert.deepEqual(
     [...el("layer-info").children].map((line) => line.textContent),
     ["Number of contributing observations", "2024-07-09 to 2024-10-07"],
   );
 
   await pick("quantity", "QA_CQM");
-  // A sequential ramp over ±3 dB: CQM is a composite quality indicator where
-  // higher is better, not a quantity with a meaningful middle.
+  // A sequential ramp over the measured one-sided range: CQM is a composite
+  // quality indicator where higher is better, and 0 dB is not a meaningful middle.
   assert.equal(el("legend-min").textContent, "-3.0 dB");
-  assert.equal(el("legend-max").textContent, "3.0 dB");
+  assert.equal(el("legend-max").textContent, "10.0 dB");
   assert.deepEqual(
     [...el("layer-info").children].map((line) => line.textContent),
     ["Composite quality map (higher is better)", "2024-07-09 to 2024-10-07"],
@@ -208,15 +214,15 @@ test("the false colour names its channels and the stretch each was baked with", 
   // reach that legend.
   assert.deepEqual(cells.filter(Boolean), [
     "VV",
-    "0.10 to 0.80",
+    "0.10 to 0.75",
     "VH",
-    "0.10 to 0.60",
+    "0.10 to 0.55",
     "VV / VH",
-    "0.80 to 2.50",
+    "0.80 to 2.60",
   ]);
   assert.equal(
     page.map.getSource("glace-coh12_rgb-2024").url,
-    "pmtiles://https://data.source.coop/lqgentner/glace-ch/mosaics/pmtiles/2024/coh12_rgb.pmtiles",
+    "pmtiles://https://data.source.coop/lqgentner/glace-ch/mosaics/2024/coh12_rgb_viz.pmtiles",
     "the pre-styled archive the store publishes",
   );
 
@@ -231,7 +237,7 @@ test("going back to a single-band layer restores the ramp", async () => {
   assert.equal(el("legend-bar").hidden, false);
   assert.equal(el("legend-channels").hidden, true);
   assert.equal(el("legend-min").textContent, "0.10");
-  assert.equal(el("legend-max").textContent, "0.80");
+  assert.equal(el("legend-max").textContent, "0.75");
 });
 
 test("every archive the store published is reachable", async () => {
@@ -250,9 +256,9 @@ test("every archive the store published is reachable", async () => {
   }
   // The twelve above, plus the two false-colour archives the tests before this
   // one selected: a layer is created once and kept, so this is every archive the
-  // collection links for the year and nothing besides.
+  // collection links for the year the page sits on, and nothing besides.
   assert.equal(
     [...map.layers.keys()].filter((id) => id.startsWith("glace-")).length,
-    archives.length,
+    archives.filter((link) => link.href.includes("/2024/")).length,
   );
 });
