@@ -1,0 +1,26 @@
+# Moves the action versions in the workflows, and jsdom in package-lock.json,
+# monthly and in one pull request each; the seven-day cooldown skips releases
+# too fresh to have had their regressions reported. pixi.lock is not
+# Dependabot's: refresh it with `pixi update`.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      dependencies:
+        patterns:
+          - "*"
+    cooldown:
+      default-days: 7
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      dependencies:
+        patterns:
+          - "*"
+    cooldown:
+      default-days: 7

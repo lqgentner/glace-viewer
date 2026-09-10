@@ -7,11 +7,11 @@ archives: text deltas against the previous version, so an inventory update costs
 moved. PMTiles tiles are individually gzipped, which defeats both.
 
 Run locally before `scripts/serve.py`, or in CI before publishing. Needs
-tippecanoe on PATH (or --tippecanoe); see .github/workflows/deploy.yml for the
-pinned build.
+tippecanoe on PATH (or --tippecanoe); `pixi run` puts the pinned conda-forge
+build there.
 
 Usage:
-    uv run --locked python scripts/build-tiles.py
+    pixi run build-tiles
 """
 
 from __future__ import annotations
@@ -97,8 +97,8 @@ def main() -> int:
 
     if shutil.which(args.tippecanoe) is None and not Path(args.tippecanoe).is_file():
         print(
-            f"tippecanoe not found at {args.tippecanoe!r}. Build it from "
-            "https://github.com/felt/tippecanoe or pass --tippecanoe.",
+            f"tippecanoe not found at {args.tippecanoe!r}. Run this through "
+            "`pixi run build-tiles` or pass --tippecanoe.",
             file=sys.stderr,
         )
         return 1

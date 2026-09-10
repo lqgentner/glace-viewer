@@ -10,7 +10,9 @@ tiles
 _site/
 
 # Dev-only: the page loads js/ directly and has no runtime dependencies.
-# `npm install` is needed for `npm test` and nothing else.
+# `.pixi/` is the environment pixi.lock describes; `node_modules/` is jsdom for
+# `npm test` and nothing else.
+.pixi/
 node_modules/
 
 __pycache__/

@@ -16,27 +16,22 @@ permissions:
   contents: read
 
 jobs:
-  python:
+  test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up uv
-        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+      - uses: actions/checkout@v7
+      # Python, Node and tippecanoe all come from pixi.lock; the cache is keyed
+      # on it. `--locked` also checks that pixi.toml and pixi.lock agree.
+      #
+      # The stable actions float on a major; setup-pixi is pinned to a release
+      # because its inputs may change between minors while pixi is pre-1.0.
+      # Dependabot (.github/dependabot.yml) moves both. pixi itself is not
+      # pinned here: Dependabot cannot update a `with:` input, so a version
+      # would rot and drift from the `requires-pixi` floor in pixi.toml.
+      - uses: prefix-dev/setup-pixi@v0.10.2
         with:
-          enable-cache: true
-      # No dependencies: serve.py and build-tiles.py are stdlib only, and so are
-      # their tests. --locked also checks that pyproject.toml and uv.lock agree.
-      - run: uv run --locked python -m unittest discover -s tests -v
-
-  javascript:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: npm
-      # jsdom is the only dependency, and it is dev-only; nothing is bundled or
-      # published. `npm ci` so the lockfile decides the version.
-      - run: npm ci
-      - run: npm test
+          cache: true
+      # `pixi run test` runs the Python suite, then `npm ci` and the JavaScript
+      # suite: jsdom is the one dependency pixi cannot lock, so npm's lockfile
+      # decides its version.
+      - run: pixi run --locked test

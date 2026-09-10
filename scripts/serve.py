@@ -9,7 +9,7 @@ The GLACE archives live on object storage and ``site-config.js`` points the page
 there, so the plain command already shows them and ``--tiles-dir`` is only for
 reading a local build instead:
 
-    uv run --locked python scripts/serve.py
+    pixi run serve
     # -> http://localhost:8000/            the published store
     # -> http://localhost:8000/?tiles=tiles   whatever is mounted under /tiles
 
@@ -21,7 +21,7 @@ Run ``scripts/build-tiles.py`` first: the inventory archives are build outputs
 and are not committed.
 
 Usage:
-    uv run --locked python scripts/serve.py [--tiles-dir DIR]
+    pixi run serve [--tiles-dir DIR]
 """
 
 from __future__ import annotations

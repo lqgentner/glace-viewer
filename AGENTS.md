@@ -8,7 +8,8 @@ human-facing overview.
 ## Layout
 
 No build step and no framework: `index.html`, `style.css` and native ES modules
-under `js/`, loaded straight by the browser. `node_modules` is dev-only.
+under `js/`, loaded straight by the browser. `.pixi` and `node_modules` are
+dev-only.
 
 | module | owns |
 | --- | --- |
@@ -23,6 +24,7 @@ under `js/`, loaded straight by the browser. `node_modules` is dev-only.
 | `js/ui.js` | status line, credit popovers, safe DOM helpers, segmented controls |
 | `js/app.js` | control wiring and startup |
 | `scripts/serve.py` | dev server with `Range` support and per-type caching |
+| `pixi.toml` | the toolchain (Python, Node, tippecanoe) and the tasks that run it |
 | `scripts/build-tiles.py` | `data/*.geojson` → `data/*.pmtiles` via tippecanoe |
 
 Anything that reaches the page from the catalog or a vector tile is built as DOM
@@ -30,12 +32,15 @@ nodes, never as an HTML string.
 
 ## Preview locally
 
-Python tooling is managed by [uv](https://docs.astral.sh/uv/); uv, Python and
-`uv.lock` are pinned, and `--locked` fails rather than drifting.
+Every tool comes through [pixi](https://pixi.sh): Python, Node and tippecanoe
+from conda-forge, pinned together in `pixi.lock`. jsdom is the exception
+(conda-forge stops at jsdom 14 and pixi cannot lock npm packages), so
+`package.json` stays and `npm ci` runs as a task inside the environment. The
+tasks are in `pixi.toml`; `--locked` fails rather than drifting.
 
 ```bash
-uv run --locked python scripts/build-tiles.py  # needs tippecanoe on PATH, or --tippecanoe
-uv run --locked python scripts/serve.py        # -> http://localhost:8000/
+pixi run build-tiles                    # data/*.geojson -> data/*.pmtiles
+pixi run serve                          # -> http://localhost:8000/
 ```
 
 - **Open `localhost`, not `127.0.0.1`.** The basemap reads Protomaps' hosted
@@ -44,8 +49,8 @@ uv run --locked python scripts/serve.py        # -> http://localhost:8000/
 - `http.server` cannot serve PMTiles (no `Range`), hence `serve.py`. It sends
   the page shell `no-store` so a stale `js/app.js` never renders silently.
 - The page reads the published store by default (`site-config.js`). To read a
-  build: `ln -s <store root> tiles` and open `?tiles=tiles`, or `serve.py
-  --tiles-dir <dir>`. Either way it is the catalog root that is served: the
+  build: `ln -s <store root> tiles` and open `?tiles=tiles`, or `pixi run
+  serve --tiles-dir <dir>`. Either way it is the catalog root that is served: the
   archives sit in `mosaics/{year}/` beside the COGs, so there is no separate
   directory of them to point at. `tiles` is gitignored without a trailing slash
   because it is usually a symlink, which git sees as a file.
@@ -57,8 +62,7 @@ uv run --locked python scripts/serve.py        # -> http://localhost:8000/
 ## Tests
 
 ```bash
-uv run --locked python -m unittest discover -s tests  # the two scripts
-npm ci && npm test                                    # the page
+pixi run --locked test      # both suites: test-py (the scripts), test-js (the page)
 ```
 
 Both run on every pull request (`.github/workflows/test.yml`), and the deploy
@@ -105,8 +109,9 @@ Things to know when adding tests:
 ## Deploy
 
 `.github/workflows/deploy.yml` publishes to GitHub Pages on every push to
-`main`: builds tippecanoe from source (pinned by `TIPPECANOE_VERSION`, cached),
-builds the inventory archives, and uploads the archives but never the GeoJSON.
+`main`: installs the pixi environment (tippecanoe included, cached on
+`pixi.lock`), builds the inventory archives, and uploads the archives but never
+the GeoJSON.
 
 - **Settings → Pages → Source must be "GitHub Actions"**, not "Deploy from a
   branch". The branch option serves the committed GeoJSON and none of the
@@ -116,6 +121,11 @@ builds the inventory archives, and uploads the archives but never the GeoJSON.
   and inventories still work.
 - Every path to `assets/` is relative because a Pages project site lives on a
   subpath.
+- The stable actions float on a major; `setup-pixi` is pinned to a release
+  while pixi is pre-1.0. Dependabot (`.github/dependabot.yml`) moves both
+  monthly, jsdom with them. `pixi.lock` is refreshed by hand
+  with `pixi update`; pixi itself is unpinned in CI, `requires-pixi` in
+  `pixi.toml` being the floor.
 
 ## The published store
 

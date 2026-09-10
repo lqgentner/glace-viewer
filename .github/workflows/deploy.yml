@@ -18,11 +18,6 @@ concurrency:
   group: pages
   cancel-in-progress: false
 
-env:
-  # Pinned rather than tracking main, so a rebuild of an old commit produces the
-  # same tiles. Bump deliberately.
-  TIPPECANOE_VERSION: "2.79.0"
-
 jobs:
   # The same suites the pull request ran, re-run against the commit that is
   # about to be published: a red build must not reach Pages.
@@ -33,36 +28,17 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up uv
-        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+      - uses: actions/checkout@v7
+      # tippecanoe comes from conda-forge through pixi.lock, pinned there so a
+      # rebuild of an old commit produces the same tiles.
+      - uses: prefix-dev/setup-pixi@v0.10.2
         with:
-          enable-cache: true
-
-      # Building tippecanoe takes ~90 s; the cache makes every later run instant.
-      # Keyed on the version, so bumping it rebuilds without a manual purge.
-      - name: Cache tippecanoe
-        id: cache-tippecanoe
-        uses: actions/cache@v4
-        with:
-          path: ~/.local/bin/tippecanoe
-          key: tippecanoe-${{ runner.os }}-${{ env.TIPPECANOE_VERSION }}
-
-      - name: Build tippecanoe from source
-        if: steps.cache-tippecanoe.outputs.cache-hit != 'true'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends build-essential libsqlite3-dev zlib1g-dev
-          git clone --depth 1 --branch "$TIPPECANOE_VERSION" https://github.com/felt/tippecanoe.git /tmp/tippecanoe
-          make -C /tmp/tippecanoe -j"$(nproc)"
-          mkdir -p ~/.local/bin
-          cp /tmp/tippecanoe/tippecanoe ~/.local/bin/
+          cache: true
 
       - name: Build vector tiles
         run: |
-          chmod +x ~/.local/bin/tippecanoe
-          ~/.local/bin/tippecanoe --version
-          uv run --locked python scripts/build-tiles.py --tippecanoe ~/.local/bin/tippecanoe
+          pixi run --locked tippecanoe --version
+          pixi run --locked build-tiles
 
       # Only the archives are published, never the GeoJSON they were built from:
       # shipping both would double what a visitor could download for no gain.
@@ -74,7 +50,7 @@ jobs:
           cp data/*.pmtiles data/inventories.json _site/data/
           du -sh _site
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: _site
 
@@ -86,4 +62,4 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
