@@ -44,10 +44,7 @@ window.GLACE_CONFIG = {
    *
    * This is `glace-ch`, the Switzerland-only rehearsal build — the layout and
    * the machinery of the full store over one scope, published to be exercised
-   * before the Alps dataset arrives. Each year is there twice: pre-styled
-   * PMTiles under `mosaics/pmtiles/{year}/`, which is what this page draws, and
-   * the float COGs they were styled from under `mosaics/{year}/`, which the
-   * STAC items point at for quantitative work.
+   * before the Alps dataset arrives.
    *
    * `?tiles=` still wins over this, which is how a local build or the next store
    * gets looked at without a redeploy. */

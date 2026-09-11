@@ -45,7 +45,7 @@ const DEFAULTS = {
 
   /* The parquet reader behind the tile grid, on the same terms and imported the
    * same way. Also absent from QUERY_PARAMS, and for the same reason. */
-  hyparquetUrl: "https://esm.sh/hyparquet@1.29.2",
+  hyparquetUrl: "https://esm.sh/hyparquet@1.30.1",
 
   /* Protomaps' hosted API: a TileJSON document, read the same way as the
    * Mapterhorn terrain below rather than as a PMTiles archive. Faster than the
