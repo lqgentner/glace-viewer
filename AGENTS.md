@@ -8,13 +8,16 @@ human-facing overview.
 ## Layout
 
 No build step and no framework: `index.html`, `style.css` and native ES modules
-under `js/`, loaded straight by the browser. `.pixi` and `node_modules` are
-dev-only.
+under `js/`, loaded straight by the browser. Every library is a pinned CDN URL
+in the import map in `index.html`; MapLibre 6 is ESM-only, so there are no
+UMD script tags. The `js/` modules read `maplibregl`, `pmtiles` and `basemaps`
+as globals that one inline module sets, which is what lets the tests fake them
+without a loader hook. `.pixi` and `node_modules` are dev-only.
 
 | module | owns |
 | --- | --- |
 | `js/config.js` | settings: defaults → `site-config.js` → `?tiles=`, `?basemap=`, `?flavor=` |
-| `js/map.js` | the map, draw order (`addStacked`), basemap swap, labels, hillshade, 3D, the missing-tile workaround |
+| `js/map.js` | the map, draw order (`addStacked`), basemap swap, labels, hillshade, 3D |
 | `js/store.js` | the STAC catalog → one record per PMTiles archive |
 | `js/rasters.js` | raster controls, the panel's axes, legend |
 | `js/cog-rgb.js` | the `glace-rgb://` COG protocol — wired up, unused |
@@ -82,10 +85,11 @@ workflow calls that workflow before staging, so a red suite cannot reach Pages.
 | `tests/tile-grid.test.js` | the tile grid from a fake parquet reader |
 | `tests/sky.test.js` | the silhouette against an independent camera model, the sky's gate |
 | `tests/viewer-degraded.test.js` | no reachable catalog |
+| `tests/viewer-no-webgl.test.js` | no WebGL2, which MapLibre 6 requires: the status line says so |
 | `tests/viewer-narrow.test.js` | phone viewport; guards the stylesheet, not the DOM |
 | `tests/viewer-3d-restore.test.js` | a pitched `#hash` comes back in 3D |
 | `tests/viewer-light-flavor.test.js` | `?flavor=light` gets black labels |
-| `tests/page-assets.test.js` | every local `src`/`href` exists and is staged by `deploy.yml` |
+| `tests/page-assets.test.js` | every local `src`/`href` exists and is staged by `deploy.yml`; the two maplibre pins agree |
 
 Things to know when adding tests:
 
@@ -279,9 +283,8 @@ Reasons that are not in the code, or that look like bugs until you know them.
   default `maxPitch`. The hillshade is left alone when 3D comes on.
 - Pitch is in the `#hash`, terrain is not, so startup re-enables terrain when
   the incoming pitch is non-zero, without moving the camera.
-- `projection: globe` in MapLibre 5 is a zoom interpolation (globe to z11,
-  mercator from z12). Costs: no fog matrices (unused) and zoom-around-cursor
-  degrades to zoom-around-centre while the globe shows.
+- `projection: globe` is a zoom interpolation (globe to z11, mercator from
+  z12).
 
 ### The sky
 
@@ -301,7 +304,7 @@ not turn the way a real one does behind an orbiting camera.
   loop, so there is none, and the `sky` class is on only while a corner of the
   viewport lies outside the disc — a pan over a glacier writes nothing.
 - **Do not gate on `map.getProjection().type === "globe"`** as the plugin
-  does: in MapLibre 5 that is the stylesheet's spec, `globe` at z13 as at z1.
+  does: that is the stylesheet's spec, `globe` at z13 as at z1.
 - The limb is sampled at the visible horizon, not 90° from the centre; the
   header of `js/sky.js` says why, and `sky.test.js` checks it against an
   independent pinhole camera. The field of view and globe scaling it assumes
@@ -369,17 +372,6 @@ read averages speckle away (RTC VV's 2–98 range narrows from ~14 dB to ~5 dB)
 and a stretch derived that way clipped 13.6 % of the scene flat. WEBP q80 is
 not the limiting factor (mean |Laplacian| 9.49 vs 9.33 for lossless PNG at a
 twelfth of the size).
-
-### Missing tiles
-
-The archives are sparse: bounds are one rectangle over scattered MGRS tiles,
-and 12 of 36 sampled z11 tiles in the Alps build have no tile. `pmtiles.Protocol`
-answers `data: null`, and MapLibre's `RasterTileSource.loadTile` only marks a
-tile loaded inside `if (response && response.data)`, so a missing tile stays
-`loading` forever — never drawn, parent left magnified, `idle` never fires.
-`js/map.js` wraps the protocol and answers a missing raster tile with one
-transparent pixel. Vector tiles already return an empty buffer.
-`errorOnMissingTile` does not help; it only applies to vector tiles.
 
 ### The COG reader
 

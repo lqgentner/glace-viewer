@@ -245,7 +245,7 @@ class FakeMap {
 }
 
 /**
- * Install a DOM and the three globals the page expects from its script tags.
+ * Install a DOM and the three globals index.html sets before the modules run.
  *
  * @param {object} [options]
  * @param {string} [options.search]  query string, e.g. "?flavor=dark"
@@ -253,8 +253,16 @@ class FakeMap {
  * @param {Record<string, string>} [options.files]  URL -> path for fetch()
  * @param {number} [options.pitch]   the pitch a #hash would have restored
  * @param {boolean} [options.narrow] whether the viewport is phone-sized
+ * @param {boolean} [options.webgl]  whether the browser can draw at all
  */
-export function installBrowser({ search = "", site, files = {}, pitch = 0, narrow = false } = {}) {
+export function installBrowser({
+  search = "",
+  site,
+  files = {},
+  pitch = 0,
+  narrow = false,
+  webgl = true,
+} = {}) {
   created = [];
   initialPitch = pitch;
   const dom = new JSDOM(fs.readFileSync(path.join(REPO, "index.html"), "utf8"), {
@@ -290,9 +298,15 @@ export function installBrowser({ search = "", site, files = {}, pitch = 0, narro
   });
 
   const popups = [];
+  /* MapLibre 6 throws from the constructor when there is no WebGL2 context. */
+  class NoGpuMap {
+    constructor() {
+      throw new Error("Failed to initialize WebGL2");
+    }
+  }
   globalThis.maplibregl = {
     addProtocol() {},
-    Map: FakeMap,
+    Map: webgl ? FakeMap : NoGpuMap,
     NavigationControl: class {},
     ScaleControl: class {
       constructor(options = {}) {

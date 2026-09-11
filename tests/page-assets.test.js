@@ -37,6 +37,14 @@ test("every file the page references is in the repository", () => {
   }
 });
 
+/* The stylesheet is a <link> and the script an import-map entry, so the two
+ * pins of one library are in different syntaxes and would drift silently. */
+test("every pin of maplibre-gl on the page names one version", () => {
+  const html = fs.readFileSync(path.join(REPO, "index.html"), "utf8");
+  const versions = new Set([...html.matchAll(/maplibre-gl@([^/]+)\//g)].map((m) => m[1]));
+  assert.equal(versions.size, 1, `index.html pins maplibre-gl at ${[...versions].join(" and ")}`);
+});
+
 test("the manifest's icons resolve, relative to the manifest itself", () => {
   const rel = "assets/site.webmanifest";
   const manifest = JSON.parse(fs.readFileSync(path.join(REPO, rel), "utf8"));

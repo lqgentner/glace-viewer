@@ -12,7 +12,7 @@
     <link rel="manifest" href="assets/site.webmanifest" />
     <meta name="theme-color" content="#10141c" />
 
-    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.9.0/dist/maplibre-gl.css" />
+    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@6.9.0/dist/maplibre-gl.css" />
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
@@ -164,35 +164,42 @@
 
     <div id="status" hidden></div>
 
-    <!-- Nothing on the page reads a COG today — the tile-source switch was
-         retired in favour of the pre-styled archives — but js/cog-rgb.js and its
-         protocol are still wired up, so this map stays with them. It is parsed
-         and never used until something asks for a `glace-rgb://` tile.
+    <!-- Every library, pinned. An import map has to be parsed before the first
+         module loads, so this cannot move below the modules.
 
-         `lerc` is resolved to the package's own file rather than through the CDN
-         that builds the COG reader around it.
-         lerc's emscripten loader picks its environment with
-         `globalThis.process?.versions?.node && process.type != "renderer"`, and
-         esm.sh *rewrites* that `globalThis.process` to its own Node polyfill,
-         which answers `versions.node` unconditionally. Served that way lerc
-         decides it is running under Node, reaches for `createRequire`, and
-         every LERC decode rejects. jsDelivr serves the file untouched, where
-         `globalThis.process` is genuinely undefined in a browser, and the wasm
-         sits beside it for `new URL("lerc-wasm.wasm", import.meta.url)`.
-         An import map has to be parsed before the first module loads, so this
-         cannot move below js/app.js. It pairs with `?external=lerc` on
-         cogReaderUrl in js/config.js — change the two together. -->
+         maplibre-gl is ESM-only from v6; its bundle imports a shared chunk and,
+         at map creation, a worker file, both beside it. pmtiles imports fflate
+         bare, hence the fourth entry.
+
+         Nothing on the page reads a COG today, but js/cog-rgb.js is still wired
+         up and `lerc` is what it imports when asked for a tile. It is mapped to
+         the package's own file rather than the CDN that builds the reader
+         (`?external=lerc` on cogReaderUrl in js/config.js; change the two
+         together): esm.sh rewrites `globalThis.process` to a Node polyfill,
+         under which lerc's emscripten loader decides it is running in Node and
+         every decode rejects. -->
     <script type="importmap">
       {
         "imports": {
+          "maplibre-gl": "https://unpkg.com/maplibre-gl@6.9.0/dist/maplibre-gl.mjs",
+          "pmtiles": "https://unpkg.com/pmtiles@4.5.0/dist/esm/index.js",
+          "fflate": "https://unpkg.com/fflate@0.8.3/esm/browser.js",
+          "@protomaps/basemaps": "https://unpkg.com/@protomaps/basemaps@5.7.2/dist/esm/index.js",
           "lerc": "https://cdn.jsdelivr.net/npm/lerc@4.2.0/LercDecode.es.js"
         }
       }
     </script>
 
-    <script src="https://unpkg.com/maplibre-gl@5.9.0/dist/maplibre-gl.js"></script>
-    <script src="https://unpkg.com/pmtiles@4.5.0/dist/pmtiles.js"></script>
-    <script src="https://unpkg.com/@protomaps/basemaps@5.7.2/dist/basemaps.js" crossorigin="anonymous"></script>
+    <!-- The globals the UMD builds used to create. The js/ modules read these
+         rather than importing the packages, which is what lets the tests hand
+         them a fake. Module scripts run in document order, so this is set
+         before js/app.js. -->
+    <script type="module">
+      import * as maplibregl from "maplibre-gl";
+      import * as pmtiles from "pmtiles";
+      import * as basemaps from "@protomaps/basemaps";
+      Object.assign(globalThis, { maplibregl, pmtiles, basemaps });
+    </script>
     <!-- Optional per-deployment overrides; must run before the modules do. -->
     <script src="site-config.js"></script>
     <script type="module" src="js/app.js"></script>

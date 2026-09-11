@@ -19,8 +19,9 @@
  * one does behind an orbiting camera.
  */
 
-/* MapLibre's vertical field of view, in radians, which the page never changes
- * and 5.9 exposes no getter for. The camera sits `0.5 * height / tan(fov / 2)`
+/* MapLibre's default vertical field of view, in radians, which the page never
+ * changes. A constant rather than the map's getter so the test's fake needs no
+ * camera. The camera sits `0.5 * height / tan(fov / 2)`
  * in front of the surface, and the globe's radius is scaled so a pixel at the
  * centre is one mercator pixel: `worldSize / 2π / cos(lat)`, with a 512 px
  * tile. Both from maplibre-gl-js src/geo — transform_helper.ts and
