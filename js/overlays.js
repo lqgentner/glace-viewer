@@ -149,7 +149,11 @@ function inventoryOverlay(entry) {
         type: "line",
         source: this.sourceId,
         "source-layer": sourceLayer,
-        paint: { "line-color": "rgba(0,0,0,0.55)", "line-width": 2.6, "line-opacity": 0.8 },
+        paint: {
+          "line-color": "rgba(0,0,0,0.55)",
+          "line-width": ["interpolate", ["linear"], ["zoom"], 6, 1.8, 10, 3, 14, 4.4],
+          "line-opacity": 0.8,
+        },
       });
       addStacked("overlay", {
         id: lineId,
