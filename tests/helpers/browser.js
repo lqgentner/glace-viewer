@@ -229,8 +229,10 @@ class FakeMap {
     return true;
   }
 
-  queryRenderedFeatures() {
-    return this.hits;
+  // Only hits on the layers asked for, as MapLibre does, so a test cannot pass
+  // on a layer the page never made clickable.
+  queryRenderedFeatures(_geometry, { layers } = {}) {
+    return layers ? this.hits.filter((hit) => layers.includes(hit.layer.id)) : this.hits;
   }
 
   /** Index of a layer in draw order; -1 when it does not exist. */

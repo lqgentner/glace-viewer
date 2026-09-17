@@ -394,7 +394,7 @@ test("the viewer", async (t) => {
   });
 
   await t.test("the inventory list is built from the index", async () => {
-    assert.equal(el("inventories").children.length, 3);
+    assert.equal(el("inventories").children.length, 5);
     assert.equal(el("inventories-section").hidden, false);
     assert.ok(el("inv-sgi2023"), "each row is keyed by inventory id");
   });
@@ -412,6 +412,64 @@ test("the viewer", async (t) => {
     assert.ok(el("status").textContent.includes("Swiss Glacier Inventory 2023"));
     map.settle();
     assert.equal(el("status").hidden, true, "the message clears when the source loads");
+  });
+
+  await t.test("the swatch picks an outline colour, now or for when the layer is added", async () => {
+    const swatch = (id) => el(`inv-${id}`).parentElement.querySelector(".swatch");
+    const palette = () => page.window.document.querySelector(".palette-popover");
+    const chip = (color) => palette().querySelector(`[aria-label="${color}"]`);
+
+    assert.equal(palette(), null);
+    swatch("sgi2023").dispatchEvent(new page.window.Event("mouseenter"));
+    swatch("sgi2023").dispatchEvent(new page.window.Event("focus"));
+    assert.equal(palette(), null, "only a click opens it");
+
+    swatch("sgi2023").click();
+    // In the body, like the credit popover, so it can reach past the panel.
+    assert.equal(palette().parentElement, page.window.document.body);
+    assert.equal(palette().children.length, 9);
+    assert.ok(swatch("sgi2023").classList.contains("popover-open"), "the disc stays while open");
+    assert.equal(page.window.document.activeElement, chip("#ff7f00"), "focus lands on the current colour");
+    swatch("sgi2023").click();
+    assert.equal(palette(), null, "a second click closes it");
+
+    swatch("sgi2023").click();
+    page.window.document.body.dispatchEvent(new page.window.Event("pointerdown", { bubbles: true }));
+    assert.equal(palette(), null, "a press elsewhere closes it");
+
+    swatch("sgi2023").click();
+    const escape = new page.window.KeyboardEvent("keydown", { key: "Escape", bubbles: true });
+    page.window.document.dispatchEvent(escape);
+    assert.equal(palette(), null, "Escape closes it");
+    assert.equal(page.window.document.activeElement, swatch("sgi2023"), "and hands focus back");
+    assert.equal(swatch("sgi2023").classList.contains("popover-open"), false, "and drops the disc");
+
+    swatch("sgi2023").click();
+    palette().dispatchEvent(new page.window.Event("mouseleave"));
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    assert.ok(palette(), "the pointer leaving does not close a click-opened box");
+    swatch("sgi2023").click();
+
+    swatch("sgi2023").click();
+
+    chip("#ffff33").click();
+    assert.equal(map.getLayer("inv-line-sgi2023").paint["line-color"], "#ffff33");
+    assert.equal(palette(), null, "a pick closes the box");
+    assert.equal(page.window.document.activeElement, swatch("sgi2023"), "and focus stays in the panel");
+    assert.equal(swatch("sgi2023").classList.contains("popover-open"), false);
+    swatch("sgi2023").click();
+    assert.equal(chip("#ffff33").getAttribute("aria-pressed"), "true");
+
+    // Not added yet: the pick is what the layer is created with.
+    swatch("agi5").click();
+    assert.equal(page.window.document.querySelectorAll(".popover").length, 1, "one popover at a time");
+    chip("#999999").click();
+    assert.equal(map.getLayer("inv-line-agi5"), undefined);
+    change(el("inv-agi5"), true);
+    await settle();
+    assert.equal(map.getLayer("inv-line-agi5").paint["line-color"], "#999999");
+    change(el("inv-agi5"), false);
+    await settle();
   });
 
   await t.test("a popup reports every overlay under the pointer", async () => {
@@ -485,5 +543,24 @@ test("the viewer", async (t) => {
       /HTTP 500/,
       "the other inventory finishing must not wipe the failure",
     );
+  });
+
+  await t.test("an inventory is described by its name and whichever identifier it carries", async () => {
+    for (const id of ["rgi7", "pauletal2020"]) change(el(`inv-${id}`), true);
+    await settle();
+    map.hits = [
+      {
+        layer: { id: "inv-line-rgi7" },
+        properties: { name: "Grosser Aletschgletscher", rgi_id: "RGI2000-v7.0-G-11-01450", year: 2003 },
+      },
+      { layer: { id: "inv-line-pauletal2020" }, properties: { glacier_nr: 1234, year: 2015 } },
+    ];
+    map.fire("click", { point: { x: 10, y: 10 }, lngLat: [8, 46] });
+
+    const text = page.popups.at(-1).content.textContent;
+    assert.ok(text.includes("Grosser Aletschgletscher"));
+    assert.ok(text.includes("RGI ID: RGI2000-v7.0-G-11-01450"));
+    assert.ok(text.includes("Glacier number: 1234"));
+    assert.equal(text.match(/Glacier name/g).length, 1, "an inventory without names says nothing of one");
   });
 });

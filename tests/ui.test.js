@@ -124,3 +124,25 @@ test("credits: every external link opens safely", async () => {
   assert.equal(link.target, "_blank");
   assert.equal(link.rel, "noopener noreferrer");
 });
+
+test("popovers: Escape closes a credit without reopening it", async () => {
+  const { page, ui } = await loadUi();
+  const { document, Event, KeyboardEvent } = page.window;
+  const button = ui.creditButton("T", { title: "T", links: [{ label: "D", url: "https://example.org" }] });
+  document.body.append(button);
+  const escape = () => document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  const box = () => document.querySelector(".credit-popover");
+
+  // Opened by hover, with focus elsewhere: focus is left alone.
+  button.dispatchEvent(new Event("mouseenter"));
+  escape();
+  assert.equal(box(), null);
+  assert.notEqual(document.activeElement, button);
+
+  // Focus inside the box goes back to the mark, whose focus handler must not reopen it.
+  button.dispatchEvent(new Event("mouseenter"));
+  box().querySelector("a").focus();
+  escape();
+  assert.equal(box(), null);
+  assert.equal(document.activeElement, button);
+});

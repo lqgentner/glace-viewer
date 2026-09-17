@@ -27,7 +27,7 @@ test("a missing catalog costs only the rasters", async () => {
   assert.match(el("status").textContent, /still work/);
 
   // Everything with no bearing on the rasters is untouched.
-  assert.equal(el("inventories").children.length, 3);
+  assert.equal(el("inventories").children.length, 5);
   assert.equal(el("inventories-section").hidden, false);
 
   page.el("hillshade").checked = true;

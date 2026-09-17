@@ -25,7 +25,7 @@ terrain are instead served as TileJSON tile endpoints. Rendering is
 | GLACE rasters | the [`glace-ch` store](https://source.coop/lqgentner/glace-ch) on Source Cooperative — derived from Copernicus Sentinel-1 data |
 | Basemap | [Protomaps](https://protomaps.com) vector tiles (OpenStreetMap data) via their [hosted API](https://protomaps.com/api), or Esri World Imagery |
 | Terrain | [Mapterhorn](https://mapterhorn.com) global DEM |
-| Glacier inventories | Swiss Glacier Inventory 2016 & 2023, and the Paul et al. 2020 Alpine Glacier Inventory |
+| Glacier inventories | Swiss Glacier Inventory 2016 & 2023, Austrian Glacier Inventory 5, the Paul et al. 2020 Alpine Glacier Inventory, and the Randolph Glacier Inventory 7.0 (Alps) |
 
 Basemap, terrain and raster credits appear live in the map's attribution
 control as the layers that use them are switched on. The glacier inventories

@@ -1,10 +1,34 @@
 {
   "inventories": [
     {
+      "id": "agi5",
+      "title": "Austrian Glacier Inventory 5",
+      "span": "2021\u20132023",
+      "color": "#e41a1c",
+      "url": "agi5.pmtiles",
+      "source_layer": "agi5",
+      "min_zoom": 4,
+      "max_zoom": 14,
+      "features": 799,
+      "simplify_m": 10.0,
+      "has_names": true,
+      "attribution": "Hartig et al., 2026",
+      "citation": "Hartig, A., Akguen, A. M., Bertolotti, G., Bolch, T., Conzelmann, S., Hartl, L., Haut, A., Helfricht, K., Hynek, B., Kaucher, M. S., Kellerer-Pirklbauer, A., Kogel, A. C., Krippes, J., Lauria, M. V., Mayer, C., Otto, J.-C., Prinz, R., Proel\u00df, S., Seiser, B., \u2026 Zandler, H. (2026). The Austrian Glacier Inventory GI 5, 2021-2023, as vector files [Dataset]. PANGAEA. https://doi.org/10.1594/PANGAEA.991106",
+      "license": "CC BY 4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "version": null,
+      "links": [
+        {
+          "label": "Dataset",
+          "url": "https://doi.org/10.1594/PANGAEA.991106"
+        }
+      ]
+    },
+    {
       "id": "pauletal2020",
       "title": "Alpine Glacier Inventory",
       "span": "2015\u20132017",
-      "color": "#ff2d95",
+      "color": "#377eb8",
       "url": "pauletal2020.pmtiles",
       "source_layer": "pauletal2020",
       "min_zoom": 4,
@@ -25,10 +49,34 @@
       ]
     },
     {
+      "id": "rgi7",
+      "title": "Randolph Glacier Inventory 7.0",
+      "span": "2003",
+      "color": "#4daf4a",
+      "url": "rgi7.pmtiles",
+      "source_layer": "rgi7",
+      "min_zoom": 4,
+      "max_zoom": 14,
+      "features": 4034,
+      "simplify_m": 10.0,
+      "has_names": true,
+      "attribution": "RGI 7.0 Consortium, 2023",
+      "citation": "RGI 7.0 Consortium. (2023). Randolph Glacier Inventory - A Dataset of Global Glacier Outlines, Version 7.0 [Dataset]. NASA National Snow and Ice Data Center Distributed Active Archive Center. https://doi.org/10.5067/F6JMOVY5NAVZ",
+      "license": "CC BY 4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "version": "7.0",
+      "links": [
+        {
+          "label": "Dataset",
+          "url": "https://doi.org/10.5067/f6jmovy5navz"
+        }
+      ]
+    },
+    {
       "id": "sgi2016",
       "title": "Swiss Glacier Inventory 2016",
       "span": "2013\u20132018",
-      "color": "#22d3ee",
+      "color": "#984ea3",
       "url": "sgi2016.pmtiles",
       "source_layer": "sgi2016",
       "min_zoom": 4,
@@ -52,7 +100,7 @@
       "id": "sgi2023",
       "title": "Swiss Glacier Inventory 2023",
       "span": "2021\u20132024",
-      "color": "#facc15",
+      "color": "#ff7f00",
       "url": "sgi2023.pmtiles",
       "source_layer": "sgi2023",
       "min_zoom": 4,

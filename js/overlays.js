@@ -14,7 +14,16 @@ import { GRID_INDEX_URL, INVENTORY_BASE, INVENTORY_INDEX_URL } from "./config.js
 import { addStacked, map, styleReady } from "./map.js";
 import { isNonEmptyString } from "./store.js";
 import { loadTileGrid } from "./tile-grid.js";
-import { clearStatus, collapsible, creditButton, el, h, setStatus } from "./ui.js";
+import {
+  attachPopover,
+  clearStatus,
+  collapsible,
+  creditButton,
+  el,
+  h,
+  hidePopover,
+  setStatus,
+} from "./ui.js";
 
 /* ---------- the shared lazy-source lifecycle ---------- */
 
@@ -150,9 +159,8 @@ function inventoryOverlay(entry) {
         source: this.sourceId,
         "source-layer": sourceLayer,
         paint: {
-          "line-color": "rgba(0,0,0,0.55)",
-          "line-width": ["interpolate", ["linear"], ["zoom"], 6, 1.8, 10, 3, 14, 4.4],
-          "line-opacity": 0.8,
+          "line-color": "#000",
+          "line-width": ["interpolate", ["linear"], ["zoom"], 6, 2.4, 10, 3.6, 14, 5.2],
         },
       });
       addStacked("overlay", {
@@ -162,11 +170,54 @@ function inventoryOverlay(entry) {
         "source-layer": sourceLayer,
         paint: {
           "line-color": entry.color,
-          "line-width": ["interpolate", ["linear"], ["zoom"], 6, 0.6, 10, 1.2, 14, 2],
+          "line-width": ["interpolate", ["linear"], ["zoom"], 6, 0.5, 10, 1, 14, 1.6],
         },
       });
     },
   });
+}
+
+/* ColorBrewer Set1: the index's defaults are its first five. */
+const OUTLINE_COLORS = [
+  "#e41a1c", "#377eb8", "#4daf4a", "#984ea3", "#ff7f00", "#ffff33", "#a65628", "#f781bf",
+  "#999999",
+];
+
+/* A click on the swatch opens the colours in the same popover as the credit
+ * marks. A pick recolours a loaded layer at once; an unloaded one reads
+ * `entry.color` when it is added. */
+function colorPicker(entry) {
+  const lineId = `inv-line-${entry.id}`;
+  const swatch = h("button", {
+    type: "button",
+    class: "swatch",
+    "aria-label": `${entry.title}: outline colour`,
+    style: { backgroundColor: entry.color },
+  });
+  const pick = (color) => {
+    entry.color = color;
+    swatch.style.backgroundColor = color;
+    if (map.getLayer(lineId)) map.setPaintProperty(lineId, "line-color", color);
+    hidePopover({ refocus: true });
+  };
+  const chips = () =>
+    OUTLINE_COLORS.map((color) =>
+      h("button", {
+        type: "button",
+        class: "chip",
+        "aria-label": color,
+        "aria-pressed": String(color === entry.color),
+        autofocus: color === entry.color,
+        style: { backgroundColor: color },
+        onclick: () => pick(color),
+      }),
+    );
+  attachPopover(swatch, chips, {
+    className: "palette-popover",
+    caretAt: 1 / 3,
+    hover: false,
+  });
+  return swatch;
 }
 
 export async function loadInventories() {
@@ -197,14 +248,7 @@ export async function loadInventories() {
       entry.span ? h("span", { class: "span", textContent: `(${entry.span})` }) : null,
     );
     node.append(
-      h(
-        "div",
-        { class: "inventory" },
-        box,
-        h("span", { class: "swatch", style: { background: entry.color } }),
-        label,
-        creditButton(entry.title, entry),
-      ),
+      h("div", { class: "inventory" }, box, colorPicker(entry), label, creditButton(entry.title, entry)),
     );
   }
   el("inventories-section").hidden = index.length === 0;
@@ -295,13 +339,14 @@ function inventoryRow(feature) {
   const id = feature.layer.id.replace("inv-line-", "");
   const { entry } = inventories.get(id);
   const props = feature.properties;
-  // Paul et al. ships no names but does carry its own glacier number, so each
-  // inventory is described by whichever identifier it actually has.
-  const identity =
-    props.glacier_nr === undefined
-      ? ["Glacier name", props.name || "No name provided"]
-      : ["Glacier number", props.glacier_nr];
-  return popupSection(entry.title, [identity, ["Acquisition year", props.year]]);
+  // A name where the inventory has names, then whichever identifier it carries:
+  // Paul et al. has no names but a glacier number, RGI has both.
+  return popupSection(entry.title, [
+    entry.has_names === false ? null : ["Glacier name", props.name || "No name provided"],
+    ["Glacier number", props.glacier_nr],
+    ["RGI ID", props.rgi_id],
+    ["Acquisition year", props.year],
+  ].filter(Boolean));
 }
 
 /* The tile name is a UTM zone, a latitude band and the 100 km square, e.g.

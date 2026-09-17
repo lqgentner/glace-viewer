@@ -214,7 +214,7 @@ executed, so they are deployment decisions.
 
 ## Glacier inventory overlays
 
-Three third-party inventories ship simplified (10 m in EPSG:3035, five
+Five third-party inventories ship simplified (10 m in EPSG:3035, five
 decimals), each fetched only when first ticked. All are CC BY 4.0; each
 carries attribution, citation and licence in `data/inventories.json`, shown
 behind the info mark beside its toggle. The MIT licence covers the viewer code,
@@ -224,10 +224,18 @@ not this data.
 | --- | --- | --- |
 | `sgi2016` | Swiss Glacier Inventory 2016 (2013–2018) | 1,400 |
 | `sgi2023` | Swiss Glacier Inventory 2023 (2021–2024) | 1,299 |
+| `agi5` | Austrian Glacier Inventory 5 (2021–2023) | 799 |
 | `pauletal2020` | Alpine Glacier Inventory (2015–2017), no names, has `glacier_nr` | 4,395 |
+| `rgi7` | Randolph Glacier Inventory 7.0, subregion 11-01 Alps (2003), has `rgi_id` | 4,034 |
 
-- Regenerate the GeoJSON with `scripts/stac/export-inventories.py` in
-  deep-glacier-mapping; it needs that repository's dataset classes.
+- Regenerate the GeoJSON with `scripts/inventories/export-inventories.py` in
+  deep-glacier-mapping; it needs that repository's dataset classes. RGI 7 is
+  read as `RGI7(region="11-01")`, which skips the rest of the global file.
+  The exporter writes one feature per line, so a `git diff` names the
+  outlines that changed.
+- The popup shows a name where `has_names` allows, then `glacier_nr` or
+  `rgi_id` where the feature has one. 555 RGI names carry a French WGI code
+  as a prefix (`FR4N01166K01 du Rochail 1`); that is how RGI publishes them.
 - tippecanoe drops null properties, so an unnamed feature has no `name` key at
   all. `inventories.json` records each archive's `source_layer`; a mismatched
   `source-layer` renders nothing and reports no error.

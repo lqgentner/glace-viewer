@@ -125,16 +125,131 @@ export function collapsible(toggleId, bodyId) {
   });
 }
 
+/* ---------- popovers ---------- */
+
+/* One popover at a time, shared by the credit marks and the inventory colour
+ * swatches. The panel scrolls, so the popover is appended to the body and
+ * positioned `fixed`: as an absolutely positioned child it would extend the
+ * panel's scroll area rather than overflow it, and long citations would put a
+ * scrollbar on the whole sidebar. Detached, it can also be wider than the panel
+ * and reach past its bottom edge. */
+
+const POPOVER_GAP_PX = 10;
+const POPOVER_MARGIN_PX = 8;
+const POPOVER_HIDE_DELAY_MS = 180;
+
+let popover = null;
+let popoverAnchor = null;
+let popoverTimer = null;
+// Set while focus is handed back to a button, so its focus handler does not reopen the box.
+let refocusing = false;
+
+/**
+ * Open `build()` in a popover over `button` on click, and on hover and focus
+ * unless `hover` is false. An `autofocus` element inside takes the focus.
+ *
+ * @param {object} [options]
+ * @param {string} [options.className]  Styles the box.
+ * @param {number} [options.caretAt]    Where along the box the caret sits, 0-1.
+ * @param {boolean} [options.hover]     Whether hover and focus open it too.
+ */
+export function attachPopover(button, build, options = {}) {
+  const { className = "", caretAt = 0.5, hover = true } = options;
+  const show = () => showPopover(button, build, className, caretAt, hover);
+  // Hover for pointers, focus for keyboards, click for touch — where hover
+  // does not exist and the button would otherwise be dead.
+  if (hover) {
+    button.addEventListener("mouseenter", show);
+    button.addEventListener("focus", () => refocusing || show());
+    button.addEventListener("mouseleave", scheduleHidePopover);
+    button.addEventListener("blur", scheduleHidePopover);
+  }
+  button.addEventListener("click", (event) => {
+    event.preventDefault();
+    if (popoverAnchor === button) hidePopover();
+    else show();
+  });
+}
+
+/* With `refocus`, focus that was inside the box goes back to its button rather
+ * than falling to the page when the box is removed. */
+export function hidePopover({ refocus = false } = {}) {
+  clearTimeout(popoverTimer);
+  const anchor = popoverAnchor;
+  const focusInside = popover?.contains(document.activeElement);
+  anchor?.classList.remove("popover-open");
+  popover?.remove();
+  popover = null;
+  popoverAnchor = null;
+  if (refocus && focusInside) {
+    refocusing = true;
+    anchor.focus();
+    refocusing = false;
+  }
+}
+
+/* A grace period, so the pointer can travel from the button onto the box
+ * without the box vanishing under it. Pressing a button inside the box blurs
+ * the anchor, so the box also stays for as long as the pointer is on it. */
+function scheduleHidePopover() {
+  clearTimeout(popoverTimer);
+  popoverTimer = setTimeout(() => {
+    if (!popover?.matches(":hover")) hidePopover();
+  }, POPOVER_HIDE_DELAY_MS);
+}
+
+function showPopover(anchor, build, className, caretAt, hover) {
+  clearTimeout(popoverTimer);
+  if (popoverAnchor === anchor) return;
+  hidePopover();
+
+  const box = h("div", { class: `popover ${className}` }, build());
+  if (hover) {
+    box.addEventListener("mouseenter", () => clearTimeout(popoverTimer));
+    box.addEventListener("mouseleave", scheduleHidePopover);
+  }
+  document.body.append(box);
+
+  // Measured after insertion: the height depends on how far the content wraps.
+  const mark = anchor.getBoundingClientRect();
+  const { width, height } = box.getBoundingClientRect();
+  const markX = mark.left + mark.width / 2;
+  const left = Math.min(
+    Math.max(markX - width * caretAt, POPOVER_MARGIN_PX),
+    window.innerWidth - width - POPOVER_MARGIN_PX,
+  );
+  const above = mark.top - height - POPOVER_GAP_PX;
+  const below = above < POPOVER_MARGIN_PX;
+  box.classList.toggle("below", below);
+  box.style.left = `${left}px`;
+  box.style.top = `${below ? mark.bottom + POPOVER_GAP_PX : above}px`;
+  // The caret tracks the mark even when the box was clamped to the viewport.
+  box.style.setProperty("--caret-x", `${markX - left}px`);
+
+  anchor.classList.add("popover-open");
+  popover = box;
+  popoverAnchor = anchor;
+  box.querySelector("[autofocus]")?.focus();
+}
+
+// A scroll or resize moves the mark out from under the box.
+window.addEventListener("resize", () => hidePopover());
+document.addEventListener("scroll", () => hidePopover(), true);
+// A press elsewhere closes it; one on its own button is that button's click.
+document.addEventListener("pointerdown", (event) => {
+  if (popover && !popover.contains(event.target) && !popoverAnchor.contains(event.target)) {
+    hidePopover();
+  }
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && popover) hidePopover({ refocus: true });
+});
+
 /* ---------- attribution popover ---------- */
 
 /* Each third-party layer carries its own credit, reachable from an info mark
  * next to its toggle, rather than being folded into the map-wide attribution
- * control where a viewer cannot tell which layer it belongs to.
- *
- * The panel scrolls, so the popover is appended to the body and positioned
- * `fixed`: as an absolutely positioned child it would extend the panel's scroll
- * area rather than overflow it, and long citations would put a scrollbar on the
- * whole sidebar. Detached, it can also be wider than the panel. */
+ * control where a viewer cannot tell which layer it belongs to. */
 
 /* MapLibre's own attribution glyph, reused verbatim so the per-layer buttons
  * and the control in the corner of the map read as the same thing. It is a
@@ -144,13 +259,6 @@ INFO_ICON.innerHTML =
   '<svg viewBox="0 0 20 20" width="14" height="14" fill="currentColor" ' +
   'fill-rule="evenodd" aria-hidden="true"><path d="M4 10a6 6 0 1 0 12 0 6 6 0 1 0-12 0' +
   'm5-3a1 1 0 1 0 2 0 1 1 0 1 0-2 0m0 3a1 1 0 1 1 2 0v3a1 1 0 1 1-2 0"/></svg>';
-
-const CREDIT_GAP_PX = 10;
-const CREDIT_MARGIN_PX = 8;
-const CREDIT_HIDE_DELAY_MS = 180;
-
-let creditBox = null;
-let creditTimer = null;
 
 export function creditButton(title, credit) {
   const button = h(
@@ -163,33 +271,8 @@ export function creditButton(title, credit) {
     },
     INFO_ICON.content.firstElementChild.cloneNode(true),
   );
-  // Hover for pointers, focus for keyboards, click for touch — where hover
-  // does not exist and the button would otherwise be dead.
-  button.addEventListener("mouseenter", () => showCredit(button, title, credit));
-  button.addEventListener("focus", () => showCredit(button, title, credit));
-  button.addEventListener("mouseleave", scheduleHideCredit);
-  button.addEventListener("blur", scheduleHideCredit);
-  button.addEventListener("click", (event) => {
-    event.preventDefault();
-    if (creditBox && creditBox.dataset.owner === title) hideCredit();
-    else showCredit(button, title, credit);
-  });
+  attachPopover(button, () => creditLines(title, credit), { className: "credit-popover" });
   return button;
-}
-
-function hideCredit() {
-  clearTimeout(creditTimer);
-  if (creditBox) {
-    creditBox.remove();
-    creditBox = null;
-  }
-}
-
-/* A grace period, so the pointer can travel from the mark onto the box without
- * the box vanishing under it — the links inside have to stay reachable. */
-function scheduleHideCredit() {
-  clearTimeout(creditTimer);
-  creditTimer = setTimeout(hideCredit, CREDIT_HIDE_DELAY_MS);
 }
 
 /* One line per fact, separated by breaks rather than wrapped in a list: the box
@@ -208,39 +291,3 @@ function creditLines(title, credit) {
 
   return lines.flatMap((line, i) => (i === 0 ? [line] : [h("br"), line]));
 }
-
-function showCredit(anchor, title, credit) {
-  clearTimeout(creditTimer);
-  if (creditBox && creditBox.dataset.owner === title) return;
-  hideCredit();
-
-  const box = h(
-    "div",
-    { class: "credit-popover", dataset: { owner: title } },
-    creditLines(title, credit),
-  );
-  box.addEventListener("mouseenter", () => clearTimeout(creditTimer));
-  box.addEventListener("mouseleave", scheduleHideCredit);
-  document.body.append(box);
-
-  // Measured after insertion: the height depends on how far the citation wraps.
-  const mark = anchor.getBoundingClientRect();
-  const { width, height } = box.getBoundingClientRect();
-  const left = Math.min(
-    Math.max(mark.left + mark.width / 2 - width / 2, CREDIT_MARGIN_PX),
-    window.innerWidth - width - CREDIT_MARGIN_PX,
-  );
-  const above = mark.top - height - CREDIT_GAP_PX;
-  const below = above < CREDIT_MARGIN_PX;
-  box.classList.toggle("below", below);
-  box.style.left = `${left}px`;
-  box.style.top = `${below ? mark.bottom + CREDIT_GAP_PX : above}px`;
-  // The caret tracks the mark even when the box was clamped to the viewport.
-  box.style.setProperty("--caret-x", `${mark.left + mark.width / 2 - left}px`);
-
-  creditBox = box;
-}
-
-// A scroll or resize moves the mark out from under the box.
-window.addEventListener("resize", hideCredit);
-document.addEventListener("scroll", hideCredit, true);
