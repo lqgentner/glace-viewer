@@ -1,10 +1,6 @@
 /*
- * End-to-end smoke test of the page against a fake MapLibre.
- *
- * The modules hold state at module scope and the map is a singleton, so this is
- * one ordered scenario rather than independent cases: the page boots, controls
- * are used while the basemap is still streaming, the style arrives, and the
- * overlays are exercised from there. Subtests are awaited in order.
+ * Ordered page scenario against fake MapLibre. Await subtests because modules share
+ * state: boot, interact before style readiness, then exercise overlays.
  */
 
 import assert from "node:assert/strict";
@@ -14,14 +10,11 @@ import test from "node:test";
 
 import { captureWarnings, installBrowser, load, REPO, settle } from "./helpers/browser.js";
 
-/* A committed fixture catalog rather than a local build, which is absent in CI.
- * It carries two years and one combination built for only one of them, so the
- * disabled-button and no-layer-for-this-year paths are reachable — and a style
- * describing only the newer year, as the store publishes one, so the older year
- * is drawn through the fallback in js/store.js.
- *
- * The published catalog itself is exercised in store.test.js and, end to end,
- * in store-catalog.test.js. */
+/*
+ * The two-year fixture has missing combinations and a style for only the newer
+ * year, exercising disabled controls and older-year fallback. store-catalog.test.js
+ * covers the published catalog fixture.
+ */
 const CATALOG = {
   "http://localhost/tiles/mosaics/collection.json": path.join(REPO, "tests", "fixtures", "two-years", "collection.json"),
   "http://localhost/tiles/mosaics/style.json": path.join(REPO, "tests", "fixtures", "two-years", "style.json"),
@@ -151,7 +144,7 @@ test("the viewer", async (t) => {
       [...el("layer-info").children].map((line) => line.textContent),
       ["Composite Coherence", "12-day baseline", "Local resolution weighted median"],
     );
-    // Under the colour ramp rather than in a footer: it describes what the
+    // Under the color ramp rather than in a footer: it describes what the
     // controls above it just selected.
     assert.ok(el("raster-controls").contains(el("layer-info")));
     assert.ok(
@@ -161,7 +154,7 @@ test("the viewer", async (t) => {
     );
   });
 
-  await t.test("the scale carries the colour map's credit", async () => {
+  await t.test("the scale carries the color map's credit", async () => {
     const credit = el("legend-credit").querySelector("button.credit");
     assert.ok(credit, "an info mark beside the SCALE heading");
 
@@ -191,9 +184,9 @@ test("the viewer", async (t) => {
   });
 
   await t.test("the dark flavor's labels are lifted through the flavor, not patched after", async () => {
-    // The generator reads label colours from the flavor it is handed, so the
+    // The generator reads label colors from the flavor it is handed, so the
     // override reaches every text layer with the generator's own 1 px halo —
-    // a wider, blurred one drew a grey ring around small labels.
+    // a wider, blurred one drew a gray ring around small labels.
     for (const id of ["places", "roads_label"]) {
       const { paint } = map.getLayer(id);
       assert.equal(paint["text-color"], "#f8fafc", `${id} face`);
@@ -356,13 +349,13 @@ test("the viewer", async (t) => {
     assert.equal(el("hillshade-strength-value").textContent, "20%");
   });
 
-  await t.test("the shading is neutral, so the colour ramp keeps its hue", async () => {
-    // A hue of its own would shift the colour map underneath it — a brown
+  await t.test("the shading is neutral, so the color ramp keeps its hue", async () => {
+    // A hue of its own would shift the color map underneath it — a brown
     // shadow over cmc.lipari is no longer cmc.lipari.
-    const grey = /^(#(?:0{6}|F{6})|rgba\((\d+), \2, \2, [\d.]+\))$/i;
+    const gray = /^(#(?:0{6}|F{6})|rgba\((\d+), \2, \2, [\d.]+\))$/i;
     for (const property of ["shadow", "highlight", "accent"]) {
-      const colour = map.getLayer("hillshade").paint[`hillshade-${property}-color`];
-      assert.match(colour, grey, `${property} is off-grey: ${colour}`);
+      const color = map.getLayer("hillshade").paint[`hillshade-${property}-color`];
+      assert.match(color, gray, `${property} is off-gray: ${color}`);
     }
   });
 
@@ -414,7 +407,7 @@ test("the viewer", async (t) => {
     assert.equal(el("status").hidden, true, "the message clears when the source loads");
   });
 
-  await t.test("the swatch picks an outline colour, now or for when the layer is added", async () => {
+  await t.test("the swatch picks an outline color, now or for when the layer is added", async () => {
     const swatch = (id) => el(`inv-${id}`).parentElement.querySelector(".swatch");
     const palette = () => page.window.document.querySelector(".palette-popover");
     const chip = (color) => palette().querySelector(`[aria-label="${color}"]`);
@@ -429,7 +422,7 @@ test("the viewer", async (t) => {
     assert.equal(palette().parentElement, page.window.document.body);
     assert.equal(palette().children.length, 9);
     assert.ok(swatch("sgi2023").classList.contains("popover-open"), "the disc stays while open");
-    assert.equal(page.window.document.activeElement, chip("#ff7f00"), "focus lands on the current colour");
+    assert.equal(page.window.document.activeElement, chip("#ff7f00"), "focus lands on the current color");
     swatch("sgi2023").click();
     assert.equal(palette(), null, "a second click closes it");
 

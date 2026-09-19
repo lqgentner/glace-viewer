@@ -1,13 +1,6 @@
 /*
- * Vector overlays: the glacier inventories and the catalog tile grid.
- *
- * Both are read by range request from object storage — the inventories as
- * vector PMTiles, the grid out of the store's stac-geoparquet item index — and
- * both share one lifecycle: nothing is created until the box is first ticked,
- * and a failure rolls the layers back so re-ticking is a fresh attempt rather
- * than a no-op. `LazyOverlay` is that lifecycle; the two differ in which layers
- * they add, what they say when they cannot be reached, and whether they hand
- * MapLibre a source that loads itself or one this page has already read.
+ * Lazy inventory PMTiles and catalog-grid overlays. Failed loads remove their
+ * layers and source so the control can retry.
  */
 
 import { GRID_INDEX_URL, INVENTORY_BASE, INVENTORY_INDEX_URL } from "./config.js";
@@ -42,10 +35,7 @@ class LazyOverlay {
     this.loaded = false;
   }
 
-  /* Awaiting the style is what makes a box ticked while the basemap is still
-   * loading behave the same as one ticked afterwards: the click is honoured
-   * when the style arrives instead of being dropped. Repeated toggles settle in
-   * call order, so the last one wins. */
+  /* Wait for the style before creating or toggling layers. */
   async setEnabled(on) {
     await styleReady;
     if (this.loaded) {
@@ -57,10 +47,10 @@ class LazyOverlay {
     }
     if (!on) return;
     setStatus(this.sourceId, `Loading ${this.label}…`);
-    /* `add` may be asynchronous — the grid reads and parses its index before it
-     * has anything to give MapLibre, where an archive-backed overlay hands over
-     * a URL and lets the source load itself. Both failure paths land in the
-     * same place: roll back, untick, and say so. */
+    /*
+     * The grid reads its data here; PMTiles sources load through MapLibre. Both
+     * paths share rollback handling.
+     */
     try {
       await this.add();
     } catch (error) {
@@ -71,7 +61,7 @@ class LazyOverlay {
     this.watch();
   }
 
-  /* Roll back, so re-ticking the box is a fresh attempt rather than a no-op. */
+  /* Remove failed state so the next activation can retry. */
   fail(error) {
     this.remove();
     const box = this.checkbox();
@@ -87,9 +77,7 @@ class LazyOverlay {
     this.loaded = false;
   }
 
-  /* Because the source loads itself, success and failure arrive as map events
-   * rather than as the resolution of a fetch. Both are one-shot: the listeners
-   * take themselves off again so later tile activity on the source is ignored. */
+  /* Watch initial source loading only; remove listeners after success or failure. */
   watch() {
     const stop = () => {
       map.off("sourcedata", onData);
@@ -112,14 +100,10 @@ class LazyOverlay {
 
 /* ---------- glacier inventories ---------- */
 
-/* Each inventory is a vector archive built from the committed GeoJSON by
- * scripts/build-tiles.py, so the browser pulls only the tiles the view covers
- * and the outlines draw as the first tiles land. */
+/* Built from committed GeoJSON by scripts/build-tiles.py. */
 const inventories = new Map();
 
-/* The index is fetched, so it gets the same treatment as the raster catalog:
- * an entry missing the fields the overlay is built from is dropped rather than
- * allowed to fail later inside MapLibre. */
+/* Drop index entries missing the fields needed to create an overlay. */
 function validateInventoryIndex(raw) {
   if (raw === null || typeof raw !== "object" || !Array.isArray(raw.inventories)) return [];
   return raw.inventories.filter((entry) => {
@@ -149,10 +133,10 @@ function inventoryOverlay(entry) {
         type: "vector",
         url: `pmtiles://${INVENTORY_BASE}/${entry.url}`,
       });
-      /* Outlines only — a fill would hide the imagery the outline is there to
-       * be compared against. The dark casing keeps them legible over both the
-       * pale and the dark end of the colour ramps. `source-layer` must match
-       * the layer name tippecanoe was given. */
+      /*
+       * Unfilled outlines preserve the raster beneath; dark casing improves
+       * contrast. source-layer must match the tippecanoe layer name.
+       */
       addStacked("overlay", {
         id: `${lineId}-casing`,
         type: "line",
@@ -183,15 +167,13 @@ const OUTLINE_COLORS = [
   "#999999",
 ];
 
-/* A click on the swatch opens the colours in the same popover as the credit
- * marks. A pick recolours a loaded layer at once; an unloaded one reads
- * `entry.color` when it is added. */
+/* Update loaded outlines immediately; unloaded layers read entry.color on creation. */
 function colorPicker(entry) {
   const lineId = `inv-line-${entry.id}`;
   const swatch = h("button", {
     type: "button",
     class: "swatch",
-    "aria-label": `${entry.title}: outline colour`,
+    "aria-label": `${entry.title}: outline color`,
     style: { backgroundColor: entry.color },
   });
   const pick = (color) => {
@@ -239,8 +221,7 @@ export async function loadInventories() {
 
     const box = h("input", { type: "checkbox", id: `inv-${entry.id}` });
     box.addEventListener("change", () => overlay.setEnabled(box.checked));
-    // No forced break: the name wraps on its own where the panel is narrow, and
-    // the span follows it inline so the row never runs to three lines.
+
     const label = h(
       "label",
       { htmlFor: box.id },
@@ -268,19 +249,14 @@ export const grid = new LazyOverlay({
   failure: (error) =>
     `Tile grid unavailable — ${GRID_INDEX_URL}${error?.message ? ` (${error.message})` : ""}`,
   async add() {
-    /* GeoJSON rather than a tiled source: this is 143 footprints over
-     * Switzerland and ~2 200 over the Alps, which is a small enough document to
-     * hand over whole, and it arrives already parsed. */
+    /* The decoded footprints are small enough to supply as one GeoJSON source. */
     map.addSource(this.sourceId, { type: "geojson", data: await loadTileGrid() });
     addStacked("overlay", {
       id: GRID_LAYER,
       type: "fill",
       source: this.sourceId,
       paint: {
-        // Shade each MGRS tile by how much of it the inventory calls glacier.
-        // White rather than the panel's blue: the data ramps run through blue at
-        // one end and grey-white at the other, and only white keeps the grid
-        // legible over both without being mistaken for the data itself.
+        // Shade by glacier fraction in neutral white for contrast with raster colors.
         "fill-color": [
           "interpolate",
           ["linear"],
@@ -301,14 +277,10 @@ export const grid = new LazyOverlay({
 
 /* ---------- popups ---------- */
 
-/* A one-pixel outline is nearly impossible to hit, so clicks are resolved
- * against a box around the pointer rather than the rendered line itself. This
- * also lets several overlapping inventories answer one click. */
+/* Query a box around the pointer to make thin and overlapping outlines clickable. */
 const CLICK_RADIUS_PX = 8;
 
-/* One handler for every clickable overlay: querying them together means a
- * single click reports everything under it in one popup rather than racing two
- * handlers to open competing ones. */
+/* Query all overlays together to combine overlapping features in one popup. */
 function clickableLayers() {
   const layers = [...inventories.values()]
     .filter(({ entry, overlay }) => overlay.loaded && el(`inv-${entry.id}`)?.checked)
@@ -317,12 +289,7 @@ function clickableLayers() {
   return layers.filter((id) => map.getLayer(id));
 }
 
-/* Every popup section reads the same way: a muted uppercase heading styled like
- * the panel's own field labels, then `label: value` lines. Fields whose value is
- * missing are dropped rather than shown empty.
- *
- * Built as nodes, not as an HTML string: the values are vector-tile properties,
- * and a glacier name containing markup must stay a glacier name. */
+/* Omit missing fields and build nodes so vector-tile properties remain text. */
 function popupSection(heading, fields) {
   const nodes = [h("div", { class: "pop-head", textContent: heading })];
   for (const [label, value] of fields) {
@@ -339,8 +306,7 @@ function inventoryRow(feature) {
   const id = feature.layer.id.replace("inv-line-", "");
   const { entry } = inventories.get(id);
   const props = feature.properties;
-  // A name where the inventory has names, then whichever identifier it carries:
-  // Paul et al. has no names but a glacier number, RGI has both.
+
   return popupSection(entry.title, [
     entry.has_names === false ? null : ["Glacier name", props.name || "No name provided"],
     ["Glacier number", props.glacier_nr],
@@ -349,9 +315,7 @@ function inventoryRow(feature) {
   ].filter(Boolean));
 }
 
-/* The tile name is a UTM zone, a latitude band and the 100 km square, e.g.
- * 31TFJ68 — so the zone the tile is projected in can be read straight off it.
- * Bands C-M are the southern hemisphere, N-X the northern. */
+/* MGRS starts with the UTM zone and latitude band. Bands C–M are south, N–X north. */
 export function utmZone(tile) {
   const match = /^(\d{1,2})([C-HJ-NP-X])/.exec(tile || "");
   if (!match) return null;
@@ -364,8 +328,7 @@ function gridRow(feature) {
     ["Tile identifier", props.tile],
     ["UTM zone", utmZone(props.tile)],
     ["Glacier fraction", percent(props.glacier_fraction)],
-    // What the sampler actually weights on, so it is worth showing beside the
-    // plain fraction rather than only in the catalogue.
+
     ["Glacier fraction, 250 m buffer", percent(props.glacier_fraction_buffered)],
   ]);
 }
@@ -384,8 +347,7 @@ map.on("click", (event) => {
   );
   if (!hits.length) return;
 
-  // A box this size often clips the same outline more than once; keep the first
-  // hit per layer, and let the tile grid trail the inventories as context.
+  // Deduplicate hits per layer and place grid context after inventory sections.
   const seen = new Set();
   const sections = [];
   let gridSection = null;

@@ -1,12 +1,6 @@
 /*
- * The GLACE raster layers: the controls that select one of them, and the legend
- * that describes it.
- *
- * The layers are read out of the catalog by js/store.js, one record per
- * archive. Only the record on screen has a MapLibre source, and only records
- * that have been on screen keep one, so scrubbing through years stays instant.
- * Every layer is drawn from its pre-styled PMTiles archive; the COG reader in
- * js/cog-rgb.js is wired up but unused — see "The COG reader" in AGENTS.md.
+ * Raster selection and legends for records from js/store.js. Sources are created on
+ * first display and retained for reuse. Rendering uses pre-styled PMTiles.
  */
 
 import { addStacked, map, styleReady } from "./map.js";
@@ -15,52 +9,29 @@ import { buildSegmented, clearStatus, creditButton, el, h, setStatus } from "./u
 
 const STATUS_KEY = "rasters";
 
-/* The catalog names products the way the archives are named; the panel names
- * them the way a reader would. `data-value` keeps the catalog's spelling, so
- * only the button face changes. A product with no entry here falls back to its
- * own name rather than vanishing. */
+/* Display labels differ from catalog values; unknown products keep their names. */
 const PRODUCT_LABELS = { COH12: "Coherence", RTC: "Backscatter" };
 const productLabel = (product) => PRODUCT_LABELS[product] ?? product;
 
-/* What the selected product is, and the qualifier that goes with it. Two lines
- * rather than one joined by a separator: at the panel's width the qualifier
- * wraps anyway, so it may as well break where it means to. */
+/* Split product and qualifier to fit the panel width. */
 const PRODUCT_DETAIL = {
   COH12: ["Composite Coherence", "12-day baseline"],
   RTC: ["Composite Backscatter", "Radiometrically terrain corrected"],
 };
 
-/* How every GLACE layer is composited, which is the same for all of them. */
 const COMPOSITING_DETAIL = "Local resolution weighted median";
 
-/* The polarizations this page presents, in the order it presents them: VV is
- * the one to open on, so it belongs on the left whatever order the catalog
- * lists them in.
- *
- * It is an allowlist as well as an order. The `polarization` field carries more
- * than a polarization — see QUANTITIES below — so this list is matched against
- * what is left once the QA suffix has been taken off. Anything else (an HH/HV
- * build, a QA role this page has no row for) is dropped in indexLayers(), and
- * silently: such a layer is correct and merely unpresentable here.
- *
- * `RGB` is not a polarization either, but it is a layer a reader picks from
- * this same row, so it sits at the end of it. */
+/*
+ * Panel order and allowlist after removing QA suffixes. Unsupported polarizations
+ * are omitted silently. RGB is a channel recipe presented in the same row.
+ */
 const POLARIZATIONS = ["VV", "VH", "RGB"];
 
-/* The quantity a layer carries, which the catalog spells as a suffix on the
- * polarization: `VV` is the measurement itself, `VV_QA_NUM` and `VV_QA_CQM` the
- * two QA rasters the store publishes beside it. So the field names a
- * polarization, a QA role and a channel recipe all at once, and the panel
- * splits it back into the two rows a reader chooses from.
- *
- * The measurement is the *absence* of a suffix, which is why its value is the
- * empty string — `data-value` carries the catalog's own spelling here as
- * everywhere else, and its spelling for a measurement is nothing.
- *
- * The button faces are short because the row is three wide in a 292px panel;
- * the full names are on the buttons' own tooltips and under the colour ramp.
- * `title` is the button's tooltip and, for a QA raster, the one-line
- * description under the ramp; `name` is how it reads inside the status line. */
+/*
+ * The catalog encodes quantities as polarization suffixes: none for data, QA_NUM
+ * for count, QA_CQM for quality. title supplies the tooltip and QA description;
+ * name supplies status text.
+ */
 const MEASUREMENT = "";
 const QUANTITIES = [
   { value: MEASUREMENT, label: "Data", title: "The measurement itself" },
@@ -80,15 +51,12 @@ const QUANTITIES = [
 const QUANTITY_ORDER = QUANTITIES.map((quantity) => quantity.value);
 const quantityOf = (value) => QUANTITIES.find((quantity) => quantity.value === value);
 
-/* The swatch colour of each channel, red green blue, because that is what the
- * legend row is naming — a pixel is as red as its VV is high. */
 const CHANNEL_SWATCHES = ["#e0524f", "#4c9f4c", "#5b8def"];
 
-/* Crameri's scientific colour maps, which the style names as `cmc.<map>`.
- * The credit is per-layer because the map is. */
+/* Credit scientific color maps named cmc.<map> in the style. */
 const COLOUR_MAP_CREDIT = {
   citation: "© Fabio Crameri",
-  links: [{ label: "Scientific colour maps", url: "https://www.fabiocrameri.ch/colourmaps/" }],
+  links: [{ label: "Scientific color maps", url: "https://www.fabiocrameri.ch/colourmaps/" }],
 };
 
 const state = {
@@ -106,10 +74,10 @@ const key = (product, polarization, year) => `${product}|${polarization}|${year}
 
 /* ---------- the polarization field ---------- */
 
-/* `VV_QA_NUM` is the QA-NUM raster of VV; `VV` is VV itself. Anchored to the
- * whole value and to the two roles that exist, so an unrecognised suffix stays
- * part of the polarization and is dropped by the allowlist rather than becoming
- * a fourth button nothing can draw. */
+/*
+ * Match only known QA suffixes; unknown ones remain in the polarization and fail
+ * the allowlist.
+ */
 const QA_SUFFIX = /^(.+)_(QA_(?:NUM|CQM))$/;
 
 function splitPolarization(value) {
@@ -131,25 +99,14 @@ function layerFor(overrides) {
   return findLayer(at.product, at.pol, at.quantity, state.year);
 }
 
-/* Which row moves out of the way when a click lands on a combination nothing
- * was published for.
- *
- * The clicked button always wins — pressing RGB shows RGB — so it is the *other*
- * row that gives, and it falls back to the leftmost of its values that can
- * follow: VV for a polarization, the measurement for a quantity. The store has
- * exactly one such pairing, the false colour crossed with a QA raster, and it is
- * mutual: there is no RGB QA layer and no QA false colour, so whichever of the
- * two is clicked sends the other back to its head.
- *
- * Product is deliberately absent. A product button goes dark when the year on
- * screen has no archive for it, which is a gap in the data rather than a
- * combination that cannot exist, and the honest answer there is to refuse the
- * click and leave the year where the reader put it. */
+/*
+ * For RGB × QA, the clicked row wins and the other falls back to its first valid
+ * value. Product never gives way: a missing archive must leave the selected year
+ * unchanged.
+ */
 const GIVES_WAY = { pol: "quantity", quantity: "pol" };
 
-/* What the other row would have to become for a click on (field, value) to land
- * on a layer, or undefined if nothing rescues it. Also the test for whether such
- * a button is offered at all — see syncControls(). */
+/* Return the other row's fallback value, or undefined if no combination works. */
 function fallbackFor(field, value) {
   const other = GIVES_WAY[field];
   if (other === undefined) return undefined;
@@ -159,25 +116,15 @@ function fallbackFor(field, value) {
 
 /* ---------- the axes ---------- */
 
-/* Whether the panel has a control that can reach this layer at all. A layer that
- * names a real archive this page does not present — another polarization,
- * another QA role — is dropped without a word: it is correct and merely
- * unpresentable here, so warning about each would be noise. Whether it can be
- * *drawn* is js/store.js's question, and answered before this one. */
+/* Filter unsupported panel choices; store.js has already checked renderability. */
 function presented(layer) {
   const { pol, quantity } = splitPolarization(layer.polarization);
   return POLARIZATIONS.includes(pol) && QUANTITY_ORDER.includes(quantity);
 }
 
 /**
- * The layers the store published, arranged into the axes the panel offers.
- *
- * Every axis is derived from the layers themselves rather than declared
- * anywhere, so no control can be built for a combination that has no archive
- * behind it. Product and year keep the order the catalog listed them in — sorted
- * for the year, which is a number and a slider; the other two are ordered by the
- * lists above, so VV is the left-hand polarization and the measurement the
- * left-hand quantity whatever order the catalog used.
+ * Build axes from available layers: products in catalog order, years ascending,
+ * polarizations and quantities in panel order.
  *
  * @param {object[]} layers  the records js/store.js read out of the catalog
  */
@@ -191,8 +138,7 @@ export function indexLayers(layers) {
 
   return {
     layers: usable,
-    /* `product|polarization|year` -> layer: the controls ask "does this
-     * combination exist" on every keystroke of the year slider. */
+
     index: new Map(
       usable.map((layer) => [key(layer.product, layer.polarization, layer.year), layer]),
     ),
@@ -206,16 +152,12 @@ export function indexLayers(layers) {
 /* ---------- map layers ---------- */
 
 function ensureLayer(layer) {
-  // The catalog's own style layer id, so the page's id and the catalog's cannot drift.
   const id = layer.id;
   if (state.added.has(id)) return;
-  /* Neither `attribution` nor `bounds`: the archive carries both in its own
-   * header, `pmtiles.Protocol({metadata: true})` puts them in the TileJSON, and
-   * a spec that named either would override the archive rather than add to it.
-   * The credit stays conditional and stays per year for the same reason as
-   * before — each year is its own archive, and MapLibre credits a source only
-   * while a visible layer uses it. The zooms are declared, since the style is
-   * where the catalog states them. */
+  /*
+   * Inherit attribution and bounds from PMTiles metadata. Zoom limits come from the
+   * catalog style.
+   */
   map.addSource(id, {
     type: "raster",
     url: `pmtiles://${layer.url}`,
@@ -233,15 +175,10 @@ function ensureLayer(layer) {
   state.added.add(id);
 }
 
-/* A raster source that cannot load says nothing on its own. MapLibre fires an
- * `error` event, the tile is never drawn, and the map just stays empty — which
- * is exactly how a broken tile protocol looks from the outside, and why one
- * went unnoticed until someone said the layer was missing.
- *
- * Only this page's own sources are reported, and only the first failure of
- * each: a viewport failing twenty tiles is one broken layer, not twenty
- * problems. A tile MapLibre cancelled is not a failure at all — panning away
- * from a tile in flight is the normal case. */
+/*
+ * Report the first failure per raster source. Ignore canceled requests, which are
+ * normal during panning.
+ */
 const reportedFailures = new Set();
 
 map.on("error", (event) => {
@@ -256,16 +193,13 @@ map.on("error", (event) => {
   );
 });
 
-/* What the controls currently name, as it reads inside a sentence. */
 function selectionName() {
   const quantity = quantityOf(state.quantity)?.name;
   const what = `${productLabel(state.product)} ${state.pol}`;
   return quantity ? `${what} ${quantity}` : `${what} layer`;
 }
 
-/* The panel updates immediately; the map catches up once the style is parsed.
- * Splitting it this way is what lets the controls respond during the seconds
- * the basemap takes to arrive instead of appearing to ignore the first click. */
+/* Update controls immediately; map rendering waits for the parsed style. */
 function render() {
   const active = selected();
   if (active) {
@@ -279,9 +213,7 @@ function render() {
   showOnMap(active);
 }
 
-/* Only the previously shown layer is hidden rather than every added one: at
- * most one raster is ever visible, so there is nothing else to turn off.
- * Repeated calls settle in order, so the last selection wins. */
+/* Hide only the previous raster. Calls settle in order, so the last selection wins. */
 async function showOnMap(active) {
   await styleReady;
   const wanted = active ? active.id : null;
@@ -300,9 +232,6 @@ const unitSuffix = (layer) =>
   typeof layer.units === "string" && layer.units ? ` ${layer.units}` : "";
 const round = (value, span) => value.toFixed(Math.abs(span) < 5 ? 2 : 1);
 
-/* A ramp and its two ends, or three channels and what each one carries. Only
- * one of the two is ever shown, so the other is hidden rather than left holding
- * whatever the last layer put there. */
 function updateLegend(layer) {
   const falseColour = layer.polarization === FALSE_COLOUR;
   el("legend-bar").hidden = falseColour;
@@ -338,12 +267,10 @@ function updateChannelLegend(layer) {
   );
 }
 
-/* Three `{band, vmin, vmax}`, red green blue, or null where the style does not
- * carry them. Checked rather than trusted, like everything else that reaches the
- * page from the catalog — and descriptive rather than structural, so
- * an unusable one costs the layer its numbers and not its place on the map. It
- * is dropped silently for the same reason a half-written date is: nothing is
- * wrong with the layer. */
+/*
+ * Validate the three {band, vmin, vmax} channel records. Invalid metadata omits
+ * legend numbers without hiding the pre-styled layer.
+ */
 function validChannels(channels) {
   const usable =
     Array.isArray(channels) &&
@@ -361,22 +288,8 @@ function validChannels(channels) {
 }
 
 /**
- * What each channel of a false-colour layer carries, and over what range.
- *
- * `channels` is the build's own record of what it baked into the archive — the
- * band in each slot and the stretch it was given — published in the style under
- * `metadata.portolan:legend`, the same block the build reads. So the legend
- * reports what the tiles were actually made with. This page holds no stretch of
- * its own and no table keyed on the product: those numbers belong to whatever
- * rendered the archive, and a second copy here is a second copy to get wrong.
- *
- * The store publishes them today. Where a store does not, the bands can still be
- * named but their ranges cannot: red and green are the two polarizations and
- * blue is their ratio, written as a difference wherever the layer is read in dB
- * and a quotient otherwise — one rule in two spellings, read off the layer's own
- * `units` rather than assumed per product. The ranges are left blank, because
- * printing numbers the archive was not necessarily built with is a guess dressed
- * as a legend.
+ * Use the style's published channel stretches. Without them, show band names and
+ * the ratio (a difference in dB) but never infer ranges from sibling layers.
  *
  * @param {object} layer
  * @returns {{band: string, vmin?: number, vmax?: number}[]}
@@ -387,18 +300,12 @@ export function falseColourChannels(layer) {
   return [{ band: "VV" }, { band: "VH" }, { band: layer.units === "dB" ? "VV − VH" : "VV / VH" }];
 }
 
-/* An ISO date as js/store.js reads it off the year's STAC item. */
 const isDate = (value) => isNonEmptyString(value) && /^\d{4}-\d{2}-\d{2}$/.test(value);
 
-/* What sits under the colour ramp: what the layer is and the window it covers.
- *
- * A measurement names its product and how it was composited; a QA raster names
- * itself in one line instead — its `title` from QUANTITIES.
- *
- * The acquisition window is the one part that comes from a document of its own —
- * the year's STAC item — so the line appears once js/store.js could read that
- * item and is silently skipped when it could not. Descriptive rather than
- * structural, like `cmap`: the layer draws identically without it. */
+/*
+ * Describe the product or QA quantity, followed by acquisition dates when
+ * available.
+ */
 export function layerDetail(layer) {
   const { quantity } = splitPolarization(layer.polarization);
   const lines =
@@ -414,9 +321,10 @@ export function layerDetail(layer) {
   return lines;
 }
 
-/* Rebuilt only when the colour map changes rather than on every render: the
- * button owns a hover popover, and replacing it under the pointer would drop
- * the box the reader is reading. */
+/*
+ * Keep the credit button while its color map is unchanged so an open popover
+ * survives renders.
+ */
 let shownColourMap = null;
 
 function updateColourMapCredit(layer) {
@@ -425,26 +333,17 @@ function updateColourMapCredit(layer) {
   shownColourMap = cmap;
   el("legend-credit").replaceChildren(
     ...(cmap
-      ? [creditButton("Colour map", { ...COLOUR_MAP_CREDIT, title: `Colormap: ${cmap}` })]
+      ? [creditButton("Color map", { ...COLOUR_MAP_CREDIT, title: `Colormap: ${cmap}` })]
       : []),
   );
 }
 
 /* ---------- controls ---------- */
 
-/* A combination only exists for some years, and some do not exist at all — the
- * false colour has no QA raster, and a QA raster has no false colour. Either
- * way the button goes grey rather than disappearing, so the control does not
- * reflow while scrubbing. The button that is currently selected is never greyed
- * — it describes the view, so it has to stay lit even where moving *to* it
- * would be impossible.
- *
- * Grey means two different things, and the difference is whether the click is
- * accepted. A combination that cannot exist is still *reachable*: pressing it
- * moves the row that gives way (see GIVES_WAY) and shows what the button names,
- * so it carries `aria-disabled` and stays live. A combination the year simply
- * has no archive for is refused outright, with `disabled`, since there is
- * nothing to move. */
+/*
+ * Gray choices with a fallback remain clickable via aria-disabled; missing archives
+ * use disabled. Keep the selected button active even when its year has no archive.
+ */
 function syncControls() {
   for (const [node, field] of [
     [el("product"), "product"],
@@ -454,10 +353,10 @@ function syncControls() {
     for (const button of node.children) {
       const value = button.dataset.value;
       const chosen = state[field] === value;
-      const grey = !chosen && layerFor({ [field]: value }) === null;
-      const reachable = grey && fallbackFor(field, value) !== undefined;
+      const gray = !chosen && layerFor({ [field]: value }) === null;
+      const reachable = gray && fallbackFor(field, value) !== undefined;
       button.setAttribute("aria-checked", String(chosen));
-      button.disabled = grey && !reachable;
+      button.disabled = gray && !reachable;
       if (reachable) button.setAttribute("aria-disabled", "true");
       else button.removeAttribute("aria-disabled");
     }
@@ -469,8 +368,7 @@ function syncControls() {
 function initControls(axes) {
   const select = (field) => (value) => {
     state[field] = value;
-    // The click won; if nothing was published for what it now names, the other
-    // row follows it rather than the map going empty.
+
     if (selected() === null) {
       const fallback = fallbackFor(field, value);
       if (fallback !== undefined) state[GIVES_WAY[field]] = fallback;
@@ -483,9 +381,6 @@ function initControls(axes) {
     select("product"),
   );
 
-  /* Only shown when there is a choice: a store published before the QA
-   * rasters offers one quantity, and a radio group with a single button is
-   * furniture, not a control. */
   buildSegmented(
     el("quantity"),
     QUANTITIES.filter((quantity) => axes.quantities.includes(quantity.value)),
@@ -521,10 +416,10 @@ function initControls(axes) {
 
 /* ---------- boot ---------- */
 
-/* The rasters are the only part of the page that needs object storage. When the
- * catalog cannot be reached or cannot be understood, hide the controls that
- * describe a raster layer and say so once, rather than leaving dead sliders
- * behind an error message. */
+/*
+ * Hide unavailable raster controls while keeping the independent map and overlays
+ * usable.
+ */
 function noRasters(reason) {
   el("raster-controls").hidden = true;
   el("layer-info").replaceChildren();
@@ -547,10 +442,10 @@ export async function loadRasters() {
 
   state.axes = axes;
 
-  /* The head of each axis rather than whatever the first layer happens to be,
-   * so the page opens on the leftmost button of each control — the measurement
-   * and VV included. If that combination has no archive, fall back to one that
-   * does rather than opening on an empty map. */
+  /*
+   * Start with the first value of each panel axis, falling back to an existing
+   * archive.
+   */
   state.product = axes.products[0];
   state.pol = axes.polarizations[0];
   state.quantity = axes.quantities[0];

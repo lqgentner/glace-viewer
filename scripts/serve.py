@@ -1,27 +1,11 @@
-"""Serve the viewer locally, with the HTTP range support PMTiles needs.
+"""Serve the viewer with byte ranges for PMTiles and an optional /tiles mount.
 
-``http.server`` answers every request with the whole file, which a PMTiles
-client cannot use: it fetches the header, the directory and each tile as byte
-ranges. This server adds ``Range`` handling and, given ``--tiles-dir``, mounts a
-local copy of the GLACE archives under ``/tiles``.
+Usage: pixi run --locked serve [--tiles-dir DIR]
 
-The GLACE archives live on object storage and ``site-config.js`` points the page
-there, so the plain command already shows them and ``--tiles-dir`` is only for
-reading a local build instead:
-
-    pixi run serve
-    # -> http://localhost:8000/            the published store
-    # -> http://localhost:8000/?tiles=tiles   whatever is mounted under /tiles
-
-Use ``localhost``, not ``127.0.0.1``: the basemap reads Protomaps' hosted API,
-and its CORS exemption for local development matches the ``localhost``
-hostname exactly, not the loopback IP.
-
-Run ``scripts/build-tiles.py`` first: the inventory archives are build outputs
-and are not committed.
-
-Usage:
-    pixi run serve [--tiles-dir DIR]
+Open http://localhost:8000/ for the configured remote store, or add
+?tiles=tiles to select the local mount. Use localhost rather than 127.0.0.1
+for the configured basemap's development access. Build inventory tiles first
+with pixi run --locked build-tiles.
 """
 
 from __future__ import annotations
@@ -38,20 +22,17 @@ from typing import IO
 from urllib.parse import unquote
 
 RANGE_RE = re.compile(r"^bytes=(\d*)-(\d*)$")
-# Page-shell files and the small JSON documents are re-read on every reload; tiles
-# and archives are not.
+# Reload page code and JSON; allow normal caching for tiles and archives.
 NO_STORE_SUFFIXES = frozenset({"", ".html", ".js", ".css", ".json"})
 
 
 class RangeRequestHandler(SimpleHTTPRequestHandler):
-    """Static handler that honours single-range ``Range`` requests."""
+    """Static handler that honors single-range ``Range`` requests."""
 
-    # A map view fetches hundreds of small tiles; without keep-alive each one
-    # pays for a fresh connection.
+    # Reuse connections across tile requests.
     protocol_version = "HTTP/1.1"
 
-    # ``mimetypes`` has no entry for ``.webmanifest``, and Chrome rejects one
-    # served as ``application/octet-stream`` with a console warning and nothing else.
+    # mimetypes lacks the web app manifest type.
     extensions_map = {
         **SimpleHTTPRequestHandler.extensions_map,
         ".webmanifest": "application/manifest+json",
@@ -65,14 +46,7 @@ class RangeRequestHandler(SimpleHTTPRequestHandler):
         return path.split("?", 1)[0].split("#", 1)[0]
 
     def _tiles_target(self, clean: str) -> Path | None:
-        """Resolve a ``/tiles/...`` request, or ``None`` if it escapes ``tiles_dir``.
-
-        Normalising the relative part is not enough on its own: ``..`` survives
-        ``normpath`` when it is already leading, so ``/tiles/../../etc/passwd``
-        used to resolve outside the mount. Harmless behind the localhost
-        default, but this server takes ``--bind``. Resolve the whole path and
-        require the result to still be inside the directory.
-        """
+        """Resolve a /tiles path, rejecting traversal and symlinks outside the mount."""
         target = (self.tiles_dir / unquote(clean.removeprefix("/tiles/")).lstrip("/")).resolve()
         return target if target.is_relative_to(self.tiles_dir) else None
 
@@ -81,8 +55,7 @@ class RangeRequestHandler(SimpleHTTPRequestHandler):
         clean = self._request_path(path)
         if clean.startswith("/tiles/"):
             target = self._tiles_target(clean)
-            # send_head() rejects an escaping path before it gets this far; the
-            # fallback keeps a caller that did not go through it inside the mount.
+            # Keep direct callers contained too; send_head rejects escaping paths.
             return str(target if target is not None else self.tiles_dir)
         return super().translate_path(path)
 
@@ -95,9 +68,7 @@ class RangeRequestHandler(SimpleHTTPRequestHandler):
 
         header = self.headers.get("Range")
         match = RANGE_RE.match(header) if header else None
-        # ``bytes=-`` matches the grammar but names neither end of a range.
-        # RFC 9110 says to ignore a Range header that cannot be satisfied, which
-        # is also what the full-body handler does.
+        # Ignore malformed ranges, including bytes=- with neither endpoint.
         if match is None or not (match.group(1) or match.group(2)):
             return super().send_head()
 
@@ -136,13 +107,7 @@ class RangeRequestHandler(SimpleHTTPRequestHandler):
         return _Slice(handle, end - start + 1)
 
     def end_headers(self) -> None:
-        """Advertise range support, and set caching to match how each file changes.
-
-        The archives are immutable once built and worth caching, but ``index.html``,
-        ``js/app.js`` and ``style.css`` are edited between reloads. Without ``no-store``
-        the browser reuses a stale script and the page silently keeps rendering the
-        previous version.
-        """
+        """Advertise byte ranges and prevent stale page code and JSON on reload."""
         self.send_header("Accept-Ranges", "bytes")
         suffix = Path(self.path.split("?", 1)[0]).suffix
         if suffix in NO_STORE_SUFFIXES:
@@ -191,9 +156,7 @@ def main() -> None:
     handler = partial(RangeRequestHandler, directory=str(web_dir))
     RangeRequestHandler.tiles_dir = tiles_dir
     with ThreadingHTTPServer((args.bind, args.port), handler) as server:
-        # "localhost", not the 127.0.0.1 the socket is bound to: the browser's
-        # Origin header has to read exactly "localhost" for the Protomaps API
-        # key's CORS exemption for local development to match.
+        # Protomaps development access requires localhost in the browser origin.
         host = "localhost" if args.bind == "127.0.0.1" else args.bind
         print(f"Serving {web_dir} (tiles: {tiles_dir}) on http://{host}:{args.port}/")
         try:

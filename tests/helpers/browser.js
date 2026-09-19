@@ -1,11 +1,6 @@
 /*
- * A DOM and a fake MapLibre, so the viewer's modules can be exercised without a
- * browser or a network.
- *
- * The fakes are deliberately strict rather than permissive: adding a layer
- * twice, adding one whose source does not exist, or setting a property on a
- * layer that was never added all throw, because each of those is a real bug the
- * page would otherwise hide behind a console warning.
+ * jsdom and strict MapLibre fakes. Duplicate layers, missing sources, and writes to
+ * unadded layers throw to expose errors the real renderer may only warn about.
  */
 
 import fs from "node:fs";
@@ -133,7 +128,7 @@ class FakeMap {
     return window.document.getElementById(this.options.container);
   }
 
-  /* A plate carrée about the centre, scaled like the mercator equator: no
+  /* A plate carrée about the center, scaled like the mercator equator: no
    * globe, no perspective, but enough to tell a whole earth from a glacier —
    * which is all js/sky.js asks of it. */
   project([lng, lat]) {

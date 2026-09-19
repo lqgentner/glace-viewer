@@ -1,12 +1,6 @@
 name: Tests
 
-# The page has no build step, so nothing here compiles anything: the Python
-# tests drive scripts/serve.py over a socket, and the JavaScript tests run the
-# modules under js/ against a jsdom document and a fake MapLibre.
-#
-# No `push` trigger on main: the deploy workflow calls this one and will not
-# publish unless it passes, so a push there would otherwise run both suites
-# twice for the same commit.
+# The deploy workflow calls this for main pushes, avoiding duplicate test runs.
 on:
   pull_request:
   workflow_call:
@@ -20,18 +14,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      # Python, Node and tippecanoe all come from pixi.lock; the cache is keyed
-      # on it. `--locked` also checks that pixi.toml and pixi.lock agree.
-      #
-      # The stable actions float on a major; setup-pixi is pinned to a release
-      # because its inputs may change between minors while pixi is pre-1.0.
-      # Dependabot (.github/dependabot.yml) moves both. pixi itself is not
-      # pinned here: Dependabot cannot update a `with:` input, so a version
-      # would rot and drift from the `requires-pixi` floor in pixi.toml.
+      # Cache the locked environment. Pin setup-pixi to a release while it is pre-1.0;
+      # Dependabot updates the action, and pixi.toml sets the minimum pixi version.
       - uses: prefix-dev/setup-pixi@v0.10.2
         with:
           cache: true
-      # `pixi run test` runs the Python suite, then `npm ci` and the JavaScript
-      # suite: jsdom is the one dependency pixi cannot lock, so npm's lockfile
-      # decides its version.
+      # Run both suites; the JavaScript task installs jsdom from the npm lockfile.
       - run: pixi run --locked test

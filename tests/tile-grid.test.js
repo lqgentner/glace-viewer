@@ -1,12 +1,6 @@
 /*
- * The catalog tile grid, read from the store's stac-geoparquet item index.
- *
- * hyparquet is swapped for `fixtures/fake-hyparquet.mjs` through the
- * `hyparquetUrl` setting — the same seam a deployment would use to pin a
- * different CDN — so the reading and the network stay out of it and what runs
- * is the part this repository owns: which columns are asked for, how one Item
- * per (tile, year) becomes one footprint per tile, and what the overlay does
- * when the index cannot be read.
+ * Inject fake-hyparquet.mjs through hyparquetUrl to test column selection,
+ * footprint deduplication, and overlay failure handling without network access.
  */
 
 import assert from "node:assert/strict";

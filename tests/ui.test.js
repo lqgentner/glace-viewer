@@ -1,10 +1,4 @@
-/*
- * The status line and the attribution popover, on their own.
- *
- * Both are places where text the page did not author reaches the DOM, and the
- * status line is shared by several things that finish in whatever order the
- * network gives them.
- */
+/* Check status priority and safe external-text rendering in attribution popovers. */
 
 import assert from "node:assert/strict";
 import test from "node:test";

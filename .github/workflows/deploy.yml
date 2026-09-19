@@ -1,7 +1,6 @@
 name: Deploy to Pages
 
-# The repository stores the inventories as GeoJSON; the vector PMTiles the page
-# actually loads are built here, so the archives never enter git history.
+# Build inventory archives from committed GeoJSON before publishing.
 on:
   push:
     branches: [main]
@@ -12,15 +11,13 @@ permissions:
   pages: write
   id-token: write
 
-# One deploy at a time, but never cancel one in flight: a half-published site is
-# worse than a slightly stale one.
+# Serialize deployments without interrupting one in progress.
 concurrency:
   group: pages
   cancel-in-progress: false
 
 jobs:
-  # The same suites the pull request ran, re-run against the commit that is
-  # about to be published: a red build must not reach Pages.
+  # Test the exact commit being published.
   test:
     uses: ./.github/workflows/test.yml
 
@@ -29,8 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      # tippecanoe comes from conda-forge through pixi.lock, pinned there so a
-      # rebuild of an old commit produces the same tiles.
+
       - uses: prefix-dev/setup-pixi@v0.10.2
         with:
           cache: true
@@ -40,8 +36,7 @@ jobs:
           pixi run --locked tippecanoe --version
           pixi run --locked build-tiles
 
-      # Only the archives are published, never the GeoJSON they were built from:
-      # shipping both would double what a visitor could download for no gain.
+      # Publish the runtime files and generated archives, excluding source GeoJSON.
       - name: Stage the site
         run: |
           mkdir -p _site/data

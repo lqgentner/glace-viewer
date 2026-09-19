@@ -5,8 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>GLACE — Sentinel-1 composites, European Alps</title>
 
-    <!-- Relative, since a Pages project site is served from a subpath. The .ico
-         carries 16, 32 and 48 px, so no PNG favicons beside it. -->
+    <!-- Use relative asset paths for Pages project subpaths. -->
     <link rel="icon" href="assets/favicon.ico" sizes="16x16 32x32 48x48" />
     <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
     <link rel="manifest" href="assets/site.webmanifest" />
@@ -18,25 +17,20 @@
   <body>
     <div id="map"></div>
 
-    <!-- The panel and, behind it, the frosted pane it sits on. The pane is a
-         sibling rather than a child because it overhangs the panel on every side
-         (see #panel-glass in style.css) and the panel is a scroll container: as a
-         child it would slide out from under its own contents. The shell clips the
-         overhang and owns the drop shadow. -->
+    <!-- The shell clips the oversized glass pane; a sibling pane stays fixed behind
+         the scrolling panel. -->
     <div id="panel-shell">
       <div id="panel-glass" aria-hidden="true"></div>
       <aside id="panel">
         <header>
           <div>
-            <!-- The wordmark carries its glyphs as outlines, so it needs no
-                 webfont — see AGENTS.md. -->
+            <!-- Outlined glyphs need no webfont. -->
             <h1 id="title">
               <img src="assets/glace-wordmark.svg" alt="GLACE" width="2074" height="419" />
             </h1>
             <p id="subtitle">Sentinel-1 annual summer composites of the European Alps</p>
           </div>
-          <!-- Collapses everything below the title. The panel covers most of a
-               phone screen, so there it opens collapsed — see js/app.js. -->
+
           <button type="button" id="panel-toggle" aria-expanded="true" aria-controls="panel-body">
             <span class="chevron" aria-hidden="true"
                   ><svg viewBox="0 0 12 12" width="12" height="12" fill="none"
@@ -48,18 +42,14 @@
 
         <div id="panel-body">
 
-          <!-- Everything that describes a raster layer. Hidden as a block when
-               the catalog cannot be reached, since none of it means anything then. -->
+          <!-- Hide raster controls together when the catalog is unavailable. -->
           <div id="raster-controls">
             <section class="control">
               <label for="product">Product</label>
               <div id="product" class="segmented" role="radiogroup" aria-label="Product"></div>
             </section>
 
-            <!-- The measurement, or one of the two QA rasters the store
-                 publishes beside it. Hidden unless the catalog carries more
-                 than one, since a store built before the QA rasters offers
-                 no choice at all — see js/rasters.js. -->
+            <!-- Hide the Layer row when the catalog offers only one quantity. -->
             <section class="control" id="quantity-row" hidden>
               <label for="quantity">Layer</label>
               <div id="quantity" class="segmented" role="radiogroup" aria-label="Layer"></div>
@@ -84,28 +74,22 @@
             <section id="legend" class="control">
               <div class="control-head">
                 <label>Scale</label>
-                <!-- Colour-map credit, appended by js/rasters.js: which map it is
-                     depends on the layer, so the button is rebuilt when it changes. -->
+                <!-- js/rasters.js supplies the selected color map's credit. -->
                 <span id="legend-credit"></span>
               </div>
               <div id="legend-bar"></div>
               <div id="legend-labels"><span id="legend-min"></span><span id="legend-max"></span></div>
-              <!-- A false-colour layer has no ramp: three channels, each carrying
-                   a different measurement. Filled by js/rasters.js, which hides
-                   the bar and its labels whenever it fills this. -->
+              <!-- RGB channel legend, shown in place of the color ramp. -->
               <div id="legend-channels" hidden></div>
             </section>
 
-            <!-- What the selected layer is. Sits under the ramp rather than in a
-                 footer: it describes the thing the controls above just chose. -->
             <p id="layer-info"></p>
           </div>
 
           <hr />
 
           <section class="control" id="inventories-section" hidden>
-            <!-- Starts collapsed: three overlays that are all off by default do not
-                 need to take up the panel before anyone asks for them. -->
+
             <button type="button" id="inventories-toggle" aria-expanded="false"
                     aria-controls="inventories">
               <span>Glacier inventories</span><span class="chevron up" aria-hidden="true"
@@ -117,13 +101,11 @@
             <div id="inventories" hidden></div>
           </section>
 
-          <!-- Hidden along with the inventories above it, so a page with no
-               inventory index does not show two rules in a row. -->
+          <!-- Hide this separator with empty inventories. -->
           <hr id="inventories-rule" />
 
           <section class="control" id="extras-section">
-            <!-- Same reasoning as the inventories above: the optional layers are
-                 off on arrival; the vector basemap and its labels are the defaults. -->
+
             <button type="button" id="extras-toggle" aria-expanded="false" aria-controls="extras">
               <span>Map options</span><span class="chevron up" aria-hidden="true"
                     ><svg viewBox="0 0 12 12" width="12" height="12" fill="none"
@@ -164,20 +146,10 @@
 
     <div id="status" hidden></div>
 
-    <!-- Every library, pinned. An import map has to be parsed before the first
-         module loads, so this cannot move below the modules.
-
-         maplibre-gl is ESM-only from v6; its bundle imports a shared chunk and,
-         at map creation, a worker file, both beside it. pmtiles imports fflate
-         bare, hence the fourth entry.
-
-         Nothing on the page reads a COG today, but js/cog-rgb.js is still wired
-         up and `lerc` is what it imports when asked for a tile. It is mapped to
-         the package's own file rather than the CDN that builds the reader
-         (`?external=lerc` on cogReaderUrl in js/config.js; change the two
-         together): esm.sh rewrites `globalThis.process` to a Node polyfill,
-         under which lerc's emscripten loader decides it is running in Node and
-         every decode rejects. -->
+    <!-- Parse the import map before loading modules. MapLibre loads sibling chunks
+         and a worker; PMTiles needs the bare fflate mapping. Keep lerc on its
+         package CDN and cogReaderUrl's ?external=lerc in sync: esm.sh's process
+         polyfill makes the LERC loader choose Node and fail in the browser. -->
     <script type="importmap">
       {
         "imports": {
@@ -190,17 +162,14 @@
       }
     </script>
 
-    <!-- The globals the UMD builds used to create. The js/ modules read these
-         rather than importing the packages, which is what lets the tests hand
-         them a fake. Module scripts run in document order, so this is set
-         before js/app.js. -->
+    <!-- Expose library globals before app.js so tests can substitute fakes. -->
     <script type="module">
       import * as maplibregl from "maplibre-gl";
       import * as pmtiles from "pmtiles";
       import * as basemaps from "@protomaps/basemaps";
       Object.assign(globalThis, { maplibregl, pmtiles, basemaps });
     </script>
-    <!-- Optional per-deployment overrides; must run before the modules do. -->
+    <!-- Load deployment overrides before application modules. -->
     <script src="site-config.js"></script>
     <script type="module" src="js/app.js"></script>
   </body>

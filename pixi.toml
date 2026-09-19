@@ -1,11 +1,4 @@
-# One manifest for every tool the repository needs: Python for the two scripts,
-# Node for the page's tests, and tippecanoe for the inventory archives, all from
-# conda-forge and pinned together in pixi.lock. `pixi run <task>` sets them up
-# on first use; `--locked` fails rather than drifting from the lock.
-#
-# jsdom is the exception: conda-forge stops at jsdom 14 and pixi cannot lock
-# npm packages, so package.json and package-lock.json stay and `npm ci` runs as
-# a task inside the pixi environment.
+# Python, Node, and tippecanoe are locked by pixi; jsdom is locked by npm.
 [workspace]
 name = "glace-viewer"
 description = "Interactive web map viewer for GLACE – Sentinel-1 coherence and backscatter composites of the European Alps."
@@ -13,21 +6,19 @@ license = "MIT"
 license-file = "LICENSE"
 readme = "README.md"
 channels = ["conda-forge"]
-# tippecanoe has no Windows build on conda-forge; CI is linux-64 and the
-# laptops are Apple silicon. Each extra platform adds a third to the lock.
+# Supported development platforms; conda-forge has no Windows tippecanoe build.
 platforms = ["linux-64", "osx-arm64"]
-# The only pin on pixi itself: the workflows install the latest release and
-# this floor is what they check. Results come from the lock, not the binary.
+# Minimum pixi version; CI installs the latest release.
 requires-pixi = ">=0.80"
 
 [dependencies]
 python = "3.12.*"
 nodejs = "24.*"
-# Pinned exactly: a rebuild of an old commit must produce the same tiles.
+# Pin tile generation for reproducible builds.
 tippecanoe = "==2.79.0"
 
 [tasks]
-# Dev-only: the page loads js/ directly and has no runtime dependencies.
+# Development dependencies only; the browser loads modules directly.
 install = "npm ci"
 test-py = "python -m unittest discover -s tests -v"
 test-js = { cmd = "npm test", depends-on = ["install"] }

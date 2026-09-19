@@ -1,9 +1,6 @@
 /*
- * Opening a link that was copied while the map was tilted.
- *
- * Its own file because the pitch is read once, at import time, and the map is a
- * module singleton — the same reason viewer-degraded.test.js stands apart.
- * `node --test` gives each file its own process.
+ * Restore terrain from a pitched hash. A separate test process provides a fresh map
+ * singleton.
  */
 
 import assert from "node:assert/strict";

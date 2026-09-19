@@ -1,9 +1,6 @@
 /*
- * Every file index.html asks the browser for, and whether the deploy stages it.
- *
- * deploy.yml names the directories it copies one by one, so adding one to the
- * repository is not enough to publish it — and a missing icon or wordmark shows
- * up as a plain-looking page rather than as any error a DOM test would catch.
+ * Check that page assets exist, dependency pins agree, and deployment stages the
+ * runtime files.
  */
 
 import assert from "node:assert/strict";

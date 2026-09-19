@@ -1,10 +1,6 @@
 /*
- * The pure functions behind the data the page cannot vouch for: the layers the
- * catalog published, arranged into the axes the panel offers, and the MGRS tile
- * name that arrives inside a vector tile.
- *
- * Whether a layer can be *drawn* is js/store.js's question — see store.test.js.
- * What is asked here is whether the panel has a control that reaches it.
+ * Check panel axes, legends, and MGRS parsing. Catalog renderability is covered in
+ * store.test.js.
  */
 
 import assert from "node:assert/strict";
@@ -104,7 +100,7 @@ test("a layer is found by product, polarization and year together", () => {
   assert.equal(axes.index.get("COH12|VV|2021"), undefined);
 });
 
-test("a false colour reports the channels the build published", () => {
+test("a false color reports the channels the build published", () => {
   // The one record of what was baked into the archive. The page holds no
   // stretch of its own, so this is the only way numbers reach that legend.
   const channels = [

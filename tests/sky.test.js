@@ -1,12 +1,6 @@
 /*
- * The sky behind the globe: where the globe's silhouette lands on screen, and
- * the CSS custom properties the stylesheet paints the halo from.
- *
- * The fake map here is an independent model of MapLibre's globe camera —
- * a pinhole at `cameraToCenterDistance` in front of the surface, the sphere
- * scaled so a pixel at the centre is one mercator pixel — so the sampler is
- * checked against the closed-form silhouette rather than against its own
- * arithmetic.
+ * Check the silhouette against an independent pinhole-camera model and verify the
+ * CSS halo properties.
  */
 
 import assert from "node:assert/strict";
@@ -23,7 +17,7 @@ const rad = (deg) => (deg * Math.PI) / 180;
 
 /**
  * A globe seen through MapLibre's camera at pitch 0: the sphere's radius keeps
- * the centre pixel the size of a mercator pixel, the camera sits
+ * the center pixel the size of a mercator pixel, the camera sits
  * `cameraToCenterDistance` above the surface, and `shift` moves every projected
  * point, standing in for what pitch does to the silhouette.
  */
@@ -62,17 +56,17 @@ test("the disc is the globe's true silhouette, not the 90° great circle", () =>
   const map = cameraMap({ zoom: 2, width: 1600, height: 1000 });
   const disc = globeDisc(map, 1600, 1000);
   assert.ok(Math.abs(disc.r - map.silhouette) < map.silhouette * 0.001, `r ${disc.r} vs ${map.silhouette}`);
-  assert.ok(Math.abs(disc.x - 800) < 0.5 && Math.abs(disc.y - 500) < 0.5, `centred at ${disc.x},${disc.y}`);
-  // The naive sample, 90° from the centre, would land inside the silhouette by
+  assert.ok(Math.abs(disc.x - 800) < 0.5 && Math.abs(disc.y - 500) < 0.5, `centered at ${disc.x},${disc.y}`);
+  // The naive sample, 90° from the center, would land inside the silhouette by
   // a visible margin at this zoom; the halo's bright rim would be hidden.
   const R = (TILE * 4) / (2 * Math.PI) / Math.cos(rad(46.5));
   assert.ok(map.silhouette / R < 0.9, "the perspective margin is what makes this test worth having");
 });
 
-test("the disc follows the silhouette when pitch moves it off centre", () => {
+test("the disc follows the silhouette when pitch moves it off center", () => {
   const map = cameraMap({ shift: [30, -70] });
   const disc = globeDisc(map, 1600, 1000);
-  assert.ok(Math.abs(disc.x - 830) < 0.5 && Math.abs(disc.y - 430) < 0.5, `centred at ${disc.x},${disc.y}`);
+  assert.ok(Math.abs(disc.x - 830) < 0.5 && Math.abs(disc.y - 430) < 0.5, `centered at ${disc.x},${disc.y}`);
 });
 
 test("the sky is painted only while the globe leaves some viewport uncovered", () => {

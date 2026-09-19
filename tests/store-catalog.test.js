@@ -1,22 +1,8 @@
 /*
- * The page against the GLACE store's own catalog, as published.
- *
- * `tests/fixtures/store/` is copied from
- * https://data.source.coop/lqgentner/glace-ch — the mosaics collection, the
- * four MapLibre styles it registers, one per published year, and the four
- * year items, verbatim but for each item's geometry, which is half a megabyte
- * of outline the page never reads. So this file is where the page meets the
- * catalog the store actually writes rather than one written to suit it.
- *
- * Two things are load-bearing and neither is obvious from the code alone. The
- * archive inventory is a set of `rel: "pmtiles"` links on the collection, while
- * everything about how one is *drawn* lives in the style beside it. And the
- * `polarization` half of each layer id carries seven values, not two: a
- * polarization, a QA role and a channel recipe share the one field, which the
- * panel splits back into the two rows a reader chooses from.
- *
- * Its own file because the modules hold state at module scope and the map is a
- * singleton, so a second catalog needs a second process.
+ * Exercise the page against fixtures copied from
+ * https://data.source.coop/lqgentner/glace-ch, with item geometry reduced. Cover
+ * archive/style joins and the polarization, QA, and RGB panel choices. A separate
+ * process isolates the map singleton.
  */
 
 import assert from "node:assert/strict";
@@ -130,7 +116,7 @@ test("a QA raster is its own archive, drawn in the same slot", async () => {
   assert.ok(map.indexOf("glace-coh12_vv_qa_num-2024") < map.indexOf("places"));
 });
 
-test("a QA raster brings its own ramp, stretch and colour-map credit", async () => {
+test("a QA raster brings its own ramp, stretch and color-map credit", async () => {
   await pick("quantity", "QA_NUM");
   // 0-90 rather than the observed 26-30 of recent years, and shared by both
   // products: 2021 reaches 58 because S1B was still flying, 2026 flies three
@@ -167,13 +153,13 @@ test("the acquisition window comes from the year's STAC item", () => {
   assert.equal(item.properties.end_datetime, "2024-10-07T00:00:00Z");
 });
 
-test("the false colour and the QA rasters grey each other, but stay reachable", async () => {
-  // The store publishes no RGB QA raster and no QA false colour. The button
-  // still says so by going grey, but the click is accepted rather than refused:
+test("the false color and the QA rasters gray each other, but stay reachable", async () => {
+  // The store publishes no RGB QA raster and no QA false color. The button
+  // still says so by going gray, but the click is accepted rather than refused:
   // whichever of the two is pressed wins, and the other row follows it.
   await pick("quantity", "QA_CQM");
   const rgb = buttons(el, "pol").RGB;
-  assert.equal(rgb.getAttribute("aria-disabled"), "true", "greyed…");
+  assert.equal(rgb.getAttribute("aria-disabled"), "true", "grayed…");
   assert.equal(rgb.disabled, false, "…but live");
   assert.equal(buttons(el, "pol").VH.hasAttribute("aria-disabled"), false, "VH has a QA raster");
 
@@ -187,7 +173,7 @@ test("the false colour and the QA rasters grey each other, but stay reachable", 
   assert.equal(page.map.getLayer("glace-coh12_rgb-2024").layout.visibility, "visible");
 });
 
-test("and the other way round: a QA button pressed on false colour resets it", async () => {
+test("and the other way round: a QA button pressed on false color resets it", async () => {
   await pick("pol", "RGB");
   const count = buttons(el, "quantity").QA_NUM;
   assert.equal(count.getAttribute("aria-disabled"), "true");
@@ -203,7 +189,7 @@ test("and the other way round: a QA button pressed on false colour resets it", a
   assert.equal(page.map.getLayer("glace-coh12_vv_qa_num-2024").layout.visibility, "visible");
 });
 
-test("the false colour names its channels and the stretch each was baked with", async () => {
+test("the false color names its channels and the stretch each was baked with", async () => {
   await pick("pol", "RGB");
   assert.equal(el("legend-bar").hidden, true, "there is no ramp to show");
   assert.equal(el("legend-channels").hidden, false);
@@ -254,7 +240,7 @@ test("every archive the store published is reachable", async () => {
       }
     }
   }
-  // The twelve above, plus the two false-colour archives the tests before this
+  // The twelve above, plus the two false-color archives the tests before this
   // one selected: a layer is created once and kept, so this is every archive the
   // collection links for the year the page sits on, and nothing besides.
   assert.equal(

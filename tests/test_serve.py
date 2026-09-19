@@ -1,10 +1,7 @@
-"""Tests for the development server's range and path handling.
+"""Test byte ranges and mount containment with raw socket requests.
 
-Both of these are reachable from a plain HTTP request, and both had real bugs:
-``/tiles/../../..`` escaped the mount, and ``Range: bytes=-`` dropped the
-connection with no response. The requests are written to a socket by hand
-because ``http.client`` and ``curl`` both normalise a path like ``a/../b``
-before sending it, which is exactly the case under test.
+HTTP clients normalize traversal paths before sending them, hiding the cases
+these tests need to exercise.
 """
 
 from __future__ import annotations
@@ -89,7 +86,7 @@ class ServerTestCase(unittest.TestCase):
         cls._tmp.cleanup()
 
     def get(self, path: str, headers: str = "") -> Response:
-        """Send a request line verbatim, without any client-side normalisation."""
+        """Send a request line verbatim, without any client-side normalization."""
         with socket.create_connection(("127.0.0.1", self.port), timeout=5) as sock:
             sock.sendall(f"GET {path} HTTP/1.0\r\nHost: t\r\n{headers}\r\n".encode())
             chunks = []

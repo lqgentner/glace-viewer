@@ -4,23 +4,16 @@
   --border: #2a3242;
   --text: #e6eaf2;
   --muted: #8b95a8;
-  /* The wordmark's pink. It is only ever used on the dark panel or the popover,
-     where it runs 8.6:1 and up. */
+  /* Wordmark pink for text on dark surfaces. */
   --accent: #d7acce;
-  /* The same hue, darkened and saturated for text on a white fill: --accent
-     there is 1.97:1, which fails AA at any size, and this is 4.7:1. */
+  /* Darker accent for readable text on white controls. */
   --accent-ink: #b8479f;
 }
 
 * { box-sizing: border-box; }
 
 html, body {
-  /* The only controls still drawn by the platform are the sliders and the
-     scrollbar. Left on the light default, a slider's unfilled track comes back
-     near-white and glares against the glass; on the dark one it is a dim grey,
-     which is the same reading as the unticked boxes beside it. The checkboxes
-     take nothing from this — `appearance: none` already took them off the
-     platform entirely. */
+  /* Use dark native sliders and scrollbars to match the panel. */
   color-scheme: dark;
   margin: 0;
   height: 100%;
@@ -31,19 +24,11 @@ html, body {
 
 #map { position: absolute; inset: 0; }
 
-/* The sky around the globe. MapLibre clears its canvas to transparent and
-   paints the basemap's background on the globe alone, so #map's own background
-   is what shows around the disc: a halo at the limb over deep space. The disc's
-   centre and radius are custom properties js/sky.js writes on `move`; the class
-   is on only while some of the viewport lies outside the globe, so at reading
-   zooms this rule never applies and the page paints --bg as before.
-
-   The halo is one broad haze rather than a bright rim with a tail: a single
-   light blue-grey (the dark flavor's water, #31353f, lifted toward white)
-   whose opacity falls off exponentially with distance from the limb, halving
-   every 0.3 radii, so the fade is even from the first pixel out and no band
-   shows. It starts well under half strength: at 0.55 it read as a lit edge. Space is --bg with a touch more blue at the centre, so the class
-   switching on changes nothing but the halo. */
+/*
+ * js/sky.js supplies the globe disc for this CSS halo behind the transparent map
+ * canvas. Opacity falls exponentially beyond the limb; the sky class is absent when
+ * the globe fills the viewport.
+ */
 #map.sky {
   background:
     radial-gradient(
@@ -61,60 +46,42 @@ html, body {
     radial-gradient(ellipse at center, #141a28, var(--bg) 70%);
 }
 
-/* Frosted glass, following joshwcomeau.com/css/backdrop-filter: a translucent
-   tint sitting on a blurred copy of whatever the panel covers. Blurring drains
-   saturation and lifts brightness, so `saturate` puts the colour back and
-   `brightness` darkens the result again — without that, a snow-bright composite
-   passing under the panel washes out the muted field labels. Those values are
-   the only knobs, and they are custom properties so a variant can retune the
-   glass without restating the rule. */
+/*
+ * Frosted glass adapted from joshwcomeau.com/css/backdrop-filter. Saturation and
+ * brightness compensate for the blur so bright rasters do not wash out panel
+ * labels.
+ */
 #panel-shell {
   --glass-blur: 16px;
   --glass-saturate: 150%;
   --glass-brightness: 78%;
-  /* The tint's own colour, as bare hsl() channels so that the alpha below can
-     be set against it independently. */
+  /* HSL channels let the tint alpha vary independently. */
   --glass-tint: 222 31% 10%;
   --glass-alpha: 0.62;
-  /* How far the pane below overhangs the panel. A Gaussian blur pulls in
-     detail from well beyond its radius, so one radius of overhang still leaves
-     the outermost pixels short of neighbours; two covers it. */
+  /* Overhang by two blur radii to provide neighboring pixels at the panel edges. */
   --glass-reach: calc(var(--glass-blur) * 2);
 
   position: absolute;
   top: 12px;
   left: 12px;
   width: 292px;
-  /* 12px of margin above, and below it the room the scale bar needs in the
-     corner underneath: a MapLibre control's 10px margin plus the ~20px the bar
-     itself is, and some air. Left at 12px both ends, a short viewport hands the
-     panel the whole left edge and the scale sits behind it. It costs the panel
-     40px of height, but only where it had more than it could fill anyway. */
+  /* Reserve bottom clearance for the scale bar in js/map.js. */
   max-height: calc(100% - 52px);
-  /* A column, so the panel can be capped by the shell's max-height and scroll
-     inside it rather than growing past the bottom of the map. */
+
   display: flex;
   flex-direction: column;
   border-radius: 10px;
-  /* Cuts the pane's overhang back to the panel's own outline. */
+
   overflow: hidden;
-  /* The shadow belongs out here: on the panel it would fall inside the clip
-     above and never be drawn. */
+  /* Keep the shadow outside the clipped panel. */
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
   z-index: 2;
 }
 
-/* `backdrop-filter` samples only the pixels directly behind the element it is
-   set on. On a panel-sized box that leaves the blur with nothing past its own
-   edge to mix in, so the glass stops answering to whatever it is sitting next
-   to — a label or a bright tongue of ice just outside never reaches it. This is
-   the article's fix, with a clip in place of its mask: the filter runs on a box
-   that overhangs the panel on every side, and the shell above crops the
-   overhang away.
-
-   A sibling rather than a child of the panel, because the panel scrolls: an
-   absolutely positioned child of a scroll container travels with the content,
-   and the pane would slide out from under the controls it backs. */
+/*
+ * Blur an oversized pane, then clip it to the shell. Keep it a sibling of the
+ * scrolling panel so it stays fixed behind the controls.
+ */
 #panel-glass {
   position: absolute;
   inset: calc(-1 * var(--glass-reach));
@@ -122,15 +89,12 @@ html, body {
 }
 
 #panel {
-  /* Positioned, so it paints over the pane behind it: within one stacking
-     context every positioned element outranks its unpositioned siblings, and
-     an unpositioned panel would sit *under* the glass and be blurred by it. */
+  /* Position the panel above its glass sibling. */
   position: relative;
-  /* min-height lets the flex item shrink past its content, which is what makes
-     the overflow below scroll instead of the shell simply growing. The scrolling
-     itself belongs to #panel-body, not here: the header carries the collapse
-     button, and a panel taller than the viewport used to scroll it out of reach
-     — on a short screen there was then no way to get the map back. */
+  /*
+   * Allow flex shrinking; only panel-body scrolls so the collapse button stays
+   * reachable.
+   */
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -138,8 +102,7 @@ html, body {
   padding: 16px;
   border: 1px solid var(--border);
   border-radius: 10px;
-  /* Near-opaque, for the browsers that skip the @supports block below: at the
-     glass alpha alone the map would read straight through an unblurred panel. */
+  /* Opaque fallback for browsers without backdrop-filter. */
   background: var(--panel);
 }
 
@@ -152,16 +115,13 @@ html, body {
   }
   #panel {
     background: hsl(var(--glass-tint) / var(--glass-alpha));
-    /* A light rim rather than the flat --border: on glass the outline reads as
-       the lit edge of the pane, and the inset line is its top bevel. */
+
     border-color: rgba(255, 255, 255, 0.14);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09);
   }
 }
 
-/* The title bar stays put and everything else collapses under it, so the
-   spacing belongs to the body rather than the header — collapsed, the panel is
-   the title alone with no gap hanging off the bottom. */
+/* Put bottom spacing in the collapsible body so the closed panel fits its title. */
 #panel header {
   flex: none;
   display: flex;
@@ -169,23 +129,11 @@ html, body {
   justify-content: space-between;
   gap: 8px;
 }
-/* The body owns the horizontal padding rather than inheriting the panel's, which
-   is what lets the scrollbar sit inside it. The negative margins stretch the
-   body across the panel's full inner width; the two paddings then put the
-   controls back where they were — 16px on the left, and on the right the ~5px
-   that a `thin` bar leaves of the same 16. `scrollbar-gutter: stable` reserves
-   that gutter whether or not there is anything to scroll, which is what stops
-   the controls reflowing when the bar appears.
-
-   A scroll container clips at its padding box, not its content box, so the left
-   padding is also what gives the checkboxes' focus rings room to be drawn.
-
-   The platform scrollbar is an opaque grey slab against a pane of glass, and the
-   two standard properties are what reduce it to a translucent thumb while
-   leaving it a real scrollbar — the OS keeps its sizing, its click-and-drag and
-   its reduced-motion behaviour, which a div-and-JS reimplementation gives up.
-   This is the Firefox path: `thin` is around 11px, and padding-right is the rest
-   of the 16. */
+/*
+ * Extend the body to place the native scrollbar inside the panel padding. A stable
+ * gutter prevents reflow; left padding preserves focus rings. Firefox uses the
+ * standard thin scrollbar with the remaining space supplied by padding.
+ */
 #panel-body {
   min-height: 0;
   overflow-y: auto;
@@ -197,13 +145,11 @@ html, body {
   scrollbar-color: rgba(255, 255, 255, 0.28) transparent;
 }
 
-/* Blink and WebKit stop honouring ::-webkit-scrollbar as soon as either standard
-   property is set, so this hands them back — they are the only engines that can
-   set the gutter's own width, and 16px of gutter carrying a 6px thumb is what
-   centres the bar in the padding instead of leaving it against the border. The
-   transparent border plus a content-box clip is what insets the thumb; a margin
-   is not available here. Firefox does not match the query and keeps the pair
-   above, where the gutter is whatever `thin` happens to be. */
+/*
+ * Reset standard scrollbar properties in Blink/WebKit to enable the pseudo-
+ * elements. A transparent border insets the thumb within a 16px gutter; Firefox
+ * keeps the standard rules above.
+ */
 @supports selector(::-webkit-scrollbar) {
   #panel-body {
     padding-right: 0;
@@ -224,16 +170,12 @@ html, body {
   }
 }
 
-/* Collapsing is a class on the panel rather than `hidden` on the body, so that
-   a phone-sized screen is already collapsed on the very first paint. The script
-   that decides it is a deferred module: setting `hidden` from there runs after
-   layout, which showed the full-height panel for a frame before it snapped
-   shut. Neither class is present until the script runs, which is what the
-   narrow-screen default below is for. */
+/*
+ * CSS supplies the collapsed mobile state before deferred scripts run, preventing a
+ * flash of the full panel.
+ */
 #panel.collapsed #panel-body { display: none; }
-/* The heading is the wordmark, so the height sets it rather than a font size.
-   Its viewBox is cropped to the ink, so 20px is cap height and the 6px below is
-   the whole gap — the 2px that suited a text heading left the two touching. */
+/* The outlined wordmark has an ink-cropped viewBox, so height sets its cap height. */
 #panel h1 { margin: 0; }
 #panel h1 img { display: block; height: 20px; width: auto; }
 #panel #subtitle { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
@@ -266,17 +208,14 @@ html, body {
 }
 .control output { color: var(--text); font-variant-numeric: tabular-nums; }
 
-/* A section label with something beside it — currently the colour-map credit
-   next to SCALE. The row carries the label's bottom margin so the two stay on
-   one baseline. */
+/* Keep section labels and adjacent credit buttons on one baseline. */
 .control-head {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-bottom: 6px;
 }
-/* The label takes the slack, so the info mark sits against the right edge —
-   where it does on the hillshade and inventory rows, whose labels flex too. */
+
 .control-head > label { flex: 1; margin-bottom: 0; }
 
 .control.checkbox { display: flex; align-items: center; gap: 8px; }
@@ -289,21 +228,10 @@ html, body {
   color: var(--text);
 }
 
-/* ---------- the panel's two-state controls ----------
- *
- * A segment and a checkbox are the same control at two sizes: off is a
- * translucent grey wash, on is a white fill carrying an accent-coloured mark —
- * text in one, a tick in the other. Both states are stated once, below, so a
- * change to one cannot leave the other behind; each control then sets only what
- * genuinely differs, which is its geometry and what goes inside the fill.
- *
- * The wash is mixed from white rather than being a fixed grey, so it holds
- * against whatever the panel happens to be covering rather than against one
- * assumed backdrop colour.
- *
- * Neither is glass itself. A second backdrop-filter inside the first only
- * re-blurs an already-blurred surface, and the result is muddier than a flat
- * wash for twice the compositing. */
+/*
+ * Segments and checkboxes share off, on, and hover colors. Use a translucent wash
+ * over the panel rather than another backdrop-filter.
+ */
 .segmented button,
 input[type="checkbox"] {
   background: rgba(255, 255, 255, 0.13);
@@ -314,8 +242,7 @@ input[type="checkbox"] {
     background-color 0.14s ease,
     border-color 0.14s ease;
 }
-/* The hover lift has to exclude whatever is already on: it is more specific
-   than the two selected rules below and would otherwise grey out their fill. */
+/* Exclude selected controls: hover specificity would override their white fill. */
 .segmented button:hover:not(:disabled):not([aria-checked="true"]),
 input[type="checkbox"]:hover:not(:checked) {
   background-color: rgba(255, 255, 255, 0.24);
@@ -337,67 +264,53 @@ input[type="checkbox"]:checked {
   border-radius: 6px;
 }
 .segmented button[aria-checked="true"] { font-weight: 600; color: var(--accent-ink); }
-/* Both greys are the same grey — the button names something not on the map —
-   but only one of them refuses the click. `aria-disabled` marks a combination
-   that cannot exist and that a press resolves by moving the other row, so it
-   keeps the pointer cursor and the hover lift below: it does something. */
+/*
+ * aria-disabled stays interactive because a click can resolve the incompatible
+ * combination. Native disabled refuses clicks.
+ */
 .segmented button:disabled,
 .segmented button[aria-disabled="true"] { opacity: 0.35; }
 .segmented button:disabled { cursor: not-allowed; }
 
-/* `appearance: none` takes the native tick along with the native box, so the
-   only thing left to draw is the tick. 14px keeps it the size the platform box
-   was, and the radius is scaled down from the segments' 6px to match at this
-   size rather than to equal it. */
+/* Draw the tick explicitly after removing the native checkbox appearance. */
 input[type="checkbox"] {
   -webkit-appearance: none;
   appearance: none;
   flex: none;
   width: 14px;
   height: 14px;
-  /* The rows already space themselves with `gap`; the UA margin was adding a
-     few more pixels on top of it. */
+
   margin: 0;
   border-radius: 4px;
 }
-/* A background image rather than a ::before, because an input is a replaced
-   element and its pseudo-elements are not guaranteed to render. The cost is
-   that --accent-ink has to be written out as %23b8479f — a data URI cannot read
-   a custom property — so the tick and the segments' text are kept in step by
-   hand. */
+/*
+ * Inputs cannot reliably render pseudo-elements, so use a background image. Keep
+ * its encoded color (%23b8479f) aligned with --accent-ink.
+ */
 input[type="checkbox"]:checked {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%23b8479f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.6 6.2 5 8.6 9.4 3.6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: center;
   background-size: 12px;
 }
-/* The platform ring goes with the platform box. */
+
 input[type="checkbox"]:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
-/* White rather than the accent: the accent marks the selected segment, and a
-   filled track in the same colour reads as a second selection. The handle turns
-   white along with it — `accent-color` paints the whole control from a single
-   value, and splitting the two means drawing the track by hand in both
-   engines, which is more machinery than the difference is worth. */
-/* `margin: 0` for the same reason as the checkbox above: the UA margin sits
-   outside the 100% width, so the track overhung its own column by 2px. */
+/* Keep native slider tracks neutral; the accent is reserved for selected segments. */
+/* Remove the native margin so the full-width slider fits its column. */
 input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
 
-/* Shared by the panel and the inventories toggle: one glyph, flipped, so the
-   two states cannot drift apart. `up` marks the collapsed one. */
+/* Shared collapse chevron; up marks the collapsed state. */
 .chevron { display: flex; transition: transform 0.15s ease; }
 .chevron.up { transform: rotate(180deg); }
 
-/* Halfway between the two obvious choices. --border is a near-black hairline,
-   which all but vanishes once a bright composite is showing through the glass
-   behind it; --muted at full strength is heavier than the section labels the
-   rule is separating, and starts to read as the loudest thing in the panel.
-   Mixing --muted down to 45% keeps the grey of the labels but not their weight,
-   and being translucent it holds up over a dark backdrop and a bright one
-   alike. The flat --border first is for browsers without color-mix(). */
+/*
+ * Use a translucent separator over bright or dark rasters. The first declaration is
+ * the fallback for browsers without color-mix().
+ */
 #panel hr {
   height: 0;
   margin: 16px 0 14px;
@@ -405,15 +318,12 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   border-top: 1px solid var(--border);
   border-top-color: color-mix(in srgb, var(--muted) 45%, transparent);
 }
-/* The rule belongs to the section above it: with no inventories to separate,
-   it would sit directly under the one that closes the raster controls. */
+/* Hide the separator with empty inventories to avoid adjacent rules. */
 #inventories-section[hidden] + #inventories-rule { display: none; }
 
 #hillshade-strength-row { margin-top: -6px; padding-left: 22px; }
 
-/* The 3D/2D switch under the navigation control. MapLibre's own buttons carry a
-   background-image glyph and no text styling, so the label needs its own; the
-   colour matches the icons beside it rather than the panel's light-on-dark. */
+/* MapLibre buttons default to image glyphs; the 3D/2D text needs explicit styling. */
 .maplibregl-ctrl-3d {
   font: 600 11px/1 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   letter-spacing: 0.04em;
@@ -428,12 +338,10 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   font-variant-numeric: tabular-nums;
 }
 
-/* The page hides things by setting `hidden` from JS, and several of them carry
-   an id-level `display` rule — #legend-labels is flex, #legend-channels is
-   grid. An id selector outranks the user-agent's `[hidden] { display: none }`,
-   so without this those elements stay on screen with the attribute set and no
-   sign anything is wrong. It is invisible to the tests too, which can only see
-   the property. */
+/*
+ * Override ID-level display rules, which otherwise outrank the browser's hidden
+ * rule.
+ */
 [hidden] { display: none !important; }
 
 #legend-bar {
@@ -450,8 +358,6 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   font-variant-numeric: tabular-nums;
 }
 
-/* The false-colour legend: one row per channel, the swatch in the channel's own
- * colour because that is exactly what the row is naming. */
 #legend-channels {
   display: grid;
   grid-template-columns: auto auto 1fr;
@@ -471,8 +377,7 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   color: var(--text);
 }
 
-/* Sits under the colour ramp, one fact per line. Tabular figures so the date
-   window does not jitter as the year changes. */
+/* Tabular dates prevent jitter when switching years. */
 #layer-info {
   margin: 10px 0 0;
   font-size: 11px;
@@ -495,7 +400,6 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   z-index: 3;
 }
 
-/* Every popover — credit, colour picker, map click — is this box. */
 .popover,
 .maplibregl-popup-content {
   color: var(--text);
@@ -506,12 +410,10 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
 }
 .maplibregl-popup-content {
   font-size: 12px;
-  /* MapLibre's default is 15px top and bottom, which leaves the first heading
-     and the last value floating. The close button sits in the right inset. */
+  /* Leave room for the close button in the right inset. */
   padding: 9px 12px 10px;
 }
-/* Nudged in to match the tighter padding, and toned down so it does not read as
-   the loudest thing in the popup. */
+
 .maplibregl-popup-close-button {
   top: 1px;
   right: 3px;
@@ -519,8 +421,7 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   font-size: 15px;
 }
 .maplibregl-popup-close-button:hover { color: var(--text); background: transparent; }
-/* The tip is the popovers' 6px caret in the border colour. MapLibre colours it
-   per anchor with two classes, so these rules carry the map's id to win. */
+/* Include the map ID to override MapLibre's per-anchor tip colors. */
 #map .maplibregl-popup-tip { border-width: 6px; }
 #map [class*="maplibregl-popup-anchor-top"] .maplibregl-popup-tip { border-bottom-color: var(--border); }
 #map [class*="maplibregl-popup-anchor-bottom"] .maplibregl-popup-tip { border-top-color: var(--border); }
@@ -530,27 +431,23 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
 
 @media (max-width: 640px) {
   #panel-shell {
-    /* Stops clear of the map controls instead of running the full width: a
-       MapLibre control group is 29px wide inside a 10px margin, so a panel
-       reaching the right edge sits on top of the zoom buttons. */
+    /* Leave room for the map controls and their margin. */
     right: 52px;
     width: auto;
     max-height: 46%;
   }
-  /* The pre-script default here, overridden by `.expanded` once the script has
-     run or the reader has tapped. On wide screens neither class is present and
-     the body is simply visible. */
+  /* Collapse before scripts run; expanded overrides this default. */
   #panel:not(.expanded) #panel-body { display: none; }
 }
 
-/* Inventory overlay toggles: a checkbox plus the colour its outlines draw in. */
+/* Inventory controls. */
 .inventory {
   display: flex;
   align-items: flex-start;
   gap: 8px;
   margin-bottom: 8px;
 }
-/* Keep the checkbox and colour swatch aligned with the first line of the name. */
+
 .inventory input[type="checkbox"] { margin-top: 2px; }
 .inventory label {
   flex: 1;
@@ -559,7 +456,7 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   color: var(--text);
   cursor: pointer;
 }
-/* The padding is the click target; the colour is clipped to the 14 x 3 bar. */
+/* Padding enlarges the hit target around the color bar. */
 .inventory .swatch {
   position: relative;
   width: 18px;
@@ -571,10 +468,10 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   flex: none;
   cursor: pointer;
 }
-/* While the row is hovered, as its checkbox lifts, or the picker is open, the
-   bar gives way to a disc in its colour (`inherit` reads the button's inline
-   background) with a black pencil on it. Keyboard focus keeps the plain focus
-   ring, so the disc goes when Escape hands focus back. */
+/*
+ * Show a pencil disc on hover or while the picker is open. Focus alone keeps the
+ * plain ring so Escape restores the bar.
+ */
 .inventory .swatch::before,
 .inventory .swatch::after {
   content: "";
@@ -595,15 +492,14 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
 .inventory:hover .swatch::after,
 .inventory .swatch.popover-open::before,
 .inventory .swatch.popover-open::after { opacity: 1; }
-/* The acquisition span reads as part of the name — same size, greyed — so it
-   sits well whether it lands on the same line or wraps onto the next. */
+
 .inventory .span {
   color: var(--muted);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-/* Per-layer attribution: a small (c) beside the toggle it belongs to. */
+/* Per-layer attribution buttons. */
 .credit {
   flex: none;
   display: flex;
@@ -620,17 +516,15 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
 .credit:hover { color: var(--accent); }
 .inventory .credit { margin-top: 2px; }
 
-/* Detached from the panel (see ui.js): fixed, so a long citation cannot put a
-   scrollbar on the sidebar, and free to be wider than it and to reach past its
-   bottom edge. Shared by the credit marks and the colour swatches; the box
-   itself is styled with the map popup's, above. */
+/* Position outside the scrolling panel; see ui.js. */
 .popover {
   position: fixed;
   z-index: 20;
   max-width: calc(100vw - 16px);
-  /* No overflow clipping: it would cut off the caret, which is drawn just
-     outside the box. The box sizes to content and the flip-below logic in
-     ui.js handles tight space. */
+  /*
+   * Keep overflow visible for the caret. ui.js flips the popover when space is
+   * tight.
+   */
   padding: 10px 12px;
 }
 .credit-popover {
@@ -639,7 +533,7 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   line-height: 1.5;
 }
 .credit-popover a { color: var(--accent); }
-/* Same heading treatment as the map popups, so the two read as one family. */
+
 .credit-popover strong {
   display: block;
   margin-bottom: 5px;
@@ -650,8 +544,10 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   color: var(--muted);
 }
 
-/* Caret pointing back at the button; --caret-x keeps it under the button even
-   when the box was clamped against the edge of the viewport. */
+/*
+ * Track the trigger with --caret-x even when the popover is clamped to the
+ * viewport.
+ */
 .popover::after {
   content: "";
   position: absolute;
@@ -668,7 +564,6 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   border-bottom-color: var(--border);
 }
 
-/* The inventory colours, three by three. */
 .palette-popover {
   display: grid;
   grid-template-columns: repeat(3, 18px);
@@ -690,7 +585,6 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   color: var(--text);
 }
 
-/* Collapsible section header, styled like the other section labels but clickable. */
 #inventories-toggle,
 #extras-toggle {
   display: flex;
@@ -711,8 +605,6 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
 #inventories-toggle:hover,
 #extras-toggle:hover { color: var(--text); }
 
-/* The last toggle in a collapsed-by-default block should not leave a gap above
-   whatever follows it. */
 #extras .control:last-child { margin-bottom: 0; }
 #extras-section { margin-bottom: 0; }
 
@@ -723,8 +615,6 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   border-top: 1px solid var(--border);
 }
 
-/* Headings match the panel's field labels (PRODUCT, YEAR, ...) so a popup reads
- * as the same kind of thing as the legend beside it. */
 .maplibregl-popup-content .pop-head {
   margin-bottom: 4px;
   font-size: 11px;
@@ -735,5 +625,5 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
 }
 .maplibregl-popup-content .pk { color: var(--text); }
 .maplibregl-popup-content > div + .pop-head { margin-top: 7px; }
-/* Leave room for the close button on the first heading only. */
+/* Reserve close-button space on the first heading only. */
 .maplibregl-popup-content .pop-head:first-child { padding-right: 16px; }

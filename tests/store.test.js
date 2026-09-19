@@ -1,13 +1,4 @@
-/*
- * The catalog read: how the mosaics collection, the style it nominates and the
- * per-year items become the layer records the panel draws from.
- *
- * The join is what this file is really about. The collection says which archives
- * exist; the style says how one year of them is drawn; the items say when each
- * year was acquired. None of the three can be trusted blindly — they come from
- * wherever `?tiles=` points — so what is read out of them is checked, and a
- * layer that fails the check is dropped rather than taken to MapLibre.
- */
+/* Check collection/style/item joins and validation of catalog input. */
 
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -49,7 +40,7 @@ const byId = (list) => new Map(list.map((layer) => [layer.id, layer]));
 test("every archive the store publishes becomes a layer", () => {
   const found = layers();
   // Two products x (VV, VH) x (measurement, QA-NUM, QA-CQM), plus one false
-  // colour each: fourteen, and the collection lists exactly that many.
+  // color each: fourteen, and the collection lists exactly that many.
   assert.equal(found.length, 14);
   assert.equal(collection.links.filter((link) => link.rel === "pmtiles").length, 14);
 });
@@ -91,7 +82,7 @@ test("the ramp, the stretch and the zooms come from the style", () => {
   assert.deepEqual([byId(layers()).get("glace-coh12_vv_qa_num-2024").vmin, num.vmin], [0, 0]);
 });
 
-test("the false colour carries three channels and no ramp", () => {
+test("the false color carries three channels and no ramp", () => {
   const rgb = byId(layers()).get("glace-coh12_rgb-2024");
   assert.deepEqual(rgb.colors, [], "nothing to interpolate between");
   assert.equal(rgb.channels.length, 3);
@@ -169,7 +160,7 @@ test("a layer the style describes incompletely is dropped, not drawn", async () 
     "a stretch with no width": { vmin: 0.5, vmax: 0.5 },
     "a stretch that is not a number": { vmax: "0.8" },
     "no stops at all": { stops: [] },
-    "stops that carry no colours": { stops: [{ value: 0.1 }, { value: 0.8 }] },
+    "stops that carry no colors": { stops: [{ value: 0.1 }, { value: 0.8 }] },
   };
   for (const [what, override] of Object.entries(cases)) {
     const broken = structuredClone(style);
@@ -184,7 +175,7 @@ test("a layer the style describes incompletely is dropped, not drawn", async () 
   }
 });
 
-test("one colourless stop is passed over rather than costing the layer its ramp", () => {
+test("one colorless stop is passed over rather than costing the layer its ramp", () => {
   const patched = structuredClone(style);
   const legend = patched.layers.find((layer) => layer.id === "glace-coh12_vv-2024")
     .metadata["portolan:legend"];

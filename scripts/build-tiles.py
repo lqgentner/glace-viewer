@@ -1,17 +1,8 @@
 #!/usr/bin/env python3
-"""Convert the committed GeoJSON overlays into the vector PMTiles the page loads.
+"""Build inventory PMTiles from committed GeoJSON and inventories.json.
 
-The repository stores the inventories as GeoJSON rather than as finished
-archives: text deltas against the previous version, so an inventory update costs
-~144 kB of history instead of ~7 MB, and `git diff` can show which outlines
-moved. PMTiles tiles are individually gzipped, which defeats both.
-
-Run locally before `scripts/serve.py`, or in CI before publishing. Needs
-tippecanoe on PATH (or --tippecanoe); `pixi run` puts the pinned conda-forge
-build there.
-
-Usage:
-    pixi run build-tiles
+Run pixi run --locked build-tiles before local serving or deployment.
+Requires tippecanoe on PATH or via --tippecanoe.
 """
 
 from __future__ import annotations
@@ -52,10 +43,7 @@ def build(
     return archive.stat().st_size
 
 
-# What the build reads out of each index entry. The viewer needs more than this,
-# but a missing key here fails as a KeyError halfway through a tippecanoe run
-# rather than as a sentence naming the entry, which is why it is checked up
-# front for every entry before any of them is built.
+# Validate every entry before building to report malformed metadata early.
 REQUIRED = {
     "id": str,
     "url": str,
@@ -111,11 +99,7 @@ def main() -> int:
         print(f"{index_path}: {error}", file=sys.stderr)
         return 1
 
-    # The index decides the layer name and the zoom range tippecanoe is given,
-    # so an archive built before it was edited is stale even though its GeoJSON
-    # has not moved. Comparing against the newer of the two catches a retuned
-    # `max_zoom` or a renamed `source_layer`; it still cannot catch a tippecanoe
-    # upgrade, which needs a full rebuild.
+    # Index changes also invalidate archives. Tool upgrades require a full rebuild.
     index_mtime = index_path.stat().st_mtime
 
     for entry in entries:

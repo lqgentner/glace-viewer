@@ -1,14 +1,6 @@
 /*
- * GLACE quick-look viewer — startup and control wiring.
- *
- * The catalog is read from wherever `tilesBase` points — site-config.js on the
- * deployed page, or `?tiles=<base-url>` from the address bar.
- *
- * Every control is wired here, before anything has loaded, and every handler
- * that touches the map waits on `styleReady` rather than being attached late.
- * A box ticked while the basemap is still streaming therefore behaves exactly
- * like one ticked afterwards — which it did not, when the wiring itself waited
- * for the map.
+ * Startup and control wiring. Handlers are attached immediately and await
+ * styleReady before mutating the map.
  */
 
 import { TERRAIN_CREDIT } from "./config.js";
@@ -23,17 +15,14 @@ import { grid, loadInventories } from "./overlays.js";
 import { loadRasters } from "./rasters.js";
 import { buildSegmented, collapsible, creditButton, el } from "./ui.js";
 
-/* The panel covers most of a phone screen, so on a narrow viewport it opens
- * collapsed to its title bar and the reader taps to open it. Wide viewports open
- * as before. Crossing the breakpoint — a rotation, usually — re-applies the
- * default for the new width rather than carrying over a choice made for a
- * different screen. The query matches the one in style.css. */
+/*
+ * Match the CSS breakpoint. Crossing it resets the panel to the default for the new
+ * viewport width.
+ */
 const NARROW_VIEWPORT = window.matchMedia("(max-width: 640px)");
 
 function setPanelOpen(open) {
-  // Both classes are always set, so the state is explicit on either side of the
-  // breakpoint: style.css collapses a narrow panel until `expanded` appears,
-  // and expands a wide one until `collapsed` does.
+  // Set both classes to override the CSS default on either side of the breakpoint.
   el("panel").classList.toggle("expanded", open);
   el("panel").classList.toggle("collapsed", !open);
   const toggle = el("panel-toggle");
@@ -82,8 +71,7 @@ function initControls() {
 
 async function boot() {
   initControls();
-  // The inventory list is independent of the map and the raster catalog, so it
-  // is built at once: waiting for them made the panel jump as it grew.
+  // Load the independent inventory list immediately to avoid panel layout shifts.
   loadInventories();
 
   await loadRasters();

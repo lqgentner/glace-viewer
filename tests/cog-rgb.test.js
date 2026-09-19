@@ -1,24 +1,8 @@
 /*
- * The `glace-rgb://` protocol: a float COG read and coloured in the browser,
- * one archive through a ramp or two combined into false colour.
- *
- * Nothing on the page produces such a source any more — the tile-source switch
- * was retired in favour of the pre-styled PMTiles archives — so this drives the
- * protocol directly, through the same `setRecipe` + `recipeTiles` pair a source
- * spec would use. That is deliberate: the reader is kept so the question can be
- * reopened, and kept code that nothing exercises is how it stops working
- * quietly.
- *
- * The recipes below are written out rather than derived, but their numbers are
- * the published store's: the stretches and colour stops come from
- * `fixtures/store/style-2024.json`, the MapLibre style the catalog publishes.
- *
- * The reader is swapped for `fixtures/fake-geotiff.mjs` through the
- * `cogReaderUrl` setting, which is the same seam a deployment would use to pin
- * a different CDN. That keeps the network and the wasm decoders out of the
- * tests while leaving the parts worth testing — which resolution level answers
- * a zoom, which window is read out of it, and what the three channels come to —
- * running for real.
+ * Exercise the unused COG protocol directly with setRecipe and recipeTiles. Recipes
+ * use the store fixture's stretches and stops. A fake reader, injected through
+ * cogReaderUrl, isolates window selection and rendering from networking and
+ * decoding.
  */
 
 import assert from "node:assert/strict";
@@ -165,7 +149,7 @@ test("zoomed out past the coarsest overview, the tile is blank not an error", as
 });
 
 test("an unknown recipe is refused rather than drawn wrong", async () => {
-  await assert.rejects(() => tile("glace-rgb://not-a-layer/13/4270/2880"), /no false-colour recipe/);
+  await assert.rejects(() => tile("glace-rgb://not-a-layer/13/4270/2880"), /no false-color recipe/);
 });
 
 test("a source tile decoded once is not decoded again", async () => {
@@ -198,7 +182,7 @@ test("neighbouring tiles share the source tiles they straddle", async () => {
   );
 });
 
-/* The colour a value lands on, computed independently of the module: a
+/* The color a value lands on, computed independently of the module: a
  * piecewise-linear walk over the style's stops, clamped at both ends. */
 function rampAt(colors, [low, high], value) {
   const stops = colors.map((hex) => [1, 3, 5].map((at) => parseInt(hex.slice(at, at + 2), 16)));

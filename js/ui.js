@@ -1,21 +1,16 @@
 /*
- * Shared browser-side furniture: safe DOM construction, the status line, the
- * per-layer attribution popover and the segmented control builder.
- *
- * Nothing here knows about the map. Everything that ends up on the page goes
- * through `h()` or `textContent`: inventory metadata, the raster catalog and
- * vector-tile properties are all data the page does not author, and a glacier
- * name or a citation containing markup must not be able to become markup.
+ * Map-independent DOM helpers, status messages, controls, and popovers. External
+ * metadata must enter through nodes or textContent, never HTML interpolation.
  */
 
 export const el = (id) => document.getElementById(id);
 
 /* ---------- safe DOM construction ---------- */
 
-/* Minimal hyperscript. Children are appended as nodes or as text — never
- * parsed — so no caller can inject markup by accident. Known properties are set
- * on the element (`className`, `textContent`, `href`, …) and anything else
- * becomes an attribute. */
+/*
+ * Append children as nodes or text. Set known DOM properties directly and other
+ * keys as attributes.
+ */
 export function h(tag, props = {}, ...children) {
   const node = document.createElement(tag);
   for (const [key, value] of Object.entries(props)) {
@@ -33,10 +28,10 @@ export function h(tag, props = {}, ...children) {
   return node;
 }
 
-/* `href` is the one place where a string from the inventory index is still interpreted
- * rather than displayed, and `javascript:` in an href executes on click. Only
- * the schemes a citation link can legitimately use are honoured; anything else
- * degrades to plain text rather than to a live link. */
+/*
+ * Only allow citation URL schemes that cannot execute script; otherwise show plain
+ * text.
+ */
 const SAFE_URL_SCHEME = /^(?:https?:|mailto:)/i;
 
 function externalLink(url, label) {
@@ -47,18 +42,15 @@ function externalLink(url, label) {
 
 /* ---------- status line ---------- */
 
-/* Several independent things report into one status element: the raster
- * catalog, each inventory and the tile grid. They finish in whatever order the
- * network gives them, so a single shared string means one overlay loading
- * successfully can wipe an unrelated failure off the screen. Entries are keyed
- * by who wrote them instead, and the most important one is displayed: errors
- * outrank progress, and among equals the most recent wins. */
+/*
+ * Key status by component so one success cannot clear another failure. Errors
+ * outrank progress; the newest entry wins ties.
+ */
 const STATUS_RANK = { info: 0, busy: 1, error: 2 };
 const statusEntries = new Map();
 
 export function setStatus(key, message, level = "busy") {
-  // Re-inserting rather than overwriting keeps the map ordered oldest-first,
-  // which is what makes "most recent among equals" fall out of the scan below.
+  // Reinsert to keep equal-priority entries ordered by recency.
   statusEntries.delete(key);
   if (message) statusEntries.set(key, { message, level });
   paintStatus();
@@ -78,15 +70,10 @@ function paintStatus() {
 
 /* ---------- segmented controls ---------- */
 
-/* Each entry is either a bare value, which is also its own label — years,
- * polarizations — or a `{ value, label }` pair where the name on the button is
- * not the name in the catalog, as for the products. `data-value` always
- * carries the catalog's own spelling, so nothing downstream has to translate
- * back.
- *
- * A pair may also carry a `title`, for a row whose faces had to be shortened to
- * fit: three buttons across a 292px panel leave about eleven characters each,
- * and the full name goes on the tooltip rather than off the edge. */
+/*
+ * Accept values or {value, label, title} entries. data-value preserves the catalog
+ * value when the display label differs.
+ */
 export function buildSegmented(node, entries, onSelect) {
   node.replaceChildren(
     ...entries.map((entry) => {
@@ -106,13 +93,7 @@ export function buildSegmented(node, entries, onSelect) {
 
 /* ---------- collapsible sections ---------- */
 
-/* The panel's section headers: a button that shows and hides the block below
- * it. Shared by the glacier inventories and the additional layers, so the two
- * cannot drift apart in behaviour the way two hand-rolled copies would.
- *
- * The markup carries the starting state — `aria-expanded` on the button, the
- * `hidden` attribute on the body and `up` on the chevron — so a section is
- * collapsed before any of this runs. */
+/* Initial state lives in markup: aria-expanded, hidden, and the chevron's up class. */
 export function collapsible(toggleId, bodyId) {
   const toggle = el(toggleId);
   const body = el(bodyId);
@@ -127,12 +108,10 @@ export function collapsible(toggleId, bodyId) {
 
 /* ---------- popovers ---------- */
 
-/* One popover at a time, shared by the credit marks and the inventory colour
- * swatches. The panel scrolls, so the popover is appended to the body and
- * positioned `fixed`: as an absolutely positioned child it would extend the
- * panel's scroll area rather than overflow it, and long citations would put a
- * scrollbar on the whole sidebar. Detached, it can also be wider than the panel
- * and reach past its bottom edge. */
+/*
+ * Attach the shared popover to body with fixed positioning so it can extend beyond
+ * the scrolling panel without enlarging it.
+ */
 
 const POPOVER_GAP_PX = 10;
 const POPOVER_MARGIN_PX = 8;
@@ -156,8 +135,7 @@ let refocusing = false;
 export function attachPopover(button, build, options = {}) {
   const { className = "", caretAt = 0.5, hover = true } = options;
   const show = () => showPopover(button, build, className, caretAt, hover);
-  // Hover for pointers, focus for keyboards, click for touch — where hover
-  // does not exist and the button would otherwise be dead.
+  // Support pointer hover, keyboard focus, and touch clicks.
   if (hover) {
     button.addEventListener("mouseenter", show);
     button.addEventListener("focus", () => refocusing || show());
@@ -171,8 +149,7 @@ export function attachPopover(button, build, options = {}) {
   });
 }
 
-/* With `refocus`, focus that was inside the box goes back to its button rather
- * than falling to the page when the box is removed. */
+/* Optionally return focus from the closing popover to its trigger. */
 export function hidePopover({ refocus = false } = {}) {
   clearTimeout(popoverTimer);
   const anchor = popoverAnchor;
@@ -188,9 +165,7 @@ export function hidePopover({ refocus = false } = {}) {
   }
 }
 
-/* A grace period, so the pointer can travel from the button onto the box
- * without the box vanishing under it. Pressing a button inside the box blurs
- * the anchor, so the box also stays for as long as the pointer is on it. */
+/* Allow pointer travel from the trigger and keep the box open while hovered. */
 function scheduleHidePopover() {
   clearTimeout(popoverTimer);
   popoverTimer = setTimeout(() => {
@@ -247,13 +222,7 @@ document.addEventListener("keydown", (event) => {
 
 /* ---------- attribution popover ---------- */
 
-/* Each third-party layer carries its own credit, reachable from an info mark
- * next to its toggle, rather than being folded into the map-wide attribution
- * control where a viewer cannot tell which layer it belongs to. */
-
-/* MapLibre's own attribution glyph, reused verbatim so the per-layer buttons
- * and the control in the corner of the map read as the same thing. It is a
- * constant, parsed once here, so no data path ever reaches an HTML parser. */
+/* Static MapLibre attribution glyph. No external text reaches this HTML parser. */
 const INFO_ICON = document.createElement("template");
 INFO_ICON.innerHTML =
   '<svg viewBox="0 0 20 20" width="14" height="14" fill="currentColor" ' +
@@ -266,8 +235,8 @@ export function creditButton(title, credit) {
     {
       type: "button",
       class: "credit",
-      title: `${title} — attribution and licence`,
-      "aria-label": `${title}: attribution and licence`,
+      title: `${title} — attribution and license`,
+      "aria-label": `${title}: attribution and license`,
     },
     INFO_ICON.content.firstElementChild.cloneNode(true),
   );
@@ -275,8 +244,6 @@ export function creditButton(title, credit) {
   return button;
 }
 
-/* One line per fact, separated by breaks rather than wrapped in a list: the box
- * is narrow and the citation is the only part that wraps. */
 function creditLines(title, credit) {
   const lines = [h("strong", { textContent: credit.title || title })];
   if (credit.citation) lines.push(h("span", { class: "cite", textContent: credit.citation }));
