@@ -18,6 +18,8 @@ import { captureWarnings, installBrowser, load, REPO, settle } from "./helpers/b
 const CATALOG = {
   "http://localhost/tiles/mosaics/collection.json": path.join(REPO, "tests", "fixtures", "two-years", "collection.json"),
   "http://localhost/tiles/mosaics/style.json": path.join(REPO, "tests", "fixtures", "two-years", "style.json"),
+  "http://localhost/tiles/mosaics/2022/item.json": path.join(REPO, "tests", "fixtures", "two-years", "item-2022.json"),
+  "http://localhost/tiles/mosaics/2023/item.json": path.join(REPO, "tests", "fixtures", "two-years", "item-2023.json"),
   "data/inventories.json": path.join(REPO, "data", "inventories.json"),
 };
 

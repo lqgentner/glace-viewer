@@ -1,7 +1,8 @@
 /*
  * Exercise the page against fixtures copied from
- * https://data.source.coop/lqgentner/glace-ch, with item geometry reduced. Cover
- * archive/style joins and the polarization, QA, and RGB panel choices. A separate
+ * https://data.source.coop/lqgentner/glace-ch, with item geometry reduced and
+ * the collection's archive links removed, as the catalog no longer writes them.
+ * Cover item/style joins and the polarization, QA, and RGB panel choices. A separate
  * process isolates the map singleton.
  */
 
@@ -13,12 +14,17 @@ import test from "node:test";
 import { captureWarnings, installBrowser, load, REPO, settle } from "./helpers/browser.js";
 
 const FIXTURES = path.join(REPO, "tests", "fixtures", "store");
-const collection = JSON.parse(fs.readFileSync(path.join(FIXTURES, "collection.json"), "utf8"));
 
 /* Where each document is looked for. The style and the item are reached through
  * the collection's own asset and links, so these URLs are the catalog's to
  * decide rather than this page's. */
 const YEARS = [2021, 2022, 2023, 2024];
+const items = new Map(
+  YEARS.map((year) => [
+    year,
+    JSON.parse(fs.readFileSync(path.join(FIXTURES, `item-${year}.json`), "utf8")),
+  ]),
+);
 const CATALOG = {
   "http://localhost/tiles/mosaics/collection.json": path.join(FIXTURES, "collection.json"),
   ...Object.fromEntries(
@@ -48,7 +54,12 @@ const pick = async (row, value) => {
   await settle();
 };
 
-const archives = collection.links.filter((link) => link.rel === "pmtiles");
+/* Visual asset keys, such as coh12_vv_qa_num_viz, by year. */
+const archives = [...items].flatMap(([year, item]) =>
+  Object.entries(item.assets)
+    .filter(([, asset]) => asset.roles.includes("visual"))
+    .map(([key]) => ({ key, year })),
+);
 
 test("the store's catalog loads without complaint", () => {
   assert.deepEqual(warnings, [], "every archive is one the panel has a control for");
@@ -56,7 +67,7 @@ test("the store's catalog loads without complaint", () => {
 
 test("the seven-value polarization field becomes two rows", () => {
   const fields = new Set(
-    archives.map((link) => /^glace-[a-z0-9]+_(.+)-\d{4}$/.exec(link["pmtiles:layers"][0])[1]),
+    archives.map(({ key }) => /^[a-z0-9]+_(.+)_viz$/.exec(key)[1]),
   );
   assert.equal(fields.size, 7);
 
@@ -86,11 +97,11 @@ test("the page opens on the measurement, not on a QA raster", () => {
   assert.equal(map.getLayer("glace-coh12_vv-2024")?.layout.visibility, "visible");
 });
 
-test("a source names the archive the collection linked, and declares no bounds", () => {
+test("a source names the archive the item lists, and declares no bounds", () => {
   const source = page.map.getSource("glace-coh12_vv-2024");
   assert.equal(
     source.url,
-    "pmtiles://https://data.source.coop/lqgentner/glace-ch/mosaics/2024/coh12_vv_viz.pmtiles",
+    "pmtiles://http://localhost/tiles/mosaics/2024/coh12_vv_viz.pmtiles",
   );
   assert.deepEqual([source.minzoom, source.maxzoom], [5, 13], "the zooms the style states");
   // Both of these are in the archive's own header, and a spec that named either
@@ -105,7 +116,7 @@ test("a QA raster is its own archive, drawn in the same slot", async () => {
 
   assert.equal(
     map.getSource("glace-coh12_vv_qa_num-2024").url,
-    "pmtiles://https://data.source.coop/lqgentner/glace-ch/mosaics/2024/coh12_vv_qa_num_viz.pmtiles",
+    "pmtiles://http://localhost/tiles/mosaics/2024/coh12_vv_qa_num_viz.pmtiles",
   );
   assert.equal(map.getLayer("glace-coh12_vv_qa_num-2024").layout.visibility, "visible");
   assert.equal(
@@ -208,7 +219,7 @@ test("the false color names its channels and the stretch each was baked with", a
   ]);
   assert.equal(
     page.map.getSource("glace-coh12_rgb-2024").url,
-    "pmtiles://https://data.source.coop/lqgentner/glace-ch/mosaics/2024/coh12_rgb_viz.pmtiles",
+    "pmtiles://http://localhost/tiles/mosaics/2024/coh12_rgb_viz.pmtiles",
     "the pre-styled archive the store publishes",
   );
 
@@ -242,9 +253,9 @@ test("every archive the store published is reachable", async () => {
   }
   // The twelve above, plus the two false-color archives the tests before this
   // one selected: a layer is created once and kept, so this is every archive the
-  // collection links for the year the page sits on, and nothing besides.
+  // item lists for the year the page sits on, and nothing besides.
   assert.equal(
     [...map.layers.keys()].filter((id) => id.startsWith("glace-")).length,
-    archives.filter((link) => link.href.includes("/2024/")).length,
+    archives.filter(({ year }) => year === 2024).length,
   );
 });

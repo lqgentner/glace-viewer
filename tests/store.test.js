@@ -1,4 +1,4 @@
-/* Check collection/style/item joins and validation of catalog input. */
+/* Check item/style joins and validation of catalog input. */
 
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -12,37 +12,27 @@ const { readStore, storeLayers, styleHrefs } = await load("js/store.js");
 
 const read = (...where) =>
   JSON.parse(fs.readFileSync(path.join(REPO, "tests", "fixtures", ...where), "utf8"));
-const COLLECTION_URL = "https://tiles.example/glace/mosaics/collection.json";
+const ITEM_URL = "https://tiles.example/glace/mosaics/2024/item.json";
 
 /* The published collection lists four years; the unit cases below reason about
- * one, so the base is its 2024 slice: that year's links and that year's style,
- * which is the one the collection marks as the default. */
-const published = read("store", "collection.json");
-const collection = {
-  ...published,
-  assets: Object.fromEntries(
-    Object.entries(published.assets).filter(([key]) => !key.startsWith("style-") || key === "style-2024"),
-  ),
-  links: published.links.filter((link) => link.rel !== "pmtiles" || link.href.includes("/2024/")),
-};
+ * one, so the base is its 2024 item and that year's style, which is the one the
+ * collection marks as the default. */
+const collection = read("store", "collection.json");
+const item = read("store", "item-2024.json");
 const style = read("store", "style-2024.json");
 
 const layers = (over = {}) =>
-  storeLayers(
-    over.collection ?? collection,
-    COLLECTION_URL,
-    over.style ?? style,
-    over.windows ?? new Map(),
-  );
+  storeLayers(over.items ?? [{ item: over.item ?? item, url: ITEM_URL }], over.style ?? style);
 
 const byId = (list) => new Map(list.map((layer) => [layer.id, layer]));
 
 test("every archive the store publishes becomes a layer", () => {
   const found = layers();
   // Two products x (VV, VH) x (measurement, QA-NUM, QA-CQM), plus one false
-  // color each: fourteen, and the collection lists exactly that many.
+  // color each: fourteen, and the item lists exactly that many.
   assert.equal(found.length, 14);
-  assert.equal(collection.links.filter((link) => link.rel === "pmtiles").length, 14);
+  const visual = Object.values(item.assets).filter((asset) => asset.roles.includes("visual"));
+  assert.equal(visual.length, 14);
 });
 
 test("the style layer id is split into the axes the panel spends it on", () => {
@@ -53,12 +43,9 @@ test("the style layer id is split into the axes the panel spends it on", () => {
   assert.equal(layer.year, 2024);
 });
 
-test("the archive URL comes from the link, resolved against the collection", () => {
+test("the archive URL comes from the asset, resolved against the item", () => {
   const layer = byId(layers()).get("glace-coh12_vv-2024");
-  assert.equal(
-    layer.url,
-    "https://data.source.coop/lqgentner/glace-ch/mosaics/2024/coh12_vv_viz.pmtiles",
-  );
+  assert.equal(layer.url, "https://tiles.example/glace/mosaics/2024/coh12_vv_viz.pmtiles");
 });
 
 test("the ramp, the stretch and the zooms come from the style", () => {
@@ -96,14 +83,15 @@ test("no layer declares bounds — the archive's own header carries them", () =>
   }
 });
 
-test("the acquisition window is attached by year", () => {
-  const windows = new Map([[2024, { startDate: "2024-07-09", endDate: "2024-10-07" }]]);
-  const layer = byId(layers({ windows })).get("glace-coh12_vh-2024");
+test("the acquisition window comes from the archive's item", () => {
+  const layer = byId(layers()).get("glace-coh12_vh-2024");
   assert.equal(layer.startDate, "2024-07-09");
   assert.equal(layer.endDate, "2024-10-07");
 
-  // A year whose item could not be read simply loses the line under its ramp.
-  assert.equal(byId(layers()).get("glace-coh12_vh-2024").startDate, undefined);
+  // An item without dates loses only the line under its ramp.
+  const undated = structuredClone(item);
+  delete undated.properties.start_datetime;
+  assert.equal(byId(layers({ item: undated })).get("glace-coh12_vh-2024").startDate, undefined);
 });
 
 test("a year the style does not describe falls back to the same layer's stops", async () => {
@@ -111,13 +99,9 @@ test("a year the style does not describe falls back to the same layer's stops", 
    * collection lists every year. The stretch and the ramp are fixed per layer
    * rather than per year — deliberately, so a real change between two years
    * reads as a change — so an older year is drawn with the same constants. */
-  const older = structuredClone(collection);
-  for (const link of older.links.filter((link) => link.rel === "pmtiles")) {
-    link.href = link.href.replace("/2024/", "/2021/");
-    link["pmtiles:layers"] = link["pmtiles:layers"].map((id) => id.replace("-2024", "-2021"));
-  }
+  const older = { ...structuredClone(item), id: "ch-mosaic-2021" };
   const warnings = await captureWarnings(() => {
-    const found = byId(layers({ collection: older }));
+    const found = byId(layers({ items: [{ item: older, url: ITEM_URL.replace("2024", "2021") }] }));
     const layer = found.get("glace-coh12_vv-2021");
     assert.equal(layer.year, 2021);
     assert.equal(layer.cmap, "cmc.lipari");
@@ -128,29 +112,32 @@ test("a year the style does not describe falls back to the same layer's stops", 
 });
 
 test("a layer nothing describes is dropped with a warning", async () => {
-  const extra = structuredClone(collection);
-  extra.links.push({
-    rel: "pmtiles",
-    href: "https://tiles.example/glace/mosaics/2024/hh_viz.pmtiles",
-    "pmtiles:layers": ["glace-coh12_hh-2024"],
-  });
+  const extra = structuredClone(item);
+  extra.assets.coh12_hh_viz = {
+    href: "coh12_hh_viz.pmtiles",
+    type: "application/vnd.pmtiles",
+    roles: ["visual"],
+  };
   const warnings = await captureWarnings(() => {
-    assert.equal(layers({ collection: extra }).length, 14);
+    assert.equal(layers({ item: extra }).length, 14);
   });
   assert.equal(warnings.length, 1);
   assert.match(warnings[0], /no style entry describes glace-coh12_hh-2024/);
 });
 
-test("a link this page cannot name a layer from is passed over in silence", async () => {
-  const odd = structuredClone(collection);
-  odd.links.push(
-    { rel: "pmtiles", href: "https://tiles.example/x.pmtiles" },
-    { rel: "pmtiles", href: "https://tiles.example/y.pmtiles", "pmtiles:layers": ["something-else"] },
-  );
-  const warnings = await captureWarnings(() => {
-    assert.equal(layers({ collection: odd }).length, 14);
+test("an asset this page cannot name a layer from is passed over in silence", async () => {
+  const pmtiles = { type: "application/vnd.pmtiles", roles: ["visual"] };
+  const odd = structuredClone(item);
+  Object.assign(odd.assets, {
+    overview: { ...pmtiles, href: "overview.pmtiles" },
+    other_viz: { ...pmtiles, href: "other_viz.pmtiles" },
+    preview: { href: "preview.png", type: "image/png", roles: ["visual"] },
   });
-  assert.deepEqual(warnings, [], "neither names an archive of this catalog's");
+  const warnings = await captureWarnings(() => {
+    assert.equal(layers({ item: odd }).length, 14);
+    assert.throws(() => layers({ item: { ...item, id: "ch-mosaic" } }), /no drawable/);
+  });
+  assert.equal(warnings.length, 0, "none names an archive of this catalog's");
 });
 
 test("a layer the style describes incompletely is dropped, not drawn", async () => {
@@ -194,16 +181,16 @@ test("a source with no zooms costs its layer, since a raster source needs them",
 test("a catalog with nothing drawable in it is refused rather than half-drawn", async () => {
   await captureWarnings(() => {
     assert.throws(() => layers({ style: { version: 8, sources: {}, layers: [] } }), /no drawable/);
-    assert.throws(() => storeLayers({}, COLLECTION_URL, style), /no drawable/);
-    assert.throws(() => storeLayers(null, COLLECTION_URL, null), /no drawable/);
+    assert.throws(() => storeLayers([], style), /no drawable/);
+    assert.throws(() => storeLayers(null, null), /no drawable/);
   });
 });
 
 test("the three documents are read end to end", async () => {
   /* The one case that exercises the reads themselves: which URL each document is
    * looked for at, that the style is found through the collection's own asset
-   * rather than by a path this page knows, and that the year's item becomes the
-   * window under the ramp. */
+   * rather than by a path this page knows, and that the year's item supplies
+   * its archives and the window under the ramp. */
   const at = (file) => path.join(REPO, "tests", "fixtures", "store", file);
   installBrowser({
     files: {
@@ -221,11 +208,36 @@ test("the three documents are read end to end", async () => {
   assert.equal(found.size, 56, "four years of fourteen archives");
   const layer = found.get("glace-rtc_vv-2024");
   assert.equal(layer.cmap, "cmc.grayC");
+  assert.equal(layer.url, "http://localhost/tiles/mosaics/2024/rtc_vv_viz.pmtiles");
   assert.deepEqual(
     [layer.startDate, layer.endDate],
     ["2024-07-09", "2024-10-07"],
     "read off the year's own STAC item",
   );
+});
+
+test("a year whose item cannot be read loses its archives, with a warning", async () => {
+  const at = (file) => path.join(REPO, "tests", "fixtures", "store", file);
+  installBrowser({
+    files: {
+      "http://localhost/tiles/mosaics/collection.json": at("collection.json"),
+      ...Object.fromEntries(
+        [2021, 2022, 2023, 2024].map((year) => [
+          `http://localhost/tiles/mosaics/styles/${year}.json`,
+          at(`style-${year}.json`),
+        ]),
+      ),
+      // Only the 2024 item answers.
+      "http://localhost/tiles/mosaics/2024/item.json": at("item-2024.json"),
+    },
+  });
+  let found;
+  const warnings = await captureWarnings(async () => {
+    found = await readStore();
+  });
+  assert.deepEqual(new Set(found.map((layer) => layer.year)), new Set([2024]));
+  assert.equal(warnings.length, 3);
+  assert.match(warnings[0], /unreadable item .*2021\/item\.json — HTTP 404/);
 });
 
 test("a catalog that cannot be reached names the document that failed", async () => {
@@ -274,16 +286,9 @@ test("a year with its own style is drawn from that style, not from the default",
     "style-2023": { href: "./styles/2023.json", roles: ["style"] },
     "style-2024": { href: "./styles/2024.json", roles: ["style", "default"] },
   };
-  perYear.links = [
-    ...collection.links.filter((link) => link.rel !== "item"),
-    ...collection.links
-      .filter((link) => link.rel === "pmtiles")
-      .map((link) => ({
-        ...link,
-        href: link.href.replace("/2024/", "/2023/"),
-        "pmtiles:layers": link["pmtiles:layers"].map((id) => id.replace("-2024", "-2023")),
-      })),
-  ];
+  perYear.links = collection.links.filter(
+    (link) => link.rel !== "item" || /\/202[34]\//.test(link.href),
+  );
   const older = structuredClone(style);
   older.layers = older.layers.map((layer) => ({ ...layer, id: layer.id.replace("-2024", "-2023") }));
   older.layers.find((layer) => layer.id === "glace-coh12_vv-2023").metadata[
@@ -294,6 +299,8 @@ test("a year with its own style is drawn from that style, not from the default",
     "http://localhost/tiles/mosaics/collection.json": at("collection-per-year.json"),
     "http://localhost/tiles/mosaics/styles/2023.json": at("tmp-style-2023.json"),
     "http://localhost/tiles/mosaics/styles/2024.json": at("style-2024.json"),
+    "http://localhost/tiles/mosaics/2023/item.json": at("item-2023.json"),
+    "http://localhost/tiles/mosaics/2024/item.json": at("item-2024.json"),
   };
   fs.writeFileSync(at("collection-per-year.json"), JSON.stringify(perYear));
   fs.writeFileSync(at("tmp-style-2023.json"), JSON.stringify(older));

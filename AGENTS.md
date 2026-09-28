@@ -82,17 +82,21 @@ mosaics/{year}/*.tif
 tiles/items.parquet
 ```
 
-`js/store.js` combines three inputs:
+`js/store.js` combines two inputs:
 
-1. Collection links with `rel="pmtiles"` enumerate the archives. Their
-   `pmtiles:layers` values are the join keys and MapLibre layer IDs, for example
-   `glace-coh12_vv_qa_num-2024`. Resolve hrefs against the document containing them.
+1. Items linked from the collection with `rel="item"` enumerate the archives:
+   each PMTiles asset with the `visual` role is one. The layer ID, which is both
+   the join key and the MapLibre layer ID, is derived as `glace-{stem}-{year}`
+   from the asset key without its `_viz` suffix and the item ID's final year:
+   `coh12_vv_qa_num_viz` in `alps-mosaic-2024` is `glace-coh12_vv_qa_num-2024`.
+   Resolve asset hrefs against the item, so a store served through `?tiles=`
+   reads its own archives. The item's `start_datetime` and `end_datetime` give
+   the acquisition window. The collection carries no archive links.
 2. Collection assets with the `style` role describe the layers. Styles are
    indexed by year, with a `default` role for fallback. The join checks the
    year's exact ID, the default's exact ID, then the same stem in the year's
-   and default styles. Enumerate from the collection, never from a style.
-3. Linked items supply `start_datetime` and `end_datetime` for the acquisition
-   window. The item ID's final year associates the dates with the layers.
+   and default styles. Enumerate from the items, never from a style: a style
+   can name an archive a partial build never produced.
 
 `metadata.portolan:legend` supplies color stops, range, units, and RGB channel
 recipes; style sources supply zoom limits. Do not maintain a second copy in the
@@ -101,7 +105,7 @@ comparison across years. Changes to raster rendering belong in the upstream
 store, since the viewer displays pre-styled RGBA archives.
 
 Incomplete layers are skipped with a warning. A failed collection or nominated
-style prevents raster startup; an unreadable item only removes its date line.
+style prevents raster startup; an unreadable item removes that year's layers.
 If there are no drawable rasters, the raster controls hide and report the
 problem. Inventories and basemap controls initialize independently.
 
@@ -211,14 +215,14 @@ rendering or CDN availability; inspect visual changes in a real browser too.
 Modules hold state and the map is a singleton. Put scenarios needing a fresh
 catalog, viewport, or initial camera in separate test files so `node --test`
 isolates them. Tests use committed fixtures, never a developer's `./tiles`:
-`store/` represents a published catalog with reduced item geometry, and
-`two-years/` exercises missing combinations and style fallback.
+`store/` represents a published catalog with reduced item geometry and no
+archive links, and `two-years/` exercises missing combinations and style fallback.
 
 Use the relevant suites when changing behavior:
 
 | Change | Tests |
 | --- | --- |
-| Settings, catalog joins, selection and legends | `config`, `store`, `layers`, `store-catalog`, `viewer` |
+| Settings, catalog joins, selection and legends | `config`, `store`, `layers`, `store-catalog`, `store-local`, `viewer` |
 | Overlay loading, retries, popups | `viewer`, `tile-grid`, `ui` |
 | Startup failures, viewport, camera, labels | `viewer-degraded`, `viewer-no-webgl`, `viewer-narrow`, `viewer-3d-restore`, `viewer-light-flavor` |
 | Globe or COG calculations | `sky`, `cog-rgb` |

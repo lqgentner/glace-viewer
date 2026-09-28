@@ -1,7 +1,7 @@
 /*
- * Read one raster record per PMTiles archive. The mosaics collection enumerates
- * archives, styles supply rendering metadata, and items supply acquisition dates.
- * Join on pmtiles:layers; see AGENTS.md for the catalog contract.
+ * Read one raster record per PMTiles archive. The year items enumerate archives
+ * and supply acquisition dates; styles supply rendering metadata. Join on the
+ * layer ID; see AGENTS.md for the catalog contract.
  */
 
 import { MOSAIC_COLLECTION_URL } from "./config.js";
@@ -36,17 +36,20 @@ function parseLayerId(id) {
   };
 }
 
-/* Enumerate collection archives using pmtiles:layers as their identity. */
-function archives(collection, collectionUrl) {
-  const links = Array.isArray(collection?.links) ? collection.links : [];
+/*
+ * Enumerate an item's archives: its visual PMTiles assets. The asset key
+ * coh12_vv_viz in item alps-mosaic-2023 is layer glace-coh12_vv-2023.
+ */
+function archives(item, itemUrl) {
+  const year = /(\d{4})$/.exec(item?.id ?? "");
+  if (year === null) return [];
   const found = [];
-  for (const link of links) {
-    if (link?.rel !== "pmtiles" || !isNonEmptyString(link.href)) continue;
-    const ids = Array.isArray(link["pmtiles:layers"]) ? link["pmtiles:layers"] : [];
-    for (const id of ids) {
-      const parsed = parseLayerId(id);
-      if (parsed !== null) found.push({ ...parsed, url: resolve(link.href, collectionUrl) });
-    }
+  for (const [key, asset] of Object.entries(item?.assets ?? {})) {
+    if (!Array.isArray(asset?.roles) || !asset.roles.includes("visual")) continue;
+    if (asset.type !== "application/vnd.pmtiles" || !isNonEmptyString(asset.href)) continue;
+    const stem = /^(.+)_viz$/.exec(key);
+    const parsed = stem && parseLayerId(`glace-${stem[1]}-${year[1]}`);
+    if (parsed) found.push({ ...parsed, url: resolve(asset.href, itemUrl) });
   }
   return found;
 }
@@ -144,20 +147,22 @@ function acquisitionWindow(item) {
 /**
  * Join catalog documents without network access.
  *
- * @param {object} collection  the mosaics collection
- * @param {string} collectionUrl  where it was read from, for relative hrefs
- * @param {object|Map<number|string, object>} style  the MapLibre style it
- *   nominates, or one per year keyed as styleHrefs() keys them
- * @param {Map<number, object>} windows  year -> {startDate, endDate}
+ * @param {{item: object, url: string}[]} items  the year items, with the URLs
+ *   they were read from for relative hrefs
+ * @param {object|Map<number|string, object>} style  the MapLibre style the
+ *   collection nominates, or one per year keyed as styleHrefs() keys them
  * @returns {object[]}
  */
-export function storeLayers(collection, collectionUrl, style, windows = new Map()) {
+export function storeLayers(items, style) {
   /* A single style document acts as the default for every year. */
   const styles = style instanceof Map ? style : new Map([["default", style]]);
   const drawn = new Map([...styles].map(([key, document]) => [key, legends(document)]));
   const fallback = drawn.get("default");
   const layers = [];
-  for (const archive of archives(collection, collectionUrl)) {
+  const found = (Array.isArray(items) ? items : []).flatMap(({ item, url }) =>
+    archives(item, url).map((archive) => ({ ...archive, ...acquisitionWindow(item) })),
+  );
+  for (const archive of found) {
     const own = drawn.get(archive.year);
     /* Fixed per-layer stretches allow fallback by stem across years. */
     const legend =
@@ -169,7 +174,7 @@ export function storeLayers(collection, collectionUrl, style, windows = new Map(
       console.warn("store: no style entry describes", archive.id);
       continue;
     }
-    const layer = { ...archive, ...legend, ...(windows.get(archive.year) ?? {}) };
+    const layer = { ...legend, ...archive };
     if (!drawable(layer)) {
       console.warn("store: skipping a layer the style describes incompletely", archive.id);
       continue;
@@ -190,8 +195,8 @@ export async function readStore() {
   const collection = await readJson(collectionUrl);
 
   /*
-   * Fetch styles and items concurrently. Style failures are fatal; item failures
-   * only omit dates. Deduplicate style hrefs because a year and default can name
+   * Fetch styles and items concurrently. Style failures are fatal; an item failure
+   * omits that year. Deduplicate style hrefs because a year and default can name
    * the same file.
    */
   const hrefs = styleHrefs(collection);
@@ -200,19 +205,19 @@ export async function readStore() {
 
   const items = (collection?.links ?? [])
     .filter((link) => link?.rel === "item" && isNonEmptyString(link.href))
-    .map((link) => readJson(resolve(link.href, collectionUrl)).catch(() => null));
+    .map((link) => resolve(link.href, collectionUrl))
+    .map((url) =>
+      readJson(url).then(
+        (item) => ({ item, url }),
+        (error) => {
+          console.warn("store: skipping an unreadable item", error.message);
+          return null;
+        },
+      ),
+    );
   const answered = await Promise.all([...requests, ...items]);
   const documents = new Map(unique.map((href, index) => [href, answered[index]]));
   const drawnAs = new Map([...hrefs].map(([key, href]) => [key, documents.get(href)]));
-  const settled = answered.slice(unique.length);
 
-  const windows = new Map();
-  for (const item of settled) {
-    // The item names its own year, the way the archives do: `ch-mosaic-2024`.
-    const year = /(\d{4})$/.exec(item?.id ?? "");
-    const dates = acquisitionWindow(item);
-    if (year && dates.startDate) windows.set(Number(year[1]), dates);
-  }
-
-  return storeLayers(collection, collectionUrl, drawnAs, windows);
+  return storeLayers(answered.slice(unique.length).filter(Boolean), drawnAs);
 }

@@ -49,67 +49,14 @@
       "type": "text/html"
     },
     {
-      "rel": "pmtiles",
-      "href": "https://tiles.example/glace/mosaics/pmtiles/2022/coh12_vv.pmtiles",
-      "type": "application/vnd.pmtiles",
-      "title": "coh12_vv web-map tiles, 2022",
-      "pmtiles:layers": [
-        "glace-coh12_vv-2022"
-      ]
+      "rel": "item",
+      "href": "./2022/item.json",
+      "type": "application/geo+json"
     },
     {
-      "rel": "pmtiles",
-      "href": "https://tiles.example/glace/mosaics/pmtiles/2022/coh12_vh.pmtiles",
-      "type": "application/vnd.pmtiles",
-      "title": "coh12_vh web-map tiles, 2022",
-      "pmtiles:layers": [
-        "glace-coh12_vh-2022"
-      ]
-    },
-    {
-      "rel": "pmtiles",
-      "href": "https://tiles.example/glace/mosaics/pmtiles/2022/rtc_vv.pmtiles",
-      "type": "application/vnd.pmtiles",
-      "title": "rtc_vv web-map tiles, 2022",
-      "pmtiles:layers": [
-        "glace-rtc_vv-2022"
-      ]
-    },
-    {
-      "rel": "pmtiles",
-      "href": "https://tiles.example/glace/mosaics/pmtiles/2023/coh12_vv.pmtiles",
-      "type": "application/vnd.pmtiles",
-      "title": "coh12_vv web-map tiles, 2023",
-      "pmtiles:layers": [
-        "glace-coh12_vv-2023"
-      ]
-    },
-    {
-      "rel": "pmtiles",
-      "href": "https://tiles.example/glace/mosaics/pmtiles/2023/coh12_vh.pmtiles",
-      "type": "application/vnd.pmtiles",
-      "title": "coh12_vh web-map tiles, 2023",
-      "pmtiles:layers": [
-        "glace-coh12_vh-2023"
-      ]
-    },
-    {
-      "rel": "pmtiles",
-      "href": "https://tiles.example/glace/mosaics/pmtiles/2023/rtc_vv.pmtiles",
-      "type": "application/vnd.pmtiles",
-      "title": "rtc_vv web-map tiles, 2023",
-      "pmtiles:layers": [
-        "glace-rtc_vv-2023"
-      ]
-    },
-    {
-      "rel": "pmtiles",
-      "href": "https://tiles.example/glace/mosaics/pmtiles/2023/rtc_vh.pmtiles",
-      "type": "application/vnd.pmtiles",
-      "title": "rtc_vh web-map tiles, 2023",
-      "pmtiles:layers": [
-        "glace-rtc_vh-2023"
-      ]
+      "rel": "item",
+      "href": "./2023/item.json",
+      "type": "application/geo+json"
     }
   ]
 }
