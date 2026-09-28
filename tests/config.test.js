@@ -108,6 +108,6 @@ test("the committed site-config.js names the store, and sets nothing else", asyn
   const source = fs.readFileSync(path.join(REPO, "site-config.js"), "utf8");
   new Function("window", source)(window);
   assert.deepEqual(window.GLACE_CONFIG, {
-    tilesBase: "https://data.source.coop/lqgentner/glace-ch",
+    tilesBase: "https://data.source.coop/giuz/glace-alps",
   });
 });

@@ -1,6 +1,6 @@
 <p align="center">
   <br />
-  <img src="https://data.source.coop/lqgentner/glace-ch/_assets/glace-wordmark.svg" alt="GLACE" width="350">
+  <img src="https://data.source.coop/giuz/glace-alps/_assets/glace-wordmark.svg" alt="GLACE" width="350">
   <br />
 </p>
 
@@ -14,9 +14,9 @@
   <br />
   <a href="https://lqgentner.github.io/glace-viewer">🗺️ Web map</a>
   ·
-  <a href="https://source.coop/lqgentner/glace-ch">💾 Dataset on Source Coop</a>
+  <a href="https://source.coop/giuz/glace-alps">💾 Dataset on Source Coop</a>
   ·
-  <a href="https://browser.portolan-sdi.org/#/external/data.source.coop/lqgentner/glace-ch/catalog.json">🧭 Portolan/STAC browser</a>
+  <a href="https://browser.portolan-sdi.org/#/external/data.source.coop/giuz/glace-alps/catalog.json">🧭 Portolan/STAC browser</a>
   ·
   <a href="https://github.com/lqgentner/glace-production">⚙️ Production pipeline</a>
 </p>

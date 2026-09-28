@@ -7,7 +7,7 @@
 
 window.GLACE_CONFIG = {
   /* Catalog root; override with ?tiles= to inspect another store. */
-  tilesBase: "https://data.source.coop/lqgentner/glace-ch",
+  tilesBase: "https://data.source.coop/giuz/glace-alps",
 
   // Set the opening view when changing the catalog extent.
   // initialView: { center: [7.66, 45.98], zoom: 8 },
