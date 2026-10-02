@@ -81,6 +81,14 @@
               <div id="legend-labels"><span id="legend-min"></span><span id="legend-max"></span></div>
               <!-- RGB channel legend, shown in place of the color ramp. -->
               <div id="legend-channels" hidden></div>
+              <!-- Value-encoded layers only: recolor, restretch and read values. -->
+              <div id="recolor" hidden>
+                <select id="cmap" aria-label="Color map"></select>
+                <input type="number" id="vmin" step="any" aria-label="Minimum" />
+                <input type="number" id="vmax" step="any" aria-label="Maximum" />
+                <button type="button" id="range-reset">Reset</button>
+              </div>
+              <div id="readout" hidden>Cursor <output id="readout-value">–</output></div>
             </section>
 
             <p id="layer-info"></p>

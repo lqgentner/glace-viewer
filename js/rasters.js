@@ -5,7 +5,9 @@
 
 import { addStacked, map, styleReady } from "./map.js";
 import { FALSE_COLOUR, isFiniteNumber, isNonEmptyString, readStore } from "./store.js";
+import { COLOR_MAPS } from "./colormaps.js";
 import { buildSegmented, clearStatus, creditButton, el, h, setStatus } from "./ui.js";
+import { step, valueAt } from "./values.js";
 
 const STATUS_KEY = "rasters";
 
@@ -68,7 +70,49 @@ const state = {
   opacity: 1,
   added: new Set(),
   activeKey: null,
+  /* Recoloring of value-encoded layers: a color map name, or null for the style's. */
+  cmap: null,
+  /* Restretched ranges by layer stem, so a year change keeps them. */
+  ranges: new Map(),
 };
+
+/* ---------- value-encoded layers ---------- */
+
+const encoded = (layer) => Boolean(layer?.encoding);
+const colorsOf = (layer) => (encoded(layer) && COLOR_MAPS[state.cmap]) || layer.colors;
+const rangeOf = (layer) =>
+  (encoded(layer) && state.ranges.get(layer.stem)) || { vmin: layer.vmin, vmax: layer.vmax };
+
+/*
+ * A color-relief expression: transparent below the first valid code, the ramp
+ * over vmin-vmax, clamped outside it. Code 1 is the lowest value; code 0, one
+ * step below, is nodata.
+ */
+export function reliefColor(encoding, colors, vmin, vmax) {
+  const scale = step(encoding);
+  const edge = scale - encoding.baseShift - scale / 2;
+  const stops = [
+    [edge, "rgba(0, 0, 0, 0)"],
+    [edge + scale / 100, colors[0]],
+  ];
+  colors.forEach((color, at) => {
+    const position = vmin + ((vmax - vmin) * at) / Math.max(1, colors.length - 1);
+    if (position > stops[stops.length - 1][0]) stops.push([position, color]);
+  });
+  return ["interpolate", ["linear"], ["elevation"], ...stops.flat()];
+}
+
+function applyRamp(layer) {
+  if (!encoded(layer) || !state.added.has(layer.id)) return;
+  const { vmin, vmax } = rangeOf(layer);
+  map.setPaintProperty(
+    layer.id,
+    "color-relief-color",
+    reliefColor(layer.encoding, colorsOf(layer), vmin, vmax),
+  );
+}
+
+const opacityProperty = (layer) => (encoded(layer) ? "color-relief-opacity" : "raster-opacity");
 
 const key = (product, polarization, year) => `${product}|${polarization}|${year}`;
 
@@ -158,6 +202,30 @@ function ensureLayer(layer) {
    * Inherit attribution and bounds from PMTiles metadata. Zoom limits come from the
    * catalog style.
    */
+  if (encoded(layer)) {
+    map.addSource(id, {
+      type: "raster-dem",
+      url: `pmtiles://${layer.url}`,
+      tileSize: 256,
+      minzoom: layer.minZoom,
+      maxzoom: layer.maxZoom,
+      ...layer.encoding,
+    });
+    const { vmin, vmax } = rangeOf(layer);
+    addStacked("data", {
+      id,
+      type: "color-relief",
+      source: id,
+      layout: { visibility: "none" },
+      paint: {
+        "color-relief-opacity": state.opacity,
+        resampling: "nearest",
+        "color-relief-color": reliefColor(layer.encoding, colorsOf(layer), vmin, vmax),
+      },
+    });
+    state.added.add(id);
+    return;
+  }
   map.addSource(id, {
     type: "raster",
     url: `pmtiles://${layer.url}`,
@@ -223,8 +291,9 @@ async function showOnMap(active) {
   }
   if (!active) return;
   ensureLayer(active);
+  applyRamp(active);
   map.setLayoutProperty(wanted, "visibility", "visible");
-  map.setPaintProperty(wanted, "raster-opacity", state.opacity);
+  map.setPaintProperty(wanted, opacityProperty(active), state.opacity);
   state.activeKey = wanted;
 }
 
@@ -241,12 +310,14 @@ function updateLegend(layer) {
   if (falseColour) {
     updateChannelLegend(layer);
   } else {
-    el("legend-bar").style.background = `linear-gradient(to right, ${layer.colors.join(", ")})`;
+    el("legend-bar").style.background = `linear-gradient(to right, ${colorsOf(layer).join(", ")})`;
     const unit = unitSuffix(layer);
-    const span = layer.vmax - layer.vmin;
-    el("legend-min").textContent = round(layer.vmin, span) + unit;
-    el("legend-max").textContent = round(layer.vmax, span) + unit;
+    const { vmin, vmax } = rangeOf(layer);
+    const span = vmax - vmin;
+    el("legend-min").textContent = round(vmin, span) + unit;
+    el("legend-max").textContent = round(vmax, span) + unit;
   }
+  syncRecolor(layer);
   updateColourMapCredit(layer);
   el("layer-info").replaceChildren(...layerDetail(layer).map((line) => h("div", { textContent: line })));
 }
@@ -328,7 +399,8 @@ export function layerDetail(layer) {
 let shownColourMap = null;
 
 function updateColourMapCredit(layer) {
-  const cmap = isNonEmptyString(layer.cmap) ? layer.cmap.replace(/^cmc\./, "") : "";
+  const name = (encoded(layer) && state.cmap) || layer.cmap;
+  const cmap = isNonEmptyString(name) ? name.replace(/^cmc\./, "") : "";
   if (cmap === shownColourMap) return;
   shownColourMap = cmap;
   el("legend-credit").replaceChildren(
@@ -336,6 +408,76 @@ function updateColourMapCredit(layer) {
       ? [creditButton("Color map", { ...COLOUR_MAP_CREDIT, title: `Colormap: ${cmap}` })]
       : []),
   );
+}
+
+/* ---------- recoloring and readout ---------- */
+
+function syncRecolor(layer) {
+  const on = encoded(layer);
+  el("recolor").hidden = !on;
+  el("readout").hidden = !on;
+  if (!on) return;
+  el("cmap").value = state.cmap ?? "";
+  const { vmin, vmax } = rangeOf(layer);
+  el("vmin").value = String(vmin);
+  el("vmax").value = String(vmax);
+}
+
+function initRecolor() {
+  el("cmap").replaceChildren(
+    h("option", { value: "", textContent: "As published" }),
+    ...Object.keys(COLOR_MAPS).map((name) =>
+      h("option", { value: name, textContent: name.replace(/^cmc\./, "") }),
+    ),
+  );
+  el("cmap").addEventListener("change", (event) => {
+    state.cmap = event.target.value || null;
+    render();
+  });
+  const restretch = () => {
+    const layer = selected();
+    if (!encoded(layer)) return;
+    const vmin = Number(el("vmin").value);
+    const vmax = Number(el("vmax").value);
+    if (!Number.isFinite(vmin) || !Number.isFinite(vmax) || vmin >= vmax) return;
+    state.ranges.set(layer.stem, { vmin, vmax });
+    render();
+  };
+  el("vmin").addEventListener("change", restretch);
+  el("vmax").addEventListener("change", restretch);
+  el("range-reset").addEventListener("click", () => {
+    const layer = selected();
+    if (layer) state.ranges.delete(layer.stem);
+    state.cmap = null;
+    render();
+  });
+
+  /* One lookup in flight; the latest cursor position wins. */
+  let pending = null;
+  let busy = false;
+  const lookup = async () => {
+    if (busy || pending === null) return;
+    const { lng, lat } = pending;
+    pending = null;
+    const layer = selected();
+    if (!encoded(layer)) return;
+    busy = true;
+    try {
+      const value = await valueAt(layer, lng, lat);
+      const decimals = Math.max(0, Math.ceil(-Math.log10(step(layer.encoding))));
+      el("readout-value").textContent =
+        value === null || value === undefined
+          ? "no data"
+          : `${value.toFixed(decimals)}${unitSuffix(layer)}`;
+    } finally {
+      busy = false;
+      if (pending !== null) lookup();
+    }
+  };
+  map.on("mousemove", (event) => {
+    pending = event.lngLat;
+    lookup();
+  });
 }
 
 /* ---------- controls ---------- */
@@ -464,6 +606,7 @@ export async function loadRasters() {
   }
 
   initControls(axes);
+  initRecolor();
   render();
   return axes;
 }

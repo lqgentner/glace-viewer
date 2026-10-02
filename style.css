@@ -627,3 +627,14 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
 .maplibregl-popup-content > div + .pop-head { margin-top: 7px; }
 /* Reserve close-button space on the first heading only. */
 .maplibregl-popup-content .pop-head:first-child { padding-right: 16px; }
+
+/* Value-encoded layers: recolor row and cursor readout. */
+#recolor {
+  display: grid;
+  grid-template-columns: 1fr 4.5em 4.5em auto;
+  gap: 4px;
+  margin-top: 6px;
+}
+#recolor[hidden], #readout[hidden] { display: none; }
+#recolor select, #recolor input, #recolor button { min-width: 0; font: inherit; font-size: 12px; }
+#readout { margin-top: 4px; font-size: 12px; font-variant-numeric: tabular-nums; }

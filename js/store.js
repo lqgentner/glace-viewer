@@ -99,11 +99,28 @@ function legends(style) {
       channels: legend.channels ?? null,
       minZoom: source.minzoom,
       maxZoom: source.maxzoom,
+      encoding: valueEncoding(source),
     };
     byId.set(layer.id, entry);
     if (!byStem.has(parsed.stem)) byStem.set(parsed.stem, entry);
   }
   return { byId, byStem };
+}
+
+/*
+ * A value-encoded archive is a raster-dem source with MapLibre's custom
+ * encoding: value = R * redFactor + G * greenFactor + B * blueFactor - baseShift.
+ * The style declares the four numbers; nothing else about the archive is assumed.
+ */
+const ENCODING_FACTORS = ["redFactor", "greenFactor", "blueFactor", "baseShift"];
+
+export function valueEncoding(source) {
+  if (source?.type !== "raster-dem" || source.encoding !== "custom") return null;
+  if (!ENCODING_FACTORS.every((name) => isFiniteNumber(source[name]))) return null;
+  return Object.fromEntries([
+    ["encoding", "custom"],
+    ...ENCODING_FACTORS.map((name) => [name, source[name]]),
+  ]);
 }
 
 /* RGB shares the polarization field but uses channel recipes instead of a ramp. */
