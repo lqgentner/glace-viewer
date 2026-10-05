@@ -347,7 +347,6 @@ function updateLegend(layer) {
     const span = vmax - vmin;
     el("legend-bar").style.background = gradient(colorsOf(layer));
     el("cmap").textContent = shortName(cmapOf(layer));
-    el("cmap").classList.toggle("modified", "cmap" in custom);
     showLimit(el("vmin"), round(vmin, span));
     showLimit(el("vmax"), round(vmax, span));
     el("vmin").classList.toggle("modified", "vmin" in custom);
@@ -355,7 +354,7 @@ function updateLegend(layer) {
     for (const unit of el("legend-labels").querySelectorAll(".unit")) {
       unit.textContent = unitSuffix(layer);
     }
-    el("range-reset").hidden = !state.custom.has(layer.stem);
+    el("range-reset").hidden = !("vmin" in custom || "vmax" in custom);
   }
   el("layer-info").replaceChildren(...layerDetail(layer).map((line) => h("div", { textContent: line })));
 }
@@ -457,10 +456,10 @@ function initLegend() {
     });
   }
 
+  /* Reset restores the default limits and keeps the chosen color map. */
   el("range-reset").addEventListener("click", () => {
     const layer = selected();
-    if (layer) state.custom.delete(layer.stem);
-    render();
+    if (encoded(layer)) customize(layer, { vmin: layer.vmin, vmax: layer.vmax });
   });
 }
 

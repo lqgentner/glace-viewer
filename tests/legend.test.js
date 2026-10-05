@@ -65,14 +65,15 @@ test("the color-map popover lists the curated maps and recolors the layer", asyn
   await settle();
   assert.equal(window.document.querySelector(".cmap-popover"), null, "picking closes it");
   assert.equal(el("cmap").textContent, "batlow");
-  assert.ok(el("cmap").classList.contains("modified"));
+  assert.equal(el("cmap").classList.contains("modified"), false, "a color map is a choice, not a change");
   assert.equal(ramp(ID).firstColor, COLOR_MAPS["cmc.batlow"][0]);
-  assert.equal(el("range-reset").hidden, false);
+  assert.equal(el("range-reset").hidden, true, "reset is for the limits only");
 });
 
 test("limits apply on change, accept a comma, and revert when invalid", async () => {
   await change(el("vmin"), "0,2");
   assert.equal(ramp(ID).first, 0.2);
+  assert.equal(el("range-reset").hidden, false);
   assert.equal(el("vmin").value, "0.20");
   assert.ok(el("vmin").classList.contains("modified"));
   assert.equal(el("vmax").classList.contains("modified"), false, "the untouched limit is not");
@@ -125,8 +126,9 @@ test("choices belong to their layer: kept across years, separate per product", a
   await pick("product", "COH12");
   el("range-reset").click();
   await settle();
-  assert.equal(el("cmap").textContent, "lipari");
-  assert.equal(el("vmin").value, "0.10");
+  assert.equal(el("vmin").value, "0.10", "reset restores the limits");
+  assert.equal(ramp("glace-coh12_vv-2022").first, 0.1);
+  assert.equal(el("cmap").textContent, "batlow", "and keeps the color map");
   assert.equal(el("range-reset").hidden, true);
 });
 

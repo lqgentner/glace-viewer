@@ -187,7 +187,7 @@ outside the scrolling panel.
 
 The legend edits value-encoded layers in place: the color-map button opens a
 popover, the limits are inputs that render never overwrites while focused, and
-choices are kept per layer stem. Limits outside the archive's codes 1-255 are
+choices are kept per layer stem. Reset restores the default limits only. Limits outside the archive's codes 1-255 are
 refused: below, the ramp falls into the nodata stop; above, MapLibre's packed
 ramp wraps around. False color is not editable.
 

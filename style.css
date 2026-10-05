@@ -373,13 +373,15 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
 }
 #range-reset:hover { color: #fff; }
 #legend-labels .limit { display: inline-flex; align-items: baseline; }
+/* Clear of the box, so the unit sits the same distance from every value. */
+#legend-labels .unit { margin-left: 4px; }
 
 /*
  * Editable values read as plain text until the legend is hovered or focused,
- * then show a box in the checkboxes' hover colors; the control under the pointer
- * or focus gets a white outline, like a checked box. Without hover (touch) the
- * box stays. Every rule is scoped to #legend so the state rules, which come
- * later, win on order at equal specificity.
+ * then show an outline, as the inventory swatches do; the control under the
+ * pointer or focus gets a white one. Without hover (touch) the outline stays.
+ * Every rule is scoped to #legend so the state rules, which come later, win on
+ * order at equal specificity.
  */
 #legend .editable {
   margin: 0 -4px;
@@ -390,30 +392,28 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   border: 1px solid transparent;
   border-radius: 4px;
   cursor: pointer;
-  transition:
-    background-color 0.14s ease,
-    border-color 0.14s ease;
+  transition: border-color 0.14s ease;
 }
 #legend .control-head .editable { font-size: 11px; color: var(--text); }
-#legend input.editable { min-width: 0; cursor: text; font-variant-numeric: tabular-nums; }
+/* Size limits to their text; the size attribute is the fallback without field-sizing. */
+#legend input.editable {
+  min-width: 0;
+  margin-right: 0;
+  field-sizing: content;
+  cursor: text;
+  font-variant-numeric: tabular-nums;
+}
 #vmax { text-align: right; }
 #legend:hover .editable,
-#legend:focus-within .editable {
-  background-color: rgba(255, 255, 255, 0.13);
-  border-color: rgba(255, 255, 255, 0.3);
-}
+#legend:focus-within .editable { border-color: rgba(255, 255, 255, 0.3); }
 #legend:hover .editable:hover,
 #legend .editable:focus-visible,
 #legend .editable.popover-open { border-color: #fff; outline: none; }
-/* A changed or edited value reads white. */
-#legend .editable.modified,
-#legend .control-head .editable.modified,
+/* A changed limit takes the accent; one being typed reads white. */
+#legend input.editable.modified { color: var(--accent-ink); }
 #legend input.editable:focus { color: #fff; }
 @media (hover: none) {
-  #legend .editable {
-    background-color: rgba(255, 255, 255, 0.13);
-    border-color: rgba(255, 255, 255, 0.3);
-  }
+  #legend .editable { border-color: rgba(255, 255, 255, 0.3); }
 }
 
 .cmap-popover { padding: 6px; }
