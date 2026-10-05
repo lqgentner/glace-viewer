@@ -14,8 +14,8 @@ from matplotlib import colormaps
 from matplotlib.colors import to_hex
 
 NAMES = [
-    "cmc.batlow", "cmc.lipari", "cmc.lajolla", "cmc.imola", "cmc.glasgow",
-    "cmc.devon", "cmc.oslo", "cmc.grayC", "viridis", "magma", "cividis",
+    "cmc.batlow", "cmc.glasgow", "cmc.lipari", "cmc.navia", "cmc.imola",
+    "cmc.oslo", "cmc.grayC", "cmc.devon", "cmc.lajolla", "viridis", "magma", "cividis",
 ]
 STOPS = 32
 

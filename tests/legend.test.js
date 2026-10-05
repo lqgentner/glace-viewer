@@ -56,7 +56,7 @@ test("the scale names its default color map and shows plain limits", () => {
 test("the color-map popover lists the curated maps and recolors the layer", async () => {
   el("cmap").click();
   const options = [...window.document.querySelectorAll(".cmap-popover .cmap-option")];
-  assert.equal(options.length, 11);
+  assert.equal(options.length, 12);
   assert.deepEqual(
     options.filter((o) => o.getAttribute("aria-pressed") === "true").map((o) => o.textContent),
     ["lipari"],
@@ -124,7 +124,7 @@ test("choices belong to their layer: kept across years, separate per product", a
   assert.equal(el("vmin").value, "0.20");
 
   await pick("product", "RTC");
-  assert.equal(el("cmap").textContent, "grayC", "backscatter keeps its own default");
+  assert.equal(el("cmap").textContent, "navia", "backscatter keeps its own default");
   assert.equal(el("range-reset").hidden, true);
 
   await pick("product", "COH12");

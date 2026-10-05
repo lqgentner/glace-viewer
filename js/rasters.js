@@ -57,7 +57,7 @@ const QUANTITY_ORDER = QUANTITIES.map((quantity) => quantity.value);
 const quantityOf = (value) => QUANTITIES.find((quantity) => quantity.value === value);
 
 /* Default color maps are the viewer's choice; the catalog's style ramp is not read. */
-const PRODUCT_CMAP = { COH12: "cmc.lipari", RTC: "cmc.grayC" };
+const PRODUCT_CMAP = { COH12: "cmc.lipari", RTC: "cmc.navia" };
 const QA_CMAP = "cmc.glasgow";
 
 export function defaultCmap(layer) {
