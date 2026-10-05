@@ -23,9 +23,7 @@ pixi run --locked test        # Python + npm ci + JavaScript tests
 For focused checks, use `pixi run --locked test-py` or
 `pixi run --locked test-js`. There is no compilation, bundling, or runtime npm
 installation. Browser dependencies are pinned CDN imports in `index.html` and
-`js/config.js`. Keep MapLibre's CSS and JavaScript pins aligned. The `lerc`
-import-map entry and `cogReaderUrl` must be changed together; the comment in
-`index.html` explains the loader constraint.
+`js/config.js`. Keep MapLibre's CSS and JavaScript pins aligned.
 
 Use the supplied server, which implements byte ranges and disables caching for
 page code and JSON. Open `localhost`, not `127.0.0.1`, for the configured
@@ -54,7 +52,6 @@ A gitignored `tiles` symlink to the catalog root also works. The root is above
 | `js/tile-grid.js` | GeoParquet index to deduplicated tile footprints |
 | `js/ui.js` | DOM helpers, status messages, segmented controls, popovers |
 | `js/sky.js` | Globe silhouette measurements for CSS |
-| `js/cog-rgb.js` | Registered but unused COG rendering protocol |
 | `scripts/serve.py` | Development HTTP server and local catalog mount |
 | `scripts/build-tiles.py` | Inventory GeoJSON to vector PMTiles |
 | `data/inventories.json` | Inventory build settings, display metadata, citations and licenses |
@@ -78,7 +75,6 @@ mosaics/collection.json
 mosaics/styles/{year}.json
 mosaics/{year}/item.json
 mosaics/{year}/*_viz.pmtiles
-mosaics/{year}/*.tif
 tiles/items.parquet
 ```
 
@@ -196,15 +192,6 @@ there is no separate grid archive to build. Column projection reduces decoding
 work but does not guarantee a smaller download. The current reader handles
 SNAPPY; a ZSTD index would require additional decompressor support.
 
-### The COG reader
-
-`glace-rgb://` is registered and tested, but no visible layer uses it. It assumes
-COGs aligned to the WebMercatorQuad grid; the published ETRS89-LAEA mosaics do
-not satisfy that assumption. Do not wire those COGs into it without addressing
-the projection. The protocol handles linear-to-dB conversion and treats decoded
-zero as nodata to compensate for the reader discarding LERC validity masks.
-Those assumptions need validation against any replacement dataset.
-
 ## Tests and deployment
 
 The JavaScript suites use jsdom and the strict fake MapLibre in
@@ -225,7 +212,7 @@ Use the relevant suites when changing behavior:
 | Settings, catalog joins, selection and legends | `config`, `store`, `layers`, `store-catalog`, `store-local`, `viewer` |
 | Overlay loading, retries, popups | `viewer`, `tile-grid`, `ui` |
 | Startup failures, viewport, camera, labels | `viewer-degraded`, `viewer-no-webgl`, `viewer-narrow`, `viewer-3d-restore`, `viewer-light-flavor` |
-| Globe or COG calculations | `sky`, `cog-rgb` |
+| Globe calculations | `sky` |
 | Static assets and dependency pins | `page-assets` |
 | Server or inventory build | `test_serve.py`, `test_build_tiles.py` |
 

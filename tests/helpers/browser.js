@@ -330,7 +330,7 @@ export function installBrowser({
     },
   };
   globalThis.pmtiles = { Protocol: class { tile() {} } };
-  /* Enough of the canvas for js/cog-rgb.js to turn its RGBA into tile bytes.
+  /* Enough of the canvas for js/composite.js to turn its RGBA into tile bytes.
    * The real one encodes a PNG; this hands the raw pixels straight back, which
    * is both simpler and more useful — a test can assert on a channel value
    * instead of decoding an image to find it. */

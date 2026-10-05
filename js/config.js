@@ -15,14 +15,7 @@ const DEFAULTS = {
   /* GeoParquet tile-grid index, relative to tilesBase. */
   gridIndex: "tiles/items.parquet",
 
-  /*
-   * Loaded on demand by the unused COG protocol. Keep ?external=lerc aligned with
-   * the import map in index.html. Keep executable library URLs out of query
-   * parameters.
-   */
-  cogReaderUrl: "https://esm.sh/@developmentseed/geotiff@0.7.0?external=lerc",
-
-  /* Loaded on demand for the tile grid; also excluded from query overrides. */
+  /* Loaded on demand for the tile grid. Keep executable library URLs out of query parameters. */
   hyparquetUrl: "https://esm.sh/hyparquet@1.30.1",
 
   /* Protomaps hosted TileJSON. Manage the API key in the Protomaps dashboard. */
@@ -84,7 +77,6 @@ export const MOSAIC_COLLECTION_URL = `${TILES_BASE}/${settings.mosaicCollection}
 export const INVENTORY_BASE = String(settings.inventoryBase).replace(/\/$/, "");
 export const INVENTORY_INDEX_URL = `${INVENTORY_BASE}/inventories.json`;
 
-export const COG_READER_URL = settings.cogReaderUrl;
 export const HYPARQUET_URL = settings.hyparquetUrl;
 
 export const GRID_INDEX_URL = `${TILES_BASE}/${settings.gridIndex}`;

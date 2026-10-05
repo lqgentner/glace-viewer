@@ -11,15 +11,11 @@ import {
   TERRAIN_TILEJSON,
   WORLD_IMAGERY_URL,
 } from "./config.js";
-import { cogRgbProtocol } from "./cog-rgb.js";
 import { installSky } from "./sky.js";
 import { setStatus } from "./ui.js";
 
 /* Expose each archive's TileJSON metadata, including attribution. */
 maplibregl.addProtocol("pmtiles", new pmtiles.Protocol({ metadata: true }).tile);
-
-/* Registered but unused; the COG reader is imported only on a tile request. */
-maplibregl.addProtocol("glace-rgb", cogRgbProtocol);
 
 /*
  * Increase label contrast over rasters through the flavor, retaining the

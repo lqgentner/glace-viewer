@@ -155,17 +155,14 @@
     <div id="status" hidden></div>
 
     <!-- Parse the import map before loading modules. MapLibre loads sibling chunks
-         and a worker; PMTiles needs the bare fflate mapping. Keep lerc on its
-         package CDN and cogReaderUrl's ?external=lerc in sync: esm.sh's process
-         polyfill makes the LERC loader choose Node and fail in the browser. -->
+         and a worker; PMTiles needs the bare fflate mapping. -->
     <script type="importmap">
       {
         "imports": {
           "maplibre-gl": "https://unpkg.com/maplibre-gl@6.9.0/dist/maplibre-gl.mjs",
           "pmtiles": "https://unpkg.com/pmtiles@4.5.0/dist/esm/index.js",
           "fflate": "https://unpkg.com/fflate@0.8.3/esm/browser.js",
-          "@protomaps/basemaps": "https://unpkg.com/@protomaps/basemaps@5.7.2/dist/esm/index.js",
-          "lerc": "https://cdn.jsdelivr.net/npm/lerc@4.2.0/LercDecode.es.js"
+          "@protomaps/basemaps": "https://unpkg.com/@protomaps/basemaps@5.7.2/dist/esm/index.js"
         }
       }
     </script>

@@ -81,14 +81,14 @@ test("an empty query parameter does not blank a setting", async () => {
 test("deployment-only settings are not reachable from the address bar", async () => {
   const config = await load({
     search:
-      "?gridIndex=nope&mosaicCollection=nope&hyparquetUrl=http://evil&cogReaderUrl=http://evil" +
+      "?gridIndex=nope&mosaicCollection=nope&hyparquetUrl=http://evil" +
       "&inventoryBase=/etc&initialView=x&terrainTilejson=http://evil",
   });
-  // The two reader URLs are imported and executed, so they matter most here.
+  // The reader URL is imported and executed, so it matters most here.
   assert.equal(config.GRID_INDEX_URL, "tiles/tiles/items.parquet");
   assert.equal(config.MOSAIC_COLLECTION_URL, "tiles/mosaics/collection.json");
   assert.match(config.HYPARQUET_URL, /^https:\/\/esm\.sh\//);
-  assert.match(config.COG_READER_URL, /^https:\/\/esm\.sh\//);
+  assert.equal("COG_READER_URL" in config, false, "the COG reader is gone");
   assert.equal(config.INVENTORY_BASE, "data");
   assert.equal(config.TERRAIN_TILEJSON, "https://tiles.mapterhorn.com/tilejson.json");
   assert.deepEqual(config.INITIAL_VIEW, { center: [8.03, 46.51], zoom: 10, minZoom: 1, maxZoom: 14 });
