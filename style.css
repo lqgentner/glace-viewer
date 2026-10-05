@@ -371,14 +371,15 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   border: 0;
   cursor: pointer;
 }
-#range-reset:hover { color: var(--accent); }
+#range-reset:hover { color: #fff; }
 #legend-labels .limit { display: inline-flex; align-items: baseline; }
 
 /*
  * Editable values read as plain text until the legend is hovered or focused,
- * then show a quiet box; the control under the pointer or focus gets the accent.
- * Without hover (touch) the quiet box stays. Every rule is scoped to #legend so
- * the state rules, which come later, win on order at equal specificity.
+ * then show a box in the checkboxes' hover colors; the control under the pointer
+ * or focus gets a white outline, like a checked box. Without hover (touch) the
+ * box stays. Every rule is scoped to #legend so the state rules, which come
+ * later, win on order at equal specificity.
  */
 #legend .editable {
   margin: 0 -4px;
@@ -389,19 +390,30 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   border: 1px solid transparent;
   border-radius: 4px;
   cursor: pointer;
+  transition:
+    background-color 0.14s ease,
+    border-color 0.14s ease;
 }
 #legend .control-head .editable { font-size: 11px; color: var(--text); }
 #legend input.editable { min-width: 0; cursor: text; font-variant-numeric: tabular-nums; }
 #vmax { text-align: right; }
 #legend:hover .editable,
-#legend:focus-within .editable { border-color: var(--border); }
+#legend:focus-within .editable {
+  background-color: rgba(255, 255, 255, 0.13);
+  border-color: rgba(255, 255, 255, 0.3);
+}
 #legend:hover .editable:hover,
 #legend .editable:focus-visible,
-#legend .editable.popover-open { border-color: var(--accent); outline: none; }
+#legend .editable.popover-open { border-color: #fff; outline: none; }
+/* A changed or edited value reads white. */
 #legend .editable.modified,
-#legend .control-head .editable.modified { color: var(--accent-ink); }
+#legend .control-head .editable.modified,
+#legend input.editable:focus { color: #fff; }
 @media (hover: none) {
-  #legend .editable { border-color: var(--border); }
+  #legend .editable {
+    background-color: rgba(255, 255, 255, 0.13);
+    border-color: rgba(255, 255, 255, 0.3);
+  }
 }
 
 .cmap-popover { padding: 6px; }
@@ -421,8 +433,8 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   border-radius: 4px;
   cursor: pointer;
 }
-.cmap-popover .cmap-option:hover { border-color: var(--border); }
-.cmap-popover .cmap-option[aria-pressed="true"] { border-color: var(--accent); }
+.cmap-popover .cmap-option:hover { border-color: rgba(255, 255, 255, 0.3); }
+.cmap-popover .cmap-option[aria-pressed="true"] { border-color: #fff; }
 .cmap-popover .ramp { height: 10px; border-radius: 3px; border: 1px solid var(--border); }
 
 #legend-channels {
@@ -534,12 +546,14 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   flex: none;
   cursor: pointer;
 }
-.inventory:hover .swatch { border-color: var(--border); }
+/* The legend's edit box, in the checkboxes' colors. */
+.inventory .swatch { transition: border-color 0.14s ease; }
+.inventory:hover .swatch { border-color: rgba(255, 255, 255, 0.3); }
 .inventory .swatch:hover,
 .inventory .swatch:focus-visible,
-.inventory .swatch.popover-open { border-color: var(--accent); outline: none; }
+.inventory .swatch.popover-open { border-color: #fff; outline: none; }
 @media (hover: none) {
-  .inventory .swatch { border-color: var(--border); }
+  .inventory .swatch { border-color: rgba(255, 255, 255, 0.3); }
 }
 
 .inventory .span {
@@ -677,6 +691,3 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
 /* Reserve close-button space on the first heading only. */
 .maplibregl-popup-content .pop-head:first-child { padding-right: 16px; }
 
-/* Value-encoded layers: cursor readout. */
-#readout[hidden] { display: none; }
-#readout { margin-top: 4px; font-size: 12px; font-variant-numeric: tabular-nums; }

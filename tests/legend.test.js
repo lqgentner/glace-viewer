@@ -50,6 +50,7 @@ test("the scale names its default color map and shows plain limits", () => {
   assert.equal(el("range-reset").hidden, true);
   assert.equal(el("legend-credit"), null, "the credit button is gone");
   assert.equal(el("recolor"), null, "and so is the old recolor row");
+  assert.equal(el("readout"), null, "and the cursor readout");
 });
 
 test("the color-map popover lists the curated maps and recolors the layer", async () => {
@@ -134,7 +135,6 @@ test("false color shows channels and nothing to edit", async () => {
   assert.equal(el("cmap").hidden, true);
   assert.equal(el("legend-labels").hidden, true);
   assert.equal(el("range-reset").hidden, true);
-  assert.equal(el("readout").hidden, true);
   await pick("pol", "VV");
   assert.equal(el("cmap").hidden, false);
 });

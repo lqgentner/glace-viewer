@@ -9,7 +9,7 @@ import { FALSE_COLOUR, compositeLayers, compositeTiles } from "./composite.js";
 import { isNonEmptyString, readStore } from "./store.js";
 import { COLOR_MAPS } from "./colormaps.js";
 import { attachPopover, buildSegmented, clearStatus, el, h, hidePopover, setStatus } from "./ui.js";
-import { decodePixel, step, valueAt } from "./values.js";
+import { decodePixel, step } from "./values.js";
 
 const STATUS_KEY = "rasters";
 
@@ -300,7 +300,6 @@ function render() {
     el("layer-info").replaceChildren();
     setStatus(STATUS_KEY, `No ${selectionName()} for ${state.year}`, "info");
   }
-  if (active?.id !== state.activeKey) el("readout-value").textContent = "–";
   syncControls();
   showOnMap(active);
 }
@@ -338,7 +337,6 @@ function updateLegend(layer) {
   el("legend-labels").hidden = falseColour;
   el("legend-channels").hidden = !falseColour;
   el("cmap").hidden = falseColour;
-  el("readout").hidden = falseColour;
 
   if (falseColour) {
     el("range-reset").hidden = true;
@@ -394,7 +392,7 @@ export function layerDetail(layer) {
   return lines;
 }
 
-/* ---------- legend editing and readout ---------- */
+/* ---------- legend editing ---------- */
 
 function initLegend() {
   attachPopover(
@@ -463,37 +461,6 @@ function initLegend() {
     const layer = selected();
     if (layer) state.custom.delete(layer.stem);
     render();
-  });
-
-  /* One lookup in flight; the latest cursor position wins. */
-  let pending = null;
-  let busy = false;
-  const lookup = async () => {
-    if (busy || pending === null) return;
-    const { lng, lat } = pending;
-    pending = null;
-    const layer = selected();
-    if (!encoded(layer)) return;
-    busy = true;
-    try {
-      const value = await valueAt(layer, lng, lat);
-      // The selection may have moved on while the tile was read.
-      if (selected() !== layer) return;
-      const decimals = Math.max(0, Math.ceil(-Math.log10(step(layer.encoding))));
-      el("readout-value").textContent =
-        value === null || value === undefined
-          ? "no data"
-          : `${value.toFixed(decimals)}${unitSuffix(layer)}`;
-    } catch {
-      if (selected() === layer) el("readout-value").textContent = "–";
-    } finally {
-      busy = false;
-      if (pending !== null) lookup();
-    }
-  };
-  map.on("mousemove", (event) => {
-    pending = event.lngLat;
-    lookup();
   });
 }
 

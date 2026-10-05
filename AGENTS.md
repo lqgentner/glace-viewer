@@ -49,7 +49,7 @@ A gitignored `tiles` symlink to the catalog root also works. The root is above
 | `js/store.js` | Catalog/style/item reads and validation; one record per raster archive |
 | `js/rasters.js` | Raster selection, source creation, panel axes, legend editing |
 | `js/composite.js` | False color composed from VV and VH archives via `glace-rgb://` |
-| `js/values.js` | Tile decoding for the cursor readout and composites |
+| `js/values.js` | Tile decoding for false-color composites |
 | `js/overlays.js` | Inventory controls, overlay lifecycle, grid layers, feature popups |
 | `js/tile-grid.js` | GeoParquet index to deduplicated tile footprints |
 | `js/ui.js` | DOM helpers, status messages, segmented controls, popovers |

@@ -32,9 +32,8 @@ and quality layers. The map also offers adjustable raster opacity, vector or
 satellite basemaps, hillshade, 3D terrain, glacier inventories, and
 the catalog's tile grid. Available raster choices come from the catalog.
 
-The archives carry quantized values, colored in the browser: you can change
-the color map and its range, and read the value under the cursor. They are
-lossy 8-bit WebP, so for numerical analysis use the COG assets linked from the
+The archives carry quantized values, colored in the browser, so you can change
+the color map and its range. They are lossy 8-bit WebP, so for numerical analysis use the COG assets linked from the
 STAC items in the browser above.
 
 ## Run locally

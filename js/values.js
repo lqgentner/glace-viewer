@@ -1,11 +1,9 @@
 /*
- * Decode value-encoded archive tiles. Tiles are fetched through the PMTiles
- * reader, decoded once and kept, for the cursor readout (at the archive's
- * maximum zoom) and for false-color composites (js/composite.js). A pixel is
- * decoded with the style's custom encoding.
+ * Decode value-encoded archive tiles for false-color composites
+ * (js/composite.js). Tiles are fetched through the PMTiles reader, decoded once
+ * and kept; a pixel is decoded with the style's custom encoding.
  */
 
-const TILE_PX = 256;
 const MAX_TILES = 128;
 
 const archives = new Map();
@@ -58,22 +56,6 @@ export function tilePixels(url, z, x, y) {
   return pending;
 }
 
-/** The WebMercatorQuad tile and pixel holding a point, at zoom z. */
-export function tilePixel(lng, lat, z, size = TILE_PX) {
-  const n = 2 ** z;
-  const xf = ((lng + 180) / 360) * n;
-  const rad = (lat * Math.PI) / 180;
-  const yf = ((1 - Math.log(Math.tan(rad) + 1 / Math.cos(rad)) / Math.PI) / 2) * n;
-  const x = Math.floor(xf);
-  const y = Math.floor(yf);
-  return {
-    x,
-    y,
-    px: Math.min(size - 1, Math.floor((xf - x) * size)),
-    py: Math.min(size - 1, Math.floor((yf - y) * size)),
-  };
-}
-
 /** Decode one RGB pixel; null where the code is the declared nodata. */
 export function decodePixel(encoding, r, g, b, nodata = 0) {
   if (r === nodata && g === nodata && b === nodata) return null;
@@ -85,22 +67,7 @@ export function decodePixel(encoding, r, g, b, nodata = 0) {
   );
 }
 
-/** One code step, for choosing how many decimals a readout shows. */
+/** One code step: the value difference between neighboring codes. */
 export const step = (encoding) =>
   encoding.redFactor + encoding.greenFactor + encoding.blueFactor;
 
-/**
- * @param {object} layer  a store record with url, maxZoom and encoding
- * @returns {Promise<number|null|undefined>}  undefined outside the archive
- */
-export async function valueAt(layer, lng, lat) {
-  const z = layer.maxZoom;
-  const { x, y, px, py } = tilePixel(lng, lat, z);
-  const tile = await tilePixels(layer.url, z, x, y);
-  if (tile === null) return undefined;
-  const scale = tile.size / TILE_PX;
-  const at = (Math.floor(py * scale) * tile.size + Math.floor(px * scale)) * 4;
-  // A lossy archive marks nodata with alpha 0; a lossless one with code 0.
-  if (tile.data[at + 3] === 0) return null;
-  return decodePixel(layer.encoding, tile.data[at], tile.data[at + 1], tile.data[at + 2]);
-}
