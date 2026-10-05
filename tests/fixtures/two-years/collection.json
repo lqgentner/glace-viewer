@@ -58,5 +58,69 @@
       "href": "./2023/item.json",
       "type": "application/geo+json"
     }
-  ]
+  ],
+  "renders": {
+    "coh12_vv": {
+      "title": "Coherence VV",
+      "assets": [
+        "coh12_vv"
+      ],
+      "rescale": [
+        [
+          0.1,
+          0.75
+        ]
+      ],
+      "colormap_name": "magma",
+      "resampling": "average",
+      "nodata": "nan"
+    },
+    "coh12_vh": {
+      "title": "Coherence VH",
+      "assets": [
+        "coh12_vh"
+      ],
+      "rescale": [
+        [
+          0.1,
+          0.55
+        ]
+      ],
+      "colormap_name": "magma",
+      "resampling": "average",
+      "nodata": "nan"
+    },
+    "rtc_vv": {
+      "title": "Backscatter VV",
+      "assets": [
+        "rtc_vv"
+      ],
+      "expression": "10*log10(rtc_vv_b1)",
+      "rescale": [
+        [
+          -14.5,
+          -4.5
+        ]
+      ],
+      "colormap_name": "gray",
+      "resampling": "average",
+      "nodata": "nan"
+    },
+    "rtc_vh": {
+      "title": "Backscatter VH",
+      "assets": [
+        "rtc_vh"
+      ],
+      "expression": "10*log10(rtc_vh_b1)",
+      "rescale": [
+        [
+          -21.0,
+          -11.0
+        ]
+      ],
+      "colormap_name": "gray",
+      "resampling": "average",
+      "nodata": "nan"
+    }
+  }
 }

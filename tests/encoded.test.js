@@ -1,4 +1,4 @@
-/* Check the decoding of value-encoded archives (spike). */
+/* Check the decoding of value-encoded archives. */
 
 import assert from "node:assert/strict";
 import test from "node:test";

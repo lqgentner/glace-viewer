@@ -74,18 +74,6 @@
     }
   ],
   "assets": {
-    "coh12_rgb_viz": {
-      "href": "coh12_rgb_viz.pmtiles",
-      "type": "application/vnd.pmtiles",
-      "title": "coh12_rgb web-map tiles",
-      "description": "Pre-styled 8-bit WebP rendering of coh12_rgb on WebMercatorQuad z5-z13, stretched 0.1-0.75 as the collection's style for 2021 declares. Not for analysis: read coh12_vv.tif and coh12_vh.tif.",
-      "file:size": 23753058,
-      "file:checksum": "1220a300f25e4e23fa55f0f322882c7b6d577cf0b259ad56bd5ea0e76d8663719afd",
-      "proj:code": "EPSG:3857",
-      "roles": [
-        "visual"
-      ]
-    },
     "coh12_vh": {
       "href": "coh12_vh.tif",
       "type": "image/tiff; application=geotiff; profile=cloud-optimized",
@@ -147,6 +135,15 @@
       "proj:code": "EPSG:3857",
       "roles": [
         "visual"
+      ],
+      "bands": [
+        {
+          "data_type": "uint8",
+          "nodata": 0,
+          "raster:scale": 0.12598425196850394,
+          "raster:offset": -13.125984251968504,
+          "unit": "dB"
+        }
       ]
     },
     "coh12_vh_qa_num": {
@@ -184,6 +181,14 @@
       "proj:code": "EPSG:3857",
       "roles": [
         "visual"
+      ],
+      "bands": [
+        {
+          "data_type": "uint8",
+          "nodata": 0,
+          "raster:scale": 0.9960629921259843,
+          "raster:offset": -0.9960629921259843
+        }
       ]
     },
     "coh12_vh_viz": {
@@ -196,6 +201,14 @@
       "proj:code": "EPSG:3857",
       "roles": [
         "visual"
+      ],
+      "bands": [
+        {
+          "data_type": "uint8",
+          "nodata": 0,
+          "raster:scale": 0.003937007874015748,
+          "raster:offset": -0.003937007874015748
+        }
       ]
     },
     "coh12_vv": {
@@ -259,6 +272,15 @@
       "proj:code": "EPSG:3857",
       "roles": [
         "visual"
+      ],
+      "bands": [
+        {
+          "data_type": "uint8",
+          "nodata": 0,
+          "raster:scale": 0.12598425196850394,
+          "raster:offset": -13.125984251968504,
+          "unit": "dB"
+        }
       ]
     },
     "coh12_vv_qa_num": {
@@ -296,6 +318,14 @@
       "proj:code": "EPSG:3857",
       "roles": [
         "visual"
+      ],
+      "bands": [
+        {
+          "data_type": "uint8",
+          "nodata": 0,
+          "raster:scale": 0.9960629921259843,
+          "raster:offset": -0.9960629921259843
+        }
       ]
     },
     "coh12_vv_viz": {
@@ -308,18 +338,14 @@
       "proj:code": "EPSG:3857",
       "roles": [
         "visual"
-      ]
-    },
-    "rtc_rgb_viz": {
-      "href": "rtc_rgb_viz.pmtiles",
-      "type": "application/vnd.pmtiles",
-      "title": "rtc_rgb web-map tiles",
-      "description": "Pre-styled 8-bit WebP rendering of rtc_rgb on WebMercatorQuad z5-z13, stretched -16.5--4 dB as the collection's style for 2021 declares. Not for analysis: read rtc_vv.tif and rtc_vh.tif.",
-      "file:size": 38780852,
-      "file:checksum": "1220041c4e4ea69ef6462df9f4b32661c6267eb4ec2f9e3b9cce8232fdb342a62bce",
-      "proj:code": "EPSG:3857",
-      "roles": [
-        "visual"
+      ],
+      "bands": [
+        {
+          "data_type": "uint8",
+          "nodata": 0,
+          "raster:scale": 0.003937007874015748,
+          "raster:offset": -0.003937007874015748
+        }
       ]
     },
     "rtc_vh": {
@@ -384,6 +410,15 @@
       "proj:code": "EPSG:3857",
       "roles": [
         "visual"
+      ],
+      "bands": [
+        {
+          "data_type": "uint8",
+          "nodata": 0,
+          "raster:scale": 0.0984251968503937,
+          "raster:offset": -13.098425196850394,
+          "unit": "dB"
+        }
       ]
     },
     "rtc_vh_qa_num": {
@@ -421,6 +456,14 @@
       "proj:code": "EPSG:3857",
       "roles": [
         "visual"
+      ],
+      "bands": [
+        {
+          "data_type": "uint8",
+          "nodata": 0,
+          "raster:scale": 0.9960629921259843,
+          "raster:offset": -0.9960629921259843
+        }
       ]
     },
     "rtc_vh_viz": {
@@ -433,6 +476,15 @@
       "proj:code": "EPSG:3857",
       "roles": [
         "visual"
+      ],
+      "bands": [
+        {
+          "data_type": "uint8",
+          "nodata": 0,
+          "raster:scale": 0.11811023622047244,
+          "raster:offset": -31.118110236220474,
+          "unit": "dB"
+        }
       ]
     },
     "rtc_vv": {
@@ -497,6 +549,15 @@
       "proj:code": "EPSG:3857",
       "roles": [
         "visual"
+      ],
+      "bands": [
+        {
+          "data_type": "uint8",
+          "nodata": 0,
+          "raster:scale": 0.0984251968503937,
+          "raster:offset": -13.098425196850394,
+          "unit": "dB"
+        }
       ]
     },
     "rtc_vv_qa_num": {
@@ -534,6 +595,14 @@
       "proj:code": "EPSG:3857",
       "roles": [
         "visual"
+      ],
+      "bands": [
+        {
+          "data_type": "uint8",
+          "nodata": 0,
+          "raster:scale": 0.9960629921259843,
+          "raster:offset": -0.9960629921259843
+        }
       ]
     },
     "rtc_vv_viz": {
@@ -546,6 +615,15 @@
       "proj:code": "EPSG:3857",
       "roles": [
         "visual"
+      ],
+      "bands": [
+        {
+          "data_type": "uint8",
+          "nodata": 0,
+          "raster:scale": 0.11811023622047244,
+          "raster:offset": -25.118110236220474,
+          "unit": "dB"
+        }
       ]
     }
   },

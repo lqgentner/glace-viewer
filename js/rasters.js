@@ -4,12 +4,15 @@
  */
 
 import { addStacked, map, styleReady } from "./map.js";
-import { FALSE_COLOUR, isFiniteNumber, isNonEmptyString, readStore } from "./store.js";
+import { isFiniteNumber, isNonEmptyString, readStore } from "./store.js";
 import { COLOR_MAPS } from "./colormaps.js";
 import { buildSegmented, clearStatus, creditButton, el, h, setStatus } from "./ui.js";
 import { step, valueAt } from "./values.js";
 
 const STATUS_KEY = "rasters";
+
+/* RGB shares the polarization field but uses channel recipes instead of a ramp. */
+const FALSE_COLOUR = "RGB";
 
 /* Display labels differ from catalog values; unknown products keep their names. */
 const PRODUCT_LABELS = { COH12: "Coherence", RTC: "Backscatter" };
@@ -53,6 +56,16 @@ const QUANTITIES = [
 const QUANTITY_ORDER = QUANTITIES.map((quantity) => quantity.value);
 const quantityOf = (value) => QUANTITIES.find((quantity) => quantity.value === value);
 
+/* Default color maps are the viewer's choice; the catalog's style ramp is not read. */
+const PRODUCT_CMAP = { COH12: "cmc.lipari", RTC: "cmc.grayC" };
+const QA_CMAP = "cmc.glasgow";
+
+export function defaultCmap(layer) {
+  const { quantity } = splitPolarization(layer.polarization);
+  if (quantity !== MEASUREMENT) return QA_CMAP;
+  return PRODUCT_CMAP[layer.product] ?? "viridis";
+}
+
 const CHANNEL_SWATCHES = ["#e0524f", "#4c9f4c", "#5b8def"];
 
 /* Credit scientific color maps named cmc.<map> in the style. */
@@ -79,9 +92,8 @@ const state = {
 /* ---------- value-encoded layers ---------- */
 
 const encoded = (layer) => Boolean(layer?.encoding);
-const colorsOf = (layer) => (encoded(layer) && COLOR_MAPS[state.cmap]) || layer.colors;
-const rangeOf = (layer) =>
-  (encoded(layer) && state.ranges.get(layer.stem)) || { vmin: layer.vmin, vmax: layer.vmax };
+const colorsOf = (layer) => COLOR_MAPS[state.cmap ?? defaultCmap(layer)];
+const rangeOf = (layer) => state.ranges.get(layer.stem) ?? { vmin: layer.vmin, vmax: layer.vmax };
 
 /*
  * A color-relief expression: transparent below the first valid code, the ramp
@@ -202,43 +214,25 @@ function ensureLayer(layer) {
    * Inherit attribution and bounds from PMTiles metadata. Zoom limits come from the
    * catalog style.
    */
-  if (encoded(layer)) {
-    map.addSource(id, {
-      type: "raster-dem",
-      url: `pmtiles://${layer.url}`,
-      tileSize: 256,
-      minzoom: layer.minZoom,
-      maxzoom: layer.maxZoom,
-      ...layer.encoding,
-    });
-    const { vmin, vmax } = rangeOf(layer);
-    addStacked("data", {
-      id,
-      type: "color-relief",
-      source: id,
-      layout: { visibility: "none" },
-      paint: {
-        "color-relief-opacity": state.opacity,
-        resampling: "nearest",
-        "color-relief-color": reliefColor(layer.encoding, colorsOf(layer), vmin, vmax),
-      },
-    });
-    state.added.add(id);
-    return;
-  }
   map.addSource(id, {
-    type: "raster",
+    type: "raster-dem",
     url: `pmtiles://${layer.url}`,
     tileSize: 256,
     minzoom: layer.minZoom,
     maxzoom: layer.maxZoom,
+    ...layer.encoding,
   });
+  const { vmin, vmax } = rangeOf(layer);
   addStacked("data", {
     id,
-    type: "raster",
+    type: "color-relief",
     source: id,
     layout: { visibility: "none" },
-    paint: { "raster-opacity": state.opacity, "raster-resampling": "nearest" },
+    paint: {
+      "color-relief-opacity": state.opacity,
+      resampling: "nearest",
+      "color-relief-color": reliefColor(layer.encoding, colorsOf(layer), vmin, vmax),
+    },
   });
   state.added.add(id);
 }
@@ -399,7 +393,7 @@ export function layerDetail(layer) {
 let shownColourMap = null;
 
 function updateColourMapCredit(layer) {
-  const name = (encoded(layer) && state.cmap) || layer.cmap;
+  const name = state.cmap ?? defaultCmap(layer);
   const cmap = isNonEmptyString(name) ? name.replace(/^cmc\./, "") : "";
   if (cmap === shownColourMap) return;
   shownColourMap = cmap;
@@ -425,7 +419,7 @@ function syncRecolor(layer) {
 
 function initRecolor() {
   el("cmap").replaceChildren(
-    h("option", { value: "", textContent: "As published" }),
+    h("option", { value: "", textContent: "Default" }),
     ...Object.keys(COLOR_MAPS).map((name) =>
       h("option", { value: name, textContent: name.replace(/^cmc\./, "") }),
     ),

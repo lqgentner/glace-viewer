@@ -1,9 +1,9 @@
 /*
- * Exercise the page against fixtures copied from
- * https://data.source.coop/lqgentner/glace-ch, with item geometry reduced and
- * the collection's archive links removed, as the catalog no longer writes them.
- * Cover item/style joins and the polarization, QA, and RGB panel choices. A separate
- * process isolates the map singleton.
+ * Exercise the page against fixtures converted from glace-catalog's
+ * value-encoded catalog, with item geometry reduced and the collection's
+ * archive links removed, as the catalog no longer writes them. Cover item/style
+ * joins and the polarization and QA panel choices. A separate process isolates
+ * the map singleton.
  */
 
 import assert from "node:assert/strict";
@@ -65,15 +65,15 @@ test("the store's catalog loads without complaint", () => {
   assert.deepEqual(warnings, [], "every archive is one the panel has a control for");
 });
 
-test("the seven-value polarization field becomes two rows", () => {
+test("the six-value polarization field becomes two rows", () => {
   const fields = new Set(
     archives.map(({ key }) => /^[a-z0-9]+_(.+)_viz$/.exec(key)[1]),
   );
-  assert.equal(fields.size, 7);
+  assert.equal(fields.size, 6);
 
   assert.deepEqual(
     [...el("pol").children].map((b) => b.dataset.value),
-    ["VV", "VH", "RGB"],
+    ["VV", "VH"],
   );
   // The measurement is the absence of a suffix, so its value is the empty
   // string — `data-value` carries the catalog's own spelling throughout.
@@ -83,8 +83,8 @@ test("the seven-value polarization field becomes two rows", () => {
   );
   assert.equal(el("quantity-row").hidden, false, "there is more than one to choose from");
 
-  // 14 archives per year, 2 products x (2 x 3 + RGB), over four published years.
-  assert.equal(archives.length, 56);
+  // 12 archives per year, 2 products x 2 x 3, over four published years.
+  assert.equal(archives.length, 48);
   assert.deepEqual(
     [...el("product").children].map((b) => b.dataset.value),
     ["COH12", "RTC"],
@@ -129,12 +129,12 @@ test("a QA raster is its own archive, drawn in the same slot", async () => {
 
 test("a QA raster brings its own ramp, stretch and color-map credit", async () => {
   await pick("quantity", "QA_NUM");
-  // 0-90 rather than the observed 26-30 of recent years, and shared by both
+  // 0-80 rather than the observed 26-30 of recent years, and shared by both
   // products: 2021 reaches 58 because S1B was still flying, 2026 flies three
   // satellites, and one ceiling for every year and both products is what keeps
   // the difference legible.
   assert.equal(el("legend-min").textContent, "0.0");
-  assert.equal(el("legend-max").textContent, "90.0");
+  assert.equal(el("legend-max").textContent, "80.0");
   assert.deepEqual(
     [...el("layer-info").children].map((line) => line.textContent),
     ["Number of contributing observations", "2024-07-09 to 2024-10-07"],
@@ -143,8 +143,8 @@ test("a QA raster brings its own ramp, stretch and color-map credit", async () =
   await pick("quantity", "QA_CQM");
   // A sequential ramp over the measured one-sided range: CQM is a composite
   // quality indicator where higher is better, and 0 dB is not a meaningful middle.
-  assert.equal(el("legend-min").textContent, "-3.0 dB");
-  assert.equal(el("legend-max").textContent, "10.0 dB");
+  assert.equal(el("legend-min").textContent, "-2.5 dB");
+  assert.equal(el("legend-max").textContent, "8.0 dB");
   assert.deepEqual(
     [...el("layer-info").children].map((line) => line.textContent),
     ["Composite quality map (higher is better)", "2024-07-09 to 2024-10-07"],
@@ -164,79 +164,6 @@ test("the acquisition window comes from the year's STAC item", () => {
   assert.equal(item.properties.end_datetime, "2024-10-07T00:00:00Z");
 });
 
-test("the false color and the QA rasters gray each other, but stay reachable", async () => {
-  // The store publishes no RGB QA raster and no QA false color. The button
-  // still says so by going gray, but the click is accepted rather than refused:
-  // whichever of the two is pressed wins, and the other row follows it.
-  await pick("quantity", "QA_CQM");
-  const rgb = buttons(el, "pol").RGB;
-  assert.equal(rgb.getAttribute("aria-disabled"), "true", "grayed…");
-  assert.equal(rgb.disabled, false, "…but live");
-  assert.equal(buttons(el, "pol").VH.hasAttribute("aria-disabled"), false, "VH has a QA raster");
-
-  await pick("pol", "RGB");
-  assert.equal(buttons(el, "pol").RGB.getAttribute("aria-checked"), "true", "the click won");
-  assert.equal(
-    buttons(el, "quantity")[""].getAttribute("aria-checked"),
-    "true",
-    "and the quantity fell back to the measurement",
-  );
-  assert.equal(page.map.getLayer("glace-coh12_rgb-2024").layout.visibility, "visible");
-});
-
-test("and the other way round: a QA button pressed on false color resets it", async () => {
-  await pick("pol", "RGB");
-  const count = buttons(el, "quantity").QA_NUM;
-  assert.equal(count.getAttribute("aria-disabled"), "true");
-  assert.equal(count.disabled, false);
-
-  await pick("quantity", "QA_NUM");
-  assert.equal(buttons(el, "quantity").QA_NUM.getAttribute("aria-checked"), "true");
-  assert.equal(
-    buttons(el, "pol").VV.getAttribute("aria-checked"),
-    "true",
-    "VV is the leftmost polarization that has one",
-  );
-  assert.equal(page.map.getLayer("glace-coh12_vv_qa_num-2024").layout.visibility, "visible");
-});
-
-test("the false color names its channels and the stretch each was baked with", async () => {
-  await pick("pol", "RGB");
-  assert.equal(el("legend-bar").hidden, true, "there is no ramp to show");
-  assert.equal(el("legend-channels").hidden, false);
-
-  const cells = [...el("legend-channels").children].map((node) => node.textContent);
-  // The build's own record of what went into each channel, published in the
-  // style. This page holds no stretch of its own, so it is the only way numbers
-  // reach that legend.
-  assert.deepEqual(cells.filter(Boolean), [
-    "VV",
-    "0.10 to 0.75",
-    "VH",
-    "0.10 to 0.55",
-    "VV / VH",
-    "0.80 to 2.60",
-  ]);
-  assert.equal(
-    page.map.getSource("glace-coh12_rgb-2024").url,
-    "pmtiles://http://localhost/tiles/mosaics/2024/coh12_rgb_viz.pmtiles",
-    "the pre-styled archive the store publishes",
-  );
-
-  // Backscatter's third channel is a difference, because it is read in dB.
-  await pick("product", "RTC");
-  assert.ok([...el("legend-channels").children].some((node) => node.textContent === "VV − VH"));
-});
-
-test("going back to a single-band layer restores the ramp", async () => {
-  await pick("product", "COH12");
-  await pick("pol", "VV");
-  assert.equal(el("legend-bar").hidden, false);
-  assert.equal(el("legend-channels").hidden, true);
-  assert.equal(el("legend-min").textContent, "0.10");
-  assert.equal(el("legend-max").textContent, "0.75");
-});
-
 test("every archive the store published is reachable", async () => {
   const { map } = page;
   for (const product of ["COH12", "RTC"]) {
@@ -251,9 +178,8 @@ test("every archive the store published is reachable", async () => {
       }
     }
   }
-  // The twelve above, plus the two false-color archives the tests before this
-  // one selected: a layer is created once and kept, so this is every archive the
-  // item lists for the year the page sits on, and nothing besides.
+  // The twelve above: a layer is created once and kept, so this is every archive
+  // the item lists for the year the page sits on.
   assert.equal(
     [...map.layers.keys()].filter((id) => id.startsWith("glace-")).length,
     archives.filter(({ year }) => year === 2024).length,

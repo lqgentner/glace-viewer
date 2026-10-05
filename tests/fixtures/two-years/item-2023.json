@@ -19,6 +19,14 @@
       "type": "application/vnd.pmtiles",
       "roles": [
         "visual"
+      ],
+      "bands": [
+        {
+          "data_type": "uint8",
+          "nodata": 0,
+          "raster:scale": 0.003937007874015748,
+          "raster:offset": -0.003937007874015748
+        }
       ]
     },
     "coh12_vh_viz": {
@@ -26,6 +34,14 @@
       "type": "application/vnd.pmtiles",
       "roles": [
         "visual"
+      ],
+      "bands": [
+        {
+          "data_type": "uint8",
+          "nodata": 0,
+          "raster:scale": 0.003937007874015748,
+          "raster:offset": -0.003937007874015748
+        }
       ]
     },
     "rtc_vv_viz": {
@@ -33,6 +49,15 @@
       "type": "application/vnd.pmtiles",
       "roles": [
         "visual"
+      ],
+      "bands": [
+        {
+          "data_type": "uint8",
+          "nodata": 0,
+          "raster:scale": 0.11811023622047244,
+          "raster:offset": -25.118110236220474,
+          "unit": "dB"
+        }
       ]
     },
     "rtc_vh_viz": {
@@ -40,6 +65,15 @@
       "type": "application/vnd.pmtiles",
       "roles": [
         "visual"
+      ],
+      "bands": [
+        {
+          "data_type": "uint8",
+          "nodata": 0,
+          "raster:scale": 0.11811023622047244,
+          "raster:offset": -31.118110236220474,
+          "unit": "dB"
+        }
       ]
     }
   }

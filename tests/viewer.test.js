@@ -301,14 +301,14 @@ test("the viewer", async (t) => {
   await t.test("opacity applies to the visible raster", async () => {
     input(el("opacity"), "40");
     await settle();
-    assert.equal(map.getLayer("glace-rtc_vv-2023").paint["raster-opacity"], 0.4);
+    assert.equal(map.getLayer("glace-rtc_vv-2023").paint["color-relief-opacity"], 0.4);
     assert.equal(el("opacity-value").textContent, "40%");
   });
 
   await t.test("a new layer inherits the current opacity", async () => {
     el("pol").querySelector('[data-value="VH"]').click();
     await settle();
-    assert.equal(map.getLayer("glace-rtc_vh-2023").paint["raster-opacity"], 0.4);
+    assert.equal(map.getLayer("glace-rtc_vh-2023").paint["color-relief-opacity"], 0.4);
   });
 
   await t.test("a year with no archive for this combination is reported", async () => {

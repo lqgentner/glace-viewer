@@ -78,7 +78,7 @@ mosaics/{year}/*_viz.pmtiles
 tiles/items.parquet
 ```
 
-`js/store.js` combines two inputs:
+`js/store.js` combines three inputs:
 
 1. Items linked from the collection with `rel="item"` enumerate the archives:
    each PMTiles asset with the `visual` role is one. The layer ID, which is both
@@ -87,18 +87,20 @@ tiles/items.parquet
    `coh12_vv_qa_num_viz` in `alps-mosaic-2024` is `glace-coh12_vv_qa_num-2024`.
    Resolve asset hrefs against the item, so a store served through `?tiles=`
    reads its own archives. The item's `start_datetime` and `end_datetime` give
-   the acquisition window. The collection carries no archive links.
-2. Collection assets with the `style` role describe the layers. Styles are
-   indexed by year, with a `default` role for fallback. The join checks the
-   year's exact ID, the default's exact ID, then the same stem in the year's
-   and default styles. Enumerate from the items, never from a style: a style
-   can name an archive a partial build never produced.
+   the acquisition window, and the asset's `bands[0].unit` the units. The
+   collection carries no archive links.
+2. Collection assets with the `style` role decode the archives: each
+   `color-relief` layer draws a `raster-dem` source with a custom encoding.
+   Styles are indexed by year, with a `default` role for fallback. The join
+   checks the year's exact ID, the default's exact ID, then the same stem in
+   the year's and default styles. Enumerate from the items, never from a style:
+   a style can name an archive a partial build never produced.
+3. The collection's `renders[<stem>].rescale` gives each layer's default
+   stretch.
 
-`metadata.portolan:legend` supplies color stops, range, units, and RGB channel
-recipes; style sources supply zoom limits. Do not maintain a second copy in the
-viewer or infer RGB stretches from sibling layers. Fixed stretches allow
-comparison across years. Changes to raster rendering belong in the upstream
-store, since the viewer displays pre-styled RGBA archives.
+The style's sources supply each archive's custom encoding, zoom limits and
+credit; its ramp is not read. Default color maps are viewer constants in
+`js/rasters.js`, because they are presentation, not data. Stretches are fixed per layer so years stay comparable.
 
 Incomplete layers are skipped with a warning. A failed collection or nominated
 style prevents raster startup; an unreadable item removes that year's layers.
@@ -202,8 +204,8 @@ rendering or CDN availability; inspect visual changes in a real browser too.
 Modules hold state and the map is a singleton. Put scenarios needing a fresh
 catalog, viewport, or initial camera in separate test files so `node --test`
 isolates them. Tests use committed fixtures, never a developer's `./tiles`:
-`store/` represents a published catalog with reduced item geometry and no
-archive links, and `two-years/` exercises missing combinations and style fallback.
+`store/` represents the value-encoded catalog converted from glace-catalog,
+with reduced item geometry and no archive links, and `two-years/` exercises missing combinations and style fallback.
 
 Use the relevant suites when changing behavior:
 

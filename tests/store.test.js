@@ -8,7 +8,7 @@ import test from "node:test";
 import { captureWarnings, installBrowser, load, REPO } from "./helpers/browser.js";
 
 installBrowser();
-const { readStore, storeLayers, styleHrefs } = await load("js/store.js");
+const { readStore, storeLayers, stretches, styleHrefs } = await load("js/store.js");
 
 const read = (...where) =>
   JSON.parse(fs.readFileSync(path.join(REPO, "tests", "fixtures", ...where), "utf8"));
@@ -22,17 +22,21 @@ const item = read("store", "item-2024.json");
 const style = read("store", "style-2024.json");
 
 const layers = (over = {}) =>
-  storeLayers(over.items ?? [{ item: over.item ?? item, url: ITEM_URL }], over.style ?? style);
+  storeLayers(
+    over.items ?? [{ item: over.item ?? item, url: ITEM_URL }],
+    over.style ?? style,
+    over.collection ?? collection,
+  );
 
 const byId = (list) => new Map(list.map((layer) => [layer.id, layer]));
 
 test("every archive the store publishes becomes a layer", () => {
   const found = layers();
-  // Two products x (VV, VH) x (measurement, QA-NUM, QA-CQM), plus one false
-  // color each: fourteen, and the item lists exactly that many.
-  assert.equal(found.length, 14);
+  // Two products x (VV, VH) x (measurement, QA-NUM, QA-CQM): twelve, and the
+  // item lists exactly that many.
+  assert.equal(found.length, 12);
   const visual = Object.values(item.assets).filter((asset) => asset.roles.includes("visual"));
-  assert.equal(visual.length, 14);
+  assert.equal(visual.length, 12);
 });
 
 test("the style layer id is split into the axes the panel spends it on", () => {
@@ -48,33 +52,54 @@ test("the archive URL comes from the asset, resolved against the item", () => {
   assert.equal(layer.url, "https://tiles.example/glace/mosaics/2024/coh12_vv_viz.pmtiles");
 });
 
-test("the ramp, the stretch and the zooms come from the style", () => {
+test("decoding and zooms come from the style, stretches from renders, units from the item", () => {
   const found = byId(layers());
   const vv = found.get("glace-coh12_vv-2024");
-  assert.equal(vv.cmap, "cmc.lipari");
-  assert.deepEqual([vv.vmin, vv.vmax], [0.1, 0.75]);
-  assert.equal(vv.units, "");
-  assert.equal(vv.colors.length, 17, "seventeen stops, as the store records them");
+  assert.equal(vv.encoding.encoding, "custom");
   assert.deepEqual([vv.minZoom, vv.maxZoom], [5, 13]);
+  assert.deepEqual([vv.vmin, vv.vmax], [0.1, 0.75]);
+  assert.equal(vv.units, "", "coherence has no unit");
+  assert.match(vv.attribution, /Copernicus Sentinel data 2024/);
+  assert.equal("colors" in vv, false, "the style's ramp is not read");
 
-  const cqm = found.get("glace-rtc_vv_qa_cqm-2024");
-  assert.equal(cqm.cmap, "cmc.glasgow", "a sequential ramp: higher is better");
-  assert.deepEqual([cqm.vmin, cqm.vmax], [-4, 8]);
-  assert.equal(cqm.units, "dB");
+  const rtc = found.get("glace-rtc_vv-2024");
+  assert.deepEqual([rtc.vmin, rtc.vmax], [-14.5, -4.5]);
+  assert.equal(rtc.units, "dB");
 
   const num = found.get("glace-rtc_vv_qa_num-2024");
-  // Shared by both products on purpose, so that RTC seeing more acquisitions
-  // than COH12 is visible rather than flattened by a per-product ceiling.
-  assert.deepEqual([num.vmin, num.vmax], [0, 90]);
-  assert.deepEqual([byId(layers()).get("glace-coh12_vv_qa_num-2024").vmin, num.vmin], [0, 0]);
+  assert.deepEqual([num.vmin, num.vmax], [0, 80]);
 });
 
-test("the false color carries three channels and no ramp", () => {
-  const rgb = byId(layers()).get("glace-coh12_rgb-2024");
-  assert.deepEqual(rgb.colors, [], "nothing to interpolate between");
-  assert.equal(rgb.channels.length, 3);
-  assert.deepEqual(rgb.channels[0], { band: "VV", vmin: 0.1, vmax: 0.75 });
-  assert.equal(rgb.channels[2].band, "VV / VH", "a quotient, since coherence is not read in dB");
+test("a stretch is read only from a finite, increasing rescale", () => {
+  const ranges = stretches({
+    renders: {
+      good: { rescale: [[0, 1]] },
+      inverted: { rescale: [[1, 0]] },
+      text: { rescale: [["0", "1"]] },
+      missing: {},
+    },
+  });
+  assert.deepEqual([...ranges.keys()], ["good"]);
+  assert.deepEqual(ranges.get("good"), { vmin: 0, vmax: 1 });
+});
+
+test("a layer without a rescale is dropped with a warning", async () => {
+  const { coh12_vv: _, ...renders } = collection.renders;
+  const warnings = await captureWarnings(async () => {
+    const found = byId(layers({ collection: { ...collection, renders } }));
+    assert.equal(found.has("glace-coh12_vv-2024"), false);
+    assert.ok(found.has("glace-coh12_vh-2024"));
+  });
+  assert.ok(warnings.some((line) => /glace-coh12_vv-2024/.test(line)));
+});
+
+test("a source without the custom encoding is dropped, not drawn as color", async () => {
+  const broken = structuredClone(style);
+  broken.sources["src-coh12_vv"].encoding = "terrarium";
+  const warnings = await captureWarnings(async () => {
+    assert.equal(byId(layers({ style: broken })).has("glace-coh12_vv-2024"), false);
+  });
+  assert.ok(warnings.some((line) => /glace-coh12_vv-2024/.test(line)));
 });
 
 test("no layer declares bounds — the archive's own header carries them", () => {
@@ -94,17 +119,18 @@ test("the acquisition window comes from the archive's item", () => {
   assert.equal(byId(layers({ item: undated })).get("glace-coh12_vh-2024").startDate, undefined);
 });
 
-test("a year the style does not describe falls back to the same layer's stops", async () => {
-  /* The style is documented as carrying the most recent year only, while the
-   * collection lists every year. The stretch and the ramp are fixed per layer
-   * rather than per year — deliberately, so a real change between two years
-   * reads as a change — so an older year is drawn with the same constants. */
+test("a year the style does not describe falls back to the same layer's source", async () => {
+  /* The style may carry the most recent year only, while the collection lists
+   * every year. Encodings and stretches are fixed per layer rather than per
+   * year — deliberately, so a real change between two years reads as a change —
+   * so an older year is decoded and drawn with the same constants. */
   const older = { ...structuredClone(item), id: "ch-mosaic-2021" };
   const warnings = await captureWarnings(() => {
     const found = byId(layers({ items: [{ item: older, url: ITEM_URL.replace("2024", "2021") }] }));
     const layer = found.get("glace-coh12_vv-2021");
     assert.equal(layer.year, 2021);
-    assert.equal(layer.cmap, "cmc.lipari");
+    assert.equal(layer.encoding.encoding, "custom");
+    assert.deepEqual([layer.minZoom, layer.maxZoom], [5, 13]);
     assert.deepEqual([layer.vmin, layer.vmax], [0.1, 0.75]);
     assert.match(layer.url, /\/2021\//, "and its own archive");
   });
@@ -119,7 +145,7 @@ test("a layer nothing describes is dropped with a warning", async () => {
     roles: ["visual"],
   };
   const warnings = await captureWarnings(() => {
-    assert.equal(layers({ item: extra }).length, 14);
+    assert.equal(layers({ item: extra }).length, 12);
   });
   assert.equal(warnings.length, 1);
   assert.match(warnings[0], /no style entry describes glace-coh12_hh-2024/);
@@ -134,40 +160,42 @@ test("an asset this page cannot name a layer from is passed over in silence", as
     preview: { href: "preview.png", type: "image/png", roles: ["visual"] },
   });
   const warnings = await captureWarnings(() => {
-    assert.equal(layers({ item: odd }).length, 14);
+    assert.equal(layers({ item: odd }).length, 12);
     assert.throws(() => layers({ item: { ...item, id: "ch-mosaic" } }), /no drawable/);
   });
   assert.equal(warnings.length, 0, "none names an archive of this catalog's");
 });
 
-test("a layer the style describes incompletely is dropped, not drawn", async () => {
-  const cases = {
-    "no stretch": { vmin: undefined },
-    "an inverted stretch": { vmin: 0.9, vmax: 0.1 },
-    "a stretch with no width": { vmin: 0.5, vmax: 0.5 },
-    "a stretch that is not a number": { vmax: "0.8" },
-    "no stops at all": { stops: [] },
-    "stops that carry no colors": { stops: [{ value: 0.1 }, { value: 0.8 }] },
+test("a layer the catalog describes incompletely is dropped, not drawn", async () => {
+  const sourceCases = {
+    "no encoding": (source) => delete source.encoding,
+    "a factor that is not a number": (source) => (source.redFactor = "1"),
+    "zooms the wrong way round": (source) => Object.assign(source, { minzoom: 13, maxzoom: 5 }),
   };
-  for (const [what, override] of Object.entries(cases)) {
-    const broken = structuredClone(style);
-    const layer = broken.layers.find((layer) => layer.id === "glace-coh12_vv-2024");
-    Object.assign(layer.metadata["portolan:legend"], override);
+  const renderCases = {
+    "no rescale": (render) => delete render.rescale,
+    "an inverted rescale": (render) => (render.rescale = [[0.9, 0.1]]),
+    "a rescale with no width": (render) => (render.rescale = [[0.5, 0.5]]),
+    "a rescale that is not a number": (render) => (render.rescale = [[0.1, "0.8"]]),
+  };
+  const run = async (what, over) => {
     const warnings = await captureWarnings(() => {
-      const found = layers({ style: broken });
-      assert.equal(found.length, 13, what);
+      const found = layers(over);
+      assert.equal(found.length, 11, what);
       assert.equal(byId(found).get("glace-coh12_vv-2024"), undefined, what);
     });
     assert.match(warnings[0] ?? "", /describes incompletely/, what);
+  };
+  for (const [what, breakIt] of Object.entries(sourceCases)) {
+    const broken = structuredClone(style);
+    breakIt(broken.sources["src-coh12_vv"]);
+    await run(what, { style: broken });
   }
-});
-
-test("one colorless stop is passed over rather than costing the layer its ramp", () => {
-  const patched = structuredClone(style);
-  const legend = patched.layers.find((layer) => layer.id === "glace-coh12_vv-2024")
-    .metadata["portolan:legend"];
-  delete legend.stops[3].color;
-  assert.equal(byId(layers({ style: patched })).get("glace-coh12_vv-2024").colors.length, 16);
+  for (const [what, breakIt] of Object.entries(renderCases)) {
+    const broken = structuredClone(collection);
+    breakIt(broken.renders.coh12_vv);
+    await run(what, { collection: broken });
+  }
 });
 
 test("a source with no zooms costs its layer, since a raster source needs them", async () => {
@@ -205,9 +233,9 @@ test("the three documents are read end to end", async () => {
   });
 
   const found = byId(await readStore());
-  assert.equal(found.size, 56, "four years of fourteen archives");
+  assert.equal(found.size, 48, "four years of twelve archives");
   const layer = found.get("glace-rtc_vv-2024");
-  assert.equal(layer.cmap, "cmc.grayC");
+  assert.deepEqual([layer.units, layer.vmin, layer.vmax], ["dB", -14.5, -4.5]);
   assert.equal(layer.url, "http://localhost/tiles/mosaics/2024/rtc_vv_viz.pmtiles");
   assert.deepEqual(
     [layer.startDate, layer.endDate],
@@ -278,8 +306,8 @@ test("the style assets are read by the year each one describes", () => {
 
 test("a year with its own style is drawn from that style, not from the default", async () => {
   /* One style per published year is what the store writes, and the years differ
-   * only in the year they name — except where a range was re-derived, and then
-   * the older year must keep the constants its own archive was baked with. */
+   * only in the year they name — except where a source changed, and then the
+   * older year must keep the source its own archive was written for. */
   const at = (file) => path.join(REPO, "tests", "fixtures", "store", file);
   const perYear = structuredClone(collection);
   perYear.assets = {
@@ -291,9 +319,7 @@ test("a year with its own style is drawn from that style, not from the default",
   );
   const older = structuredClone(style);
   older.layers = older.layers.map((layer) => ({ ...layer, id: layer.id.replace("-2024", "-2023") }));
-  older.layers.find((layer) => layer.id === "glace-coh12_vv-2023").metadata[
-    "portolan:legend"
-  ].vmax = 0.5;
+  older.sources["src-coh12_vv"].maxzoom = 12;
 
   const files = {
     "http://localhost/tiles/mosaics/collection.json": at("collection-per-year.json"),
@@ -307,9 +333,9 @@ test("a year with its own style is drawn from that style, not from the default",
   try {
     installBrowser({ files });
     const found = byId(await readStore());
-    assert.equal(found.size, 28, "both years of every archive reach the map");
-    assert.equal(found.get("glace-coh12_vv-2023").vmax, 0.5, "from its own year's style");
-    assert.equal(found.get("glace-coh12_vv-2024").vmax, 0.75);
+    assert.equal(found.size, 24, "both years of every archive reach the map");
+    assert.equal(found.get("glace-coh12_vv-2023").maxZoom, 12, "from its own year's style");
+    assert.equal(found.get("glace-coh12_vv-2024").maxZoom, 13);
   } finally {
     fs.rmSync(at("collection-per-year.json"));
     fs.rmSync(at("tmp-style-2023.json"));
