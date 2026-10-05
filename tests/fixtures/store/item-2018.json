@@ -8,7 +8,7 @@
     "https://stac-extensions.github.io/file/v2.1.0/schema.json",
     "https://stac-extensions.github.io/version/v1.2.0/schema.json"
   ],
-  "id": "alps-mosaic-2022",
+  "id": "alps-mosaic-2018",
   "geometry": null,
   "bbox": [
     4.761344237269958,
@@ -17,8 +17,8 @@
     48.388086938734624
   ],
   "properties": {
-    "start_datetime": "2022-06-17T00:00:00Z",
-    "end_datetime": "2022-09-15T00:00:00Z",
+    "start_datetime": "2018-07-03T00:00:00Z",
+    "end_datetime": "2018-10-01T00:00:00Z",
     "constellation": "sentinel-1",
     "instruments": [
       "c-sar"
@@ -43,9 +43,9 @@
       2832000.0
     ],
     "version": "0.1",
-    "glace:build_fingerprint": "0d49c4d8068f01805163d5f7eed899e7c0754169a200e43fbc5b5664686ab88f",
-    "description": "Annual mosaics of the GLACE composites for 2022, on a fixed equal-area grid (ETRS89-LAEA, 40 m) every year of this collection shares.",
-    "datetime": "2022-08-01T00:00:00Z"
+    "glace:build_fingerprint": "0d96b952a99bf7d91badf6222d2b4c394f8af3f4b35636c3ce566462f4464f51",
+    "description": "Annual mosaics of the GLACE composites for 2018, on a fixed equal-area grid (ETRS89-LAEA, 40 m) every year of this collection shares.",
+    "datetime": "2018-08-17T00:00:00Z"
   },
   "links": [
     {
@@ -85,16 +85,16 @@
           "data_type": "float32",
           "nodata": "nan",
           "statistics": {
-            "maximum": 0.98650723695755,
-            "mean": 0.2073688393534053,
-            "minimum": 0.029075395315885544,
-            "stddev": 0.1311558398657799,
+            "minimum": 0.035336945205926895,
+            "maximum": 0.9851886630058289,
+            "mean": 0.21612689701338691,
+            "stddev": 0.131520314662673,
             "valid_percent": 38.52808863471861
           }
         }
       ],
-      "file:size": 251310796,
-      "file:checksum": "12206eb72554962d0d38bf5fb0d8efa5ff312ce5af7c35865d892b0e1dbb78d99817",
+      "file:size": 249393311,
+      "file:checksum": "12205c3f00236a5e44affa928c15594f6091193b0aa57664af2d53d24bab6c193f0d",
       "raster:spatial_resolution": 40.0,
       "roles": [
         "data",
@@ -112,16 +112,16 @@
           "data_type": "float32",
           "nodata": "nan",
           "statistics": {
-            "maximum": 49425.45703125,
-            "mean": 1.756869500520006,
-            "minimum": 0.018656840547919273,
-            "stddev": 11.176964758744996,
+            "minimum": 0.01867186650633812,
+            "maximum": 1899237.625,
+            "mean": 1.754501853746847,
+            "stddev": 164.32981059737477,
             "valid_percent": 38.52808863471861
           }
         }
       ],
-      "file:size": 316130198,
-      "file:checksum": "12201cebdf105b354a0c7c3524c745d5d7bf0d15d65d44e5a3a5f7318a4deced18ad",
+      "file:size": 314522887,
+      "file:checksum": "12203bf9b8d2ce9dc265649c0001bd8a9e4632bd248b12e7784eeaf6c9ffb695e1ac",
       "raster:spatial_resolution": 40.0,
       "roles": [
         "quality",
@@ -133,8 +133,8 @@
       "type": "application/vnd.pmtiles",
       "title": "Coherence VH \u2013 Composite Quality Map \u2013 PMTiles",
       "description": "Value-encoded WebP tiles of Coherence VH \u2013 Composite Quality Map on WebMercatorQuad z5-z13: an 8-bit code in all three channels, linear over -13 to 19 dB and clipped to it, with code 0 as nodata. Decode with the band's raster:scale and raster:offset; the year's style decodes it as a raster-dem source and colours it with a color-relief layer. Lossy (WebP quality 90): for analysis, read the COGs with the \"data\" role.",
-      "file:size": 192060036,
-      "file:checksum": "12207e996bcae9ac7a1ac7e81a446831eba7551d17cba0ba03c4177b15e438a8a7c5",
+      "file:size": 188215606,
+      "file:checksum": "1220ca36ab6d76e0994ecec0bd2eb98e918cedaeac77502617029cac6520917f9000",
       "proj:code": "EPSG:3857",
       "bands": [
         {
@@ -160,16 +160,16 @@
           "data_type": "float32",
           "nodata": "nan",
           "statistics": {
-            "maximum": 26.0,
-            "mean": 18.865066751598096,
-            "minimum": 3.7539262771606445,
-            "stddev": 4.434412838216847,
+            "minimum": 10.765142440795898,
+            "maximum": 52.0,
+            "mean": 40.53698230435938,
+            "stddev": 8.759354027825795,
             "valid_percent": 38.52808863471861
           }
         }
       ],
-      "file:size": 204409783,
-      "file:checksum": "12202dda5b9b39cf17cce58fd8dacb469f44f1196bb80f21c6872eeb309a4c1661da",
+      "file:size": 280077930,
+      "file:checksum": "1220884ec960f6b84d904fc3e08b41cd5c533ba1cc9a55174d570fcaa8996c9c00fa",
       "raster:spatial_resolution": 40.0,
       "roles": [
         "quality",
@@ -181,8 +181,8 @@
       "type": "application/vnd.pmtiles",
       "title": "Coherence VH \u2013 Contributing Observations \u2013 PMTiles",
       "description": "Value-encoded WebP tiles of Coherence VH \u2013 Contributing Observations on WebMercatorQuad z5-z13: an 8-bit code in all three channels, linear over 0 to 253 and clipped to it, with code 0 as nodata. Decode with the band's raster:scale and raster:offset; the year's style decodes it as a raster-dem source and colours it with a color-relief layer. Lossy (WebP quality 90): for analysis, read the COGs with the \"data\" role.",
-      "file:size": 6373309,
-      "file:checksum": "12208f808a7eac6721e0486e6553fcdaef0726ddc12734a9ad8cbfd7beee9a40fe30",
+      "file:size": 9203840,
+      "file:checksum": "1220fb300b51d7d02a11d376fb6d5040f51f25feed0722d6d706327215289f4f74c9",
       "proj:code": "EPSG:3857",
       "bands": [
         {
@@ -201,8 +201,8 @@
       "type": "application/vnd.pmtiles",
       "title": "Coherence VH \u2013 PMTiles",
       "description": "Value-encoded WebP tiles of Coherence VH on WebMercatorQuad z5-z13: an 8-bit code in all three channels, linear over 0 to 1 and clipped to it, with code 0 as nodata. Decode with the band's raster:scale and raster:offset; the year's style decodes it as a raster-dem source and colours it with a color-relief layer. Lossy (WebP quality 90): for analysis, read the COGs with the \"data\" role.",
-      "file:size": 277653275,
-      "file:checksum": "1220dbd57d1df5696af156a3f9a7d5164df41d59f492fc697002a8cd28f69d06d967",
+      "file:size": 236608784,
+      "file:checksum": "1220182d68fbf22f3400c104d208181ff12c961f43d1751b56aed17fe9151914cf96",
       "proj:code": "EPSG:3857",
       "bands": [
         {
@@ -227,16 +227,16 @@
           "data_type": "float32",
           "nodata": "nan",
           "statistics": {
-            "maximum": 0.9840743541717529,
-            "mean": 0.26440747102914525,
-            "minimum": 0.03179081901907921,
-            "stddev": 0.1817081376274313,
+            "minimum": 0.04014446586370468,
+            "maximum": 0.9841029644012451,
+            "mean": 0.2751058769127048,
+            "stddev": 0.18499062632937316,
             "valid_percent": 38.52808863471861
           }
         }
       ],
-      "file:size": 259209753,
-      "file:checksum": "12207246ef304c106397b199f91d0f493ddbe3e4bd80cd9d0645d73c5bc6e2f7b4cf",
+      "file:size": 257631201,
+      "file:checksum": "122073809defb2001e821fad8f1d92f3eef71c9fd03bb0be1b88bc1d7942dcadd3de",
       "raster:spatial_resolution": 40.0,
       "roles": [
         "data",
@@ -254,16 +254,16 @@
           "data_type": "float32",
           "nodata": "nan",
           "statistics": {
-            "maximum": 49425.45703125,
-            "mean": 1.7570113233543085,
-            "minimum": 0.018656840547919273,
-            "stddev": 10.827888487686703,
+            "minimum": 0.01867186650633812,
+            "maximum": 1899237.375,
+            "mean": 1.7547248964973825,
+            "stddev": 164.33022464909416,
             "valid_percent": 38.52808863471861
           }
         }
       ],
-      "file:size": 316113084,
-      "file:checksum": "12209da3fcb9cfa7a75a9ce5f23f484228208d3ecf2e99265f37b34a842fca0f97a6",
+      "file:size": 314506881,
+      "file:checksum": "12207b4c0e08ae2407eaed986107248a90243ec4b79d1598428e0dc052b0b3fbfb44",
       "raster:spatial_resolution": 40.0,
       "roles": [
         "quality",
@@ -275,8 +275,8 @@
       "type": "application/vnd.pmtiles",
       "title": "Coherence VV \u2013 Composite Quality Map \u2013 PMTiles",
       "description": "Value-encoded WebP tiles of Coherence VV \u2013 Composite Quality Map on WebMercatorQuad z5-z13: an 8-bit code in all three channels, linear over -13 to 19 dB and clipped to it, with code 0 as nodata. Decode with the band's raster:scale and raster:offset; the year's style decodes it as a raster-dem source and colours it with a color-relief layer. Lossy (WebP quality 90): for analysis, read the COGs with the \"data\" role.",
-      "file:size": 191931153,
-      "file:checksum": "122002add99b855d31f483b0a9a7fcbb95716a7e791059a4a1d05a7587c5d9f30efe",
+      "file:size": 188081316,
+      "file:checksum": "122041d812f8c9e5f48efd1c0f0b950eb3853724ad94ff6bb52e5e721e19faa6e07a",
       "proj:code": "EPSG:3857",
       "bands": [
         {
@@ -302,16 +302,16 @@
           "data_type": "float32",
           "nodata": "nan",
           "statistics": {
-            "maximum": 26.0,
-            "mean": 18.874134690075923,
-            "minimum": 3.8297955989837646,
-            "stddev": 4.4363751072376,
+            "minimum": 10.874089241027832,
+            "maximum": 52.0,
+            "mean": 40.556851122622966,
+            "stddev": 8.76317263532388,
             "valid_percent": 38.52808863471861
           }
         }
       ],
-      "file:size": 115749520,
-      "file:checksum": "1220ddb9d09cdd223690145f0f2469220081e09cc91f65977815d6c8c2383b79a4e0",
+      "file:size": 163285061,
+      "file:checksum": "1220c0c07b1a0f9ebd3d3c0c6a95269ba6f67fc0afebfac4c436a0e71e67d8308421",
       "raster:spatial_resolution": 40.0,
       "roles": [
         "quality",
@@ -323,8 +323,8 @@
       "type": "application/vnd.pmtiles",
       "title": "Coherence VV \u2013 Contributing Observations \u2013 PMTiles",
       "description": "Value-encoded WebP tiles of Coherence VV \u2013 Contributing Observations on WebMercatorQuad z5-z13: an 8-bit code in all three channels, linear over 0 to 253 and clipped to it, with code 0 as nodata. Decode with the band's raster:scale and raster:offset; the year's style decodes it as a raster-dem source and colours it with a color-relief layer. Lossy (WebP quality 90): for analysis, read the COGs with the \"data\" role.",
-      "file:size": 6369219,
-      "file:checksum": "12209a0fb2a44ceb3ac52b9bcaee984128749ff0e0db419db9e7cf61c782199b1959",
+      "file:size": 9198572,
+      "file:checksum": "1220c71b9ac957e4ee0a002f286ead9a7be46ccbea259903e7882565d83da0ea3131",
       "proj:code": "EPSG:3857",
       "bands": [
         {
@@ -343,8 +343,8 @@
       "type": "application/vnd.pmtiles",
       "title": "Coherence VV \u2013 PMTiles",
       "description": "Value-encoded WebP tiles of Coherence VV on WebMercatorQuad z5-z13: an 8-bit code in all three channels, linear over 0 to 1 and clipped to it, with code 0 as nodata. Decode with the band's raster:scale and raster:offset; the year's style decodes it as a raster-dem source and colours it with a color-relief layer. Lossy (WebP quality 90): for analysis, read the COGs with the \"data\" role.",
-      "file:size": 310426043,
-      "file:checksum": "12202a06834fe2e721a405652de573bf4f4203fa2e45baa084885a54bcd92fbcea36",
+      "file:size": 271798177,
+      "file:checksum": "1220359ed590fa5624ed7fe957966b737be534452802d66c3cc1bdc367fd4b0e6c95",
       "proj:code": "EPSG:3857",
       "bands": [
         {
@@ -370,16 +370,16 @@
           "nodata": "nan",
           "unit": "linear power",
           "statistics": {
-            "maximum": 86.19140625,
-            "mean": 0.03448499992646478,
-            "minimum": 0.0002925597073044628,
-            "stddev": 0.03529409903408172,
+            "minimum": 0.0003034494293387979,
+            "maximum": 94.51227569580078,
+            "mean": 0.03337553878412606,
+            "stddev": 0.032002889710865366,
             "valid_percent": 38.52808863471861
           }
         }
       ],
-      "file:size": 277380291,
-      "file:checksum": "12205e78bef28847c7a31b2e7aba653c1f7ec6a983c88f5f6020ab0354ec13317af3",
+      "file:size": 274157944,
+      "file:checksum": "1220fa9f4a18c192945ddb55efc36709558d8a1ccfe414cdcd289b7edf4feb3b2978",
       "raster:spatial_resolution": 40.0,
       "roles": [
         "data",
@@ -397,16 +397,16 @@
           "data_type": "float32",
           "nodata": "nan",
           "statistics": {
-            "maximum": 1618.6353759765625,
-            "mean": 1.4639893258363312,
-            "minimum": 0.01893679052591324,
-            "stddev": 1.1060026495237762,
+            "minimum": 0.01892143301665783,
+            "maximum": 421.4384765625,
+            "mean": 1.4488798108574417,
+            "stddev": 1.0600459666903421,
             "valid_percent": 38.52808863471861
           }
         }
       ],
-      "file:size": 312145919,
-      "file:checksum": "122084f4fef6dcce9902c62b8e41b98520b27c00b9fd8e5029f93ebca6a0ff2e18c0",
+      "file:size": 311140043,
+      "file:checksum": "1220082cfd54927c42d44f1d96343d6dd50739dc4af599bc0faf32af86af5eb66ef7",
       "raster:spatial_resolution": 40.0,
       "roles": [
         "quality",
@@ -418,8 +418,8 @@
       "type": "application/vnd.pmtiles",
       "title": "Backscatter VH \u2013 Composite Quality Map \u2013 PMTiles",
       "description": "Value-encoded WebP tiles of Backscatter VH \u2013 Composite Quality Map on WebMercatorQuad z5-z13: an 8-bit code in all three channels, linear over -13 to 12 dB and clipped to it, with code 0 as nodata. Decode with the band's raster:scale and raster:offset; the year's style decodes it as a raster-dem source and colours it with a color-relief layer. Lossy (WebP quality 90): for analysis, read the COGs with the \"data\" role.",
-      "file:size": 221454147,
-      "file:checksum": "12204ceed21d3203cca26919f22444807dd9d2995db43274eab7ffa71911f46e505b",
+      "file:size": 219075466,
+      "file:checksum": "1220fd1bf77cdffa6de1b09c925fd3fd3530011e5fd6f138cb760bd62b60b81988e7",
       "proj:code": "EPSG:3857",
       "bands": [
         {
@@ -445,16 +445,16 @@
           "data_type": "float32",
           "nodata": "nan",
           "statistics": {
-            "maximum": 30.0,
-            "mean": 22.661388097041097,
-            "minimum": 5.977592945098877,
-            "stddev": 5.099323875410488,
+            "minimum": 13.528910636901855,
+            "maximum": 60.0,
+            "mean": 47.09531654401589,
+            "stddev": 10.26019788152729,
             "valid_percent": 38.52808863471861
           }
         }
       ],
-      "file:size": 47589534,
-      "file:checksum": "1220117158d301f7f3b26be4d909732727e86ec3bb66761772816128524b5e5dde88",
+      "file:size": 50155852,
+      "file:checksum": "122096855ff49b89ab58e881818c5ea576cd1bd8b14f9f8bdec6e2cd8bcff28485df",
       "raster:spatial_resolution": 40.0,
       "roles": [
         "quality",
@@ -466,8 +466,8 @@
       "type": "application/vnd.pmtiles",
       "title": "Backscatter VH \u2013 Contributing Observations \u2013 PMTiles",
       "description": "Value-encoded WebP tiles of Backscatter VH \u2013 Contributing Observations on WebMercatorQuad z5-z13: an 8-bit code in all three channels, linear over 0 to 253 and clipped to it, with code 0 as nodata. Decode with the band's raster:scale and raster:offset; the year's style decodes it as a raster-dem source and colours it with a color-relief layer. Lossy (WebP quality 90): for analysis, read the COGs with the \"data\" role.",
-      "file:size": 9459006,
-      "file:checksum": "12209e05c8f614c45130e2742d4d9ae6a1b95538ed2051db98128192de2b41e35471",
+      "file:size": 14071761,
+      "file:checksum": "122098c16a4931b00f0d40d4fd45b68266866cd713bd6e481f9cdc0ab9fc0ae1e3cf",
       "proj:code": "EPSG:3857",
       "bands": [
         {
@@ -486,8 +486,8 @@
       "type": "application/vnd.pmtiles",
       "title": "Backscatter VH \u2013 PMTiles",
       "description": "Value-encoded WebP tiles of Backscatter VH on WebMercatorQuad z5-z13: an 8-bit code in all three channels, linear over -31 to -1 dB and clipped to it, with code 0 as nodata. Decode with the band's raster:scale and raster:offset; the year's style decodes it as a raster-dem source and colours it with a color-relief layer. Lossy (WebP quality 90): for analysis, read the COGs with the \"data\" role.",
-      "file:size": 415945049,
-      "file:checksum": "12201beb223e4a645031b6355d605238287981921319378d383a09b89533fb200641",
+      "file:size": 379064643,
+      "file:checksum": "12207fe39fa4a9c26d20b10c8317616d08d9a66e0b5099e9a99a24d38b7af186dacd",
       "proj:code": "EPSG:3857",
       "bands": [
         {
@@ -514,16 +514,16 @@
           "nodata": "nan",
           "unit": "linear power",
           "statistics": {
-            "maximum": 908.1336669921875,
-            "mean": 0.14962061754894368,
-            "minimum": 0.0010135911870747805,
-            "stddev": 0.24806819868723198,
+            "minimum": 0.001025879173539579,
+            "maximum": 981.6820678710938,
+            "mean": 0.14360143493137045,
+            "stddev": 0.22654537255175036,
             "valid_percent": 38.52808863471861
           }
         }
       ],
-      "file:size": 326440012,
-      "file:checksum": "1220656a61db74c86a61b81a7ff7f8504329771941acaa1181396e3863056261dfd6",
+      "file:size": 323335405,
+      "file:checksum": "1220626a532645ffd2a02376bdbb9b90ef2e9d2b45408e85a3f587465538ebb3b776",
       "raster:spatial_resolution": 40.0,
       "roles": [
         "data",
@@ -541,16 +541,16 @@
           "data_type": "float32",
           "nodata": "nan",
           "statistics": {
-            "maximum": 1617.9521484375,
-            "mean": 1.4639914881584453,
-            "minimum": 0.01893679052591324,
-            "stddev": 1.1046070402609387,
+            "minimum": 0.01892143301665783,
+            "maximum": 421.4384765625,
+            "mean": 1.4488854752675322,
+            "stddev": 1.060231481241748,
             "valid_percent": 38.52808863471861
           }
         }
       ],
-      "file:size": 312158805,
-      "file:checksum": "12201f55371f5d521eee2618fa3365d4f2a65fd8f9f04fa1b43d4f3a797d1102b2b9",
+      "file:size": 311126455,
+      "file:checksum": "1220a19834da61ca7a4c74fe1e802a16da1286ddf08915c5e95b87103b66bf4825c3",
       "raster:spatial_resolution": 40.0,
       "roles": [
         "quality",
@@ -562,8 +562,8 @@
       "type": "application/vnd.pmtiles",
       "title": "Backscatter VV \u2013 Composite Quality Map \u2013 PMTiles",
       "description": "Value-encoded WebP tiles of Backscatter VV \u2013 Composite Quality Map on WebMercatorQuad z5-z13: an 8-bit code in all three channels, linear over -13 to 12 dB and clipped to it, with code 0 as nodata. Decode with the band's raster:scale and raster:offset; the year's style decodes it as a raster-dem source and colours it with a color-relief layer. Lossy (WebP quality 90): for analysis, read the COGs with the \"data\" role.",
-      "file:size": 221447057,
-      "file:checksum": "12200b0eb1929744a733f75a594e667d91e3f9612938dd47162897be4977e5d90375",
+      "file:size": 219079221,
+      "file:checksum": "1220f3419cca7b0bc79cbfeaf6b7cea052717b48bc9227f3fd31e7a7b114fce34396",
       "proj:code": "EPSG:3857",
       "bands": [
         {
@@ -589,16 +589,16 @@
           "data_type": "float32",
           "nodata": "nan",
           "statistics": {
-            "maximum": 30.0,
-            "mean": 22.661388759506963,
-            "minimum": 5.977592945098877,
-            "stddev": 5.099323989979521,
+            "minimum": 13.528910636901855,
+            "maximum": 60.0,
+            "mean": 47.09531898346444,
+            "stddev": 10.260198803777378,
             "valid_percent": 38.52808863471861
           }
         }
       ],
-      "file:size": 47589181,
-      "file:checksum": "1220957b631e1a924ade6d27e0c130982d49ea6d295c54cf9bb8f724195fd2725f7b",
+      "file:size": 50155504,
+      "file:checksum": "12209ae70ef0fdfcb5a329576663d9b9220bfdbe62507642db74ca218226440df2dd",
       "raster:spatial_resolution": 40.0,
       "roles": [
         "quality",
@@ -610,8 +610,8 @@
       "type": "application/vnd.pmtiles",
       "title": "Backscatter VV \u2013 Contributing Observations \u2013 PMTiles",
       "description": "Value-encoded WebP tiles of Backscatter VV \u2013 Contributing Observations on WebMercatorQuad z5-z13: an 8-bit code in all three channels, linear over 0 to 253 and clipped to it, with code 0 as nodata. Decode with the band's raster:scale and raster:offset; the year's style decodes it as a raster-dem source and colours it with a color-relief layer. Lossy (WebP quality 90): for analysis, read the COGs with the \"data\" role.",
-      "file:size": 9458998,
-      "file:checksum": "1220c81f98dc088ae899086c8ce06b74d59bdf93f062cfeb9dca049424da407da4ea",
+      "file:size": 14071675,
+      "file:checksum": "12204c82944314e08e434e25cf0d8a7744a5252f8af9f996a029108198f097cb79b6",
       "proj:code": "EPSG:3857",
       "bands": [
         {
@@ -630,8 +630,8 @@
       "type": "application/vnd.pmtiles",
       "title": "Backscatter VV \u2013 PMTiles",
       "description": "Value-encoded WebP tiles of Backscatter VV on WebMercatorQuad z5-z13: an 8-bit code in all three channels, linear over -25 to 5 dB and clipped to it, with code 0 as nodata. Decode with the band's raster:scale and raster:offset; the year's style decodes it as a raster-dem source and colours it with a color-relief layer. Lossy (WebP quality 90): for analysis, read the COGs with the \"data\" role.",
-      "file:size": 419522434,
-      "file:checksum": "1220fc3f2ec9303f705a2e890eb221268ec27f1760314c9eae9012e3ea1b13e59100",
+      "file:size": 392233176,
+      "file:checksum": "122073d525ed07e85e3861eecda6c0ffd4a5411e7292cd809005682d756952db367e",
       "proj:code": "EPSG:3857",
       "bands": [
         {

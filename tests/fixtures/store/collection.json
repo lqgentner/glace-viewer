@@ -5,22 +5,21 @@
     "https://schemas.portolan-sdi.org/portolan/v0.2.0/schema.json",
     "https://stac-extensions.github.io/render/v2.0.0/schema.json",
     "https://stac-extensions.github.io/raster/v2.0.0/schema.json",
-    "https://stac-extensions.github.io/projection/v2.0.0/schema.json",
     "https://stac-extensions.github.io/file/v2.1.0/schema.json",
     "https://stac-extensions.github.io/alternate-assets/v1.2.0/schema.json",
     "https://stac-extensions.github.io/version/v1.2.0/schema.json"
   ],
-  "id": "glace-ch-mosaics",
-  "title": "GLACE mosaics — annual Sentinel-1 composites on a fixed equal-area grid",
-  "description": "One mosaic per year of the GLACE composites, warped from the 10 m MGRS tiles onto ETRS89-LAEA (EPSG:3035) at 40 m. The grid is equal-area, so an area or area-change statistic can be taken from pixel counts without a latitude correction; WebMercator, where a nominal 19.109 m pixel is about 13.2 m on the ground at 46.5 degrees north, cannot do that. Every year sits on the same fixed extent, hard-coded rather than derived from whichever tiles happen to exist, so the series stacks and differences with no alignment step. Twelve single-band analysis rasters per year, in linear units, each a Cloud-Optimized GeoTIFF with 256-pixel blocks and averaged internal overviews. Drawing is served separately by fourteen PMTiles archives per year, tiled on the WebMercatorQuad grid at zoom 13: each is an asset of that year's item with the visual role, named {stem}_viz.pmtiles beside the raster it renders, registered on this collection as a rel pmtiles link, and drawn by the MapLibre style this collection publishes for that year. Both products are resampled from the 10 m tiles, so neither is derived from the other. The observation-count layers become a mean rather than a count under averaging, and are described as such.",
+  "id": "glace-alps-mosaics",
+  "title": "GLACE mosaics – Sentinel-1 Composites on ETRS89-LAEA (40 m)",
+  "description": "One mosaic per year of the GLACE composites, resampled from the MGRS tiles onto ETRS89-LAEA (EPSG:3035) at 40 m. The grid is equal-area, for area statistics, and every year shares the same extent, so years stack directly. Twelve single-band analysis rasters per year, in linear units, each a Cloud-Optimized GeoTIFF with internal overviews. For web maps, each year also has twelve PMTiles archives on the WebMercatorQuad grid up to zoom 13.",
   "license": "CC-BY-4.0",
   "keywords": [
     "Sentinel-1",
     "SAR",
     "InSAR coherence",
-    "backscatter",
-    "glaciers",
-    "cryosphere",
+    "Backscatter",
+    "Glaciers",
+    "Cryosphere",
     "Alps",
     "mosaic"
   ],
@@ -37,7 +36,7 @@
     },
     {
       "name": "University of Zurich, Department of Geography",
-      "description": "Produced the composites from Copernicus Sentinel-1 SLC data and derived the annual mosaics. Maintains this catalog. The bytes are served from Source Cooperative storage; corrections go through the catalog's issue tracker.",
+      "description": "Produced the composites from Copernicus Sentinel-1 SLC data: burst extraction, coherence estimation, radiometric terrain correction and local resolution weighted compositing. Derived the annual mosaics and maintains this catalog.",
       "roles": [
         "producer",
         "processor",
@@ -51,18 +50,18 @@
     "spatial": {
       "bbox": [
         [
-          6.767578125,
-          45.9511496866,
-          10.458984375,
-          47.3983765871
+          4.7461,
+          43.3891,
+          16.6113,
+          48.4
         ]
       ]
     },
     "temporal": {
       "interval": [
         [
-          "2021-07-11T00:00:00Z",
-          "2024-10-07T00:00:00Z"
+          "2015-06-16T00:00:00Z",
+          "2025-09-22T00:00:00Z"
         ]
       ]
     }
@@ -661,77 +660,120 @@
   },
   "assets": {
     "items": {
-      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/items.parquet",
+      "href": "https://data.source.coop/giuz/glace-alps/mosaics/items.parquet",
       "type": "application/vnd.apache.parquet",
       "title": "STAC-GeoParquet item mirror",
-      "description": "One row per year. The item JSON under each year directory remains the normative representation.",
+      "description": "Every item of every year, one row each. The item JSON in the tree is the normative representation; this is the one to query.",
       "roles": [
         "collection-mirror"
       ],
       "alternate": {
         "s3": {
-          "href": "s3://eu-central-1.opendata.source.coop/lqgentner/glace-ch/mosaics/items.parquet",
+          "href": "s3://eu-central-1.opendata.source.coop/giuz/glace-alps/mosaics/items.parquet",
           "alternate:name": "S3"
         }
       },
-      "file:size": 385139,
-      "file:checksum": "1220836fc99e1d2c9c77cdbe724b1ba4ba742aa8b7422dce269a06979dee0ad31974"
+      "file:size": 1402060,
+      "file:checksum": "12205bd062b2c0dcaa9a86825f391584a5df1a037d6810a86e82d0721c99700262be"
     },
     "thumbnail": {
-      "href": "https://data.source.coop/lqgentner/glace-ch/mosaics/thumbnail.png",
-      "type": "image/png",
+      "href": "https://data.source.coop/giuz/glace-alps/mosaics/thumbnail.webp",
+      "type": "image/webp",
       "title": "GLACE mosaics preview",
-      "description": "Rendered from the most recent year's coh12_rgb_viz.pmtiles archive, so the preview obeys the committed MapLibre style by construction.",
       "roles": [
         "thumbnail"
       ],
-      "file:size": 792651,
-      "file:checksum": "12204508844b30d34a8827f2f0c5e63a92db5eb71d6aca6c3573156878ca3ee941a2"
+      "file:size": 384130,
+      "file:checksum": "1220eda4ec8afce0d77217cd5a2688682fc9f799a4d892727c6d6e85d0827a9f8d83"
     },
-    "style-2021": {
-      "href": "./styles/2021.json",
+    "style-2015": {
+      "href": "./styles/2015.json",
       "type": "application/vnd.mapbox.style+json",
-      "title": "GLACE web-map style (2021)",
-      "description": "Every published web-map layer of 2021, the first visible and the rest hidden. Each layer's metadata.portolan:legend carries the colour ramp and value range baked into its archive, which is where those constants live.",
+      "title": "GLACE web-map style (2015)",
+      "description": "Every published web-map layer of 2015, the first visible and the rest hidden. Each archive is a raster-dem source whose custom encoding decodes its values, drawn by a color-relief layer with a default color ramp that a client can change.",
       "roles": [
         "style"
       ],
-      "file:size": 37641,
-      "file:checksum": "122020f236a74607ffb067956ffe1f3076e9580936ad582ae418a54a686912bd468c"
+      "file:size": 20395,
+      "file:checksum": "12205d5b4500b4400ad5ce43aa856294f598728d43e562ae0e985183bf8b4ba1d455"
+    },
+    "style-2016": {
+      "href": "./styles/2016.json",
+      "type": "application/vnd.mapbox.style+json",
+      "title": "GLACE web-map style (2016)",
+      "description": "Every published web-map layer of 2016, the first visible and the rest hidden. Each archive is a raster-dem source whose custom encoding decodes its values, drawn by a color-relief layer with a default color ramp that a client can change.",
+      "roles": [
+        "style"
+      ],
+      "file:size": 20395,
+      "file:checksum": "1220ac149541a6993bad806c23ac0d7f53794da8ed99a3a49d8ba6cb8447966d23bf"
+    },
+    "style-2018": {
+      "href": "./styles/2018.json",
+      "type": "application/vnd.mapbox.style+json",
+      "title": "GLACE web-map style (2018)",
+      "description": "Every published web-map layer of 2018, the first visible and the rest hidden. Each archive is a raster-dem source whose custom encoding decodes its values, drawn by a color-relief layer with a default color ramp that a client can change.",
+      "roles": [
+        "style"
+      ],
+      "file:size": 20395,
+      "file:checksum": "1220e92584503637f05cec2914315c7d46cb9e0ed751089386b164af0101a5cc2923"
+    },
+    "style-2020": {
+      "href": "./styles/2020.json",
+      "type": "application/vnd.mapbox.style+json",
+      "title": "GLACE web-map style (2020)",
+      "description": "Every published web-map layer of 2020, the first visible and the rest hidden. Each archive is a raster-dem source whose custom encoding decodes its values, drawn by a color-relief layer with a default color ramp that a client can change.",
+      "roles": [
+        "style"
+      ],
+      "file:size": 20395,
+      "file:checksum": "12204c5bf33b351a2540df7ebf1e27a2846c53ae85328edf58f6cc99bc881a412f00"
     },
     "style-2022": {
       "href": "./styles/2022.json",
       "type": "application/vnd.mapbox.style+json",
       "title": "GLACE web-map style (2022)",
-      "description": "Every published web-map layer of 2022, the first visible and the rest hidden. Each layer's metadata.portolan:legend carries the colour ramp and value range baked into its archive, which is where those constants live.",
+      "description": "Every published web-map layer of 2022, the first visible and the rest hidden. Each archive is a raster-dem source whose custom encoding decodes its values, drawn by a color-relief layer with a default color ramp that a client can change.",
       "roles": [
         "style"
       ],
-      "file:size": 37641,
-      "file:checksum": "1220651bed65797b8a0a6d0739bacdeee43bb4488ae23b28c1547bc275b85125c592"
+      "file:size": 20395,
+      "file:checksum": "1220426534e9ae88131e0d8abf44e410f1681e33d1531e1372339df6bab4bab3ce39"
     },
     "style-2023": {
       "href": "./styles/2023.json",
       "type": "application/vnd.mapbox.style+json",
       "title": "GLACE web-map style (2023)",
-      "description": "Every published web-map layer of 2023, the first visible and the rest hidden. Each layer's metadata.portolan:legend carries the colour ramp and value range baked into its archive, which is where those constants live.",
+      "description": "Every published web-map layer of 2023, the first visible and the rest hidden. Each archive is a raster-dem source whose custom encoding decodes its values, drawn by a color-relief layer with a default color ramp that a client can change.",
       "roles": [
         "style"
       ],
-      "file:size": 37641,
-      "file:checksum": "122036dc04e1942b643a069d2e0ccfb2fb6d34ae80c3f0db8a636bdf4fc883f48b81"
+      "file:size": 20395,
+      "file:checksum": "122086e1b28e1aa7ca597c759fc86de8881e6993fd05ee2b9a05693e99d6fcf3bcc3"
     },
     "style-2024": {
       "href": "./styles/2024.json",
       "type": "application/vnd.mapbox.style+json",
       "title": "GLACE web-map style (2024)",
-      "description": "Every published web-map layer of 2024, the first visible and the rest hidden. Each layer's metadata.portolan:legend carries the colour ramp and value range baked into its archive, which is where those constants live.",
+      "description": "Every published web-map layer of 2024, the first visible and the rest hidden. Each archive is a raster-dem source whose custom encoding decodes its values, drawn by a color-relief layer with a default color ramp that a client can change.",
+      "roles": [
+        "style"
+      ],
+      "file:size": 20395,
+      "file:checksum": "1220a685beb050a6f83d47cc89d0dab41da91c047774ff56e7065b8144610ed3dce8"
+    },
+    "style-2025": {
+      "href": "./styles/2025.json",
+      "type": "application/vnd.mapbox.style+json",
+      "title": "GLACE web-map style (2025)",
+      "description": "Every published web-map layer of 2025, the first visible and the rest hidden. Each archive is a raster-dem source whose custom encoding decodes its values, drawn by a color-relief layer with a default color ramp that a client can change.",
       "roles": [
         "style",
         "default"
       ],
-      "file:size": 37641,
-      "file:checksum": "1220655faa2c33dd72a934bbf378ce632e4f01dce1a540e3e4a8bf5e9d44262bbb39"
+      "file:size": 20395,
+      "file:checksum": "1220b3fc62fb31d5fa5848408cfdce27930611c2978bf09fbace40000fcc7518c8cc"
     }
   },
   "links": [
@@ -739,13 +781,13 @@
       "rel": "root",
       "href": "../catalog.json",
       "type": "application/json",
-      "title": "GLACE Switzerland (preliminary)"
+      "title": "GLACE Alps"
     },
     {
       "rel": "parent",
       "href": "../catalog.json",
       "type": "application/json",
-      "title": "GLACE Switzerland (preliminary)"
+      "title": "GLACE Alps"
     },
     {
       "rel": "describedby",
@@ -767,27 +809,51 @@
     },
     {
       "rel": "item",
-      "href": "./2021/item.json",
+      "href": "./2015/item.json",
       "type": "application/geo+json",
-      "title": "GLACE annual mosaic, 2021"
+      "title": "GLACE mosaics, 2015"
+    },
+    {
+      "rel": "item",
+      "href": "./2016/item.json",
+      "type": "application/geo+json",
+      "title": "GLACE mosaics, 2016"
+    },
+    {
+      "rel": "item",
+      "href": "./2018/item.json",
+      "type": "application/geo+json",
+      "title": "GLACE mosaics, 2018"
+    },
+    {
+      "rel": "item",
+      "href": "./2020/item.json",
+      "type": "application/geo+json",
+      "title": "GLACE mosaics, 2020"
     },
     {
       "rel": "item",
       "href": "./2022/item.json",
       "type": "application/geo+json",
-      "title": "GLACE annual mosaic, 2022"
+      "title": "GLACE mosaics, 2022"
     },
     {
       "rel": "item",
       "href": "./2023/item.json",
       "type": "application/geo+json",
-      "title": "GLACE annual mosaic, 2023"
+      "title": "GLACE mosaics, 2023"
     },
     {
       "rel": "item",
       "href": "./2024/item.json",
       "type": "application/geo+json",
-      "title": "GLACE annual mosaic, 2024"
+      "title": "GLACE mosaics, 2024"
+    },
+    {
+      "rel": "item",
+      "href": "./2025/item.json",
+      "type": "application/geo+json",
+      "title": "GLACE mosaics, 2025"
     }
   ]
 }

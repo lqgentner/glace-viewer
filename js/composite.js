@@ -2,8 +2,8 @@
  * False color composed on demand from the VV and VH archives of one product and
  * year: red VV, green VH, blue their ratio (VV − VH in dB, VV / VH otherwise).
  * Red and green use the single-band default stretches; blue's range is the
- * viewer's own, from the catalog's last RGB archives. Served to a raster source
- * through the glace-rgb:// protocol registered in js/map.js.
+ * viewer's own. Served to a raster source through the glace-rgb:// protocol
+ * registered in js/map.js.
  */
 
 import { unlessAborted } from "./archive.js";

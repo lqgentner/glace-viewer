@@ -6,13 +6,17 @@
  */
 
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
 
 import { installBrowser, load, REPO, settle } from "./helpers/browser.js";
 
 const FIXTURES = path.join(REPO, "tests", "fixtures", "store");
-const YEARS = [2021, 2022, 2023, 2024];
+/* The years the collection links an item for. */
+const YEARS = JSON.parse(fs.readFileSync(path.join(FIXTURES, "collection.json"), "utf8"))
+  .links.filter((link) => link.rel === "item")
+  .map((link) => Number(/\d{4}/.exec(link.href)[0]));
 
 const page = installBrowser({
   search: "?tiles=tiles",
@@ -35,7 +39,7 @@ await settle();
 
 test("a local copy draws its own archives", () => {
   assert.equal(
-    page.map.getSource("glace-coh12_vv-2024").url,
-    "pmtiles://http://localhost/tiles/mosaics/2024/coh12_vv_viz.pmtiles",
+    page.map.getSource("glace-coh12_vv-2025").url,
+    "pmtiles://http://localhost/tiles/mosaics/2025/coh12_vv_viz.pmtiles",
   );
 });

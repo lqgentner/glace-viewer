@@ -233,8 +233,8 @@ rendering or CDN availability; inspect visual changes in a real browser too.
 Modules hold state and the map is a singleton. Put scenarios needing a fresh
 catalog, viewport, or initial camera in separate test files so `node --test`
 isolates them. Tests use committed fixtures, never a developer's `./tiles`:
-`store/` represents the value-encoded catalog converted from glace-catalog,
-with reduced item geometry and no archive links, and `two-years/` exercises missing combinations and style fallback.
+`store/` copies the glace-alps mosaics with item geometry removed, and
+`two-years/` exercises missing combinations and style fallback.
 
 Use the relevant suites when changing behavior:
 
