@@ -116,6 +116,10 @@ class FakeMap {
     return this.pitch;
   }
 
+  getBearing() {
+    return 0;
+  }
+
   getCenter() {
     return this.center;
   }

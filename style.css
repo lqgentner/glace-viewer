@@ -32,16 +32,16 @@ html, body {
 #map.sky {
   background:
     radial-gradient(
-      circle at var(--globe-x) var(--globe-y),
-      transparent var(--globe-r),
-      rgba(178, 196, 228, 0.42) var(--globe-r),
-      rgba(178, 196, 228, 0.33) calc(var(--globe-r) * 1.1),
-      rgba(178, 196, 228, 0.23) calc(var(--globe-r) * 1.25),
-      rgba(178, 196, 228, 0.14) calc(var(--globe-r) * 1.5),
-      rgba(178, 196, 228, 0.07) calc(var(--globe-r) * 1.8),
-      rgba(178, 196, 228, 0.03) calc(var(--globe-r) * 2.2),
-      rgba(178, 196, 228, 0.01) calc(var(--globe-r) * 2.6),
-      transparent calc(var(--globe-r) * 3)
+      var(--globe-rx) var(--globe-ry) at var(--globe-x) var(--globe-y),
+      transparent 100%,
+      rgba(178, 196, 228, 0.42) 100%,
+      rgba(178, 196, 228, 0.33) 110%,
+      rgba(178, 196, 228, 0.23) 125%,
+      rgba(178, 196, 228, 0.14) 150%,
+      rgba(178, 196, 228, 0.07) 180%,
+      rgba(178, 196, 228, 0.03) 220%,
+      rgba(178, 196, 228, 0.01) 260%,
+      transparent 300%
     ),
     radial-gradient(ellipse at center, #141a28, var(--bg) 70%);
 }
