@@ -16,7 +16,7 @@
  */
 const FOV = 0.6435011087932844;
 const TILE_SIZE = 512;
-const LIMB_SAMPLES = 16;
+const LIMB_SAMPLES = 128;
 
 const rad = (deg) => (deg * Math.PI) / 180;
 const deg = (r) => (r * 180) / Math.PI;
@@ -72,7 +72,7 @@ export function globeDisc(map, width, height) {
   // Tilt only stretches the outline vertically on screen, so it stays axis-aligned.
   const rx = (maxX - minX) / 2;
   const ry = (maxY - minY) / 2;
-  return { x: (minX + maxX) / 2, y: (minY + maxY) / 2, rx, ry, r: Math.max(rx, ry) };
+  return { x: (minX + maxX) / 2, y: (minY + maxY) / 2, rx, ry };
 }
 
 function cross([ax, ay, az], [bx, by, bz]) {
@@ -85,11 +85,10 @@ export function installSky(map, element) {
     const width = element.clientWidth;
     const height = element.clientHeight;
     const disc = globeDisc(map, width, height);
-    const farthestCorner = Math.hypot(
-      Math.max(disc.x, width - disc.x),
-      Math.max(disc.y, height - disc.y),
+    // Space shows if a viewport corner lies outside the ellipse.
+    const visible = [0, width].some((cx) =>
+      [0, height].some((cy) => Math.hypot((cx - disc.x) / disc.rx, (cy - disc.y) / disc.ry) > 1),
     );
-    const visible = farthestCorner > disc.r;
     element.classList.toggle("sky", visible);
     if (!visible) return;
 

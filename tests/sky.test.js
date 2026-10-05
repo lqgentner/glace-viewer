@@ -82,7 +82,7 @@ test("the disc is the globe's true silhouette, not the 90° great circle", () =>
   const R = map.radius;
   const f = map.distance;
   const silhouette = (f * R) / Math.sqrt((f + R) ** 2 - R ** 2);
-  assert.ok(Math.abs(disc.r - silhouette) < silhouette * 0.001, `r ${disc.r} vs ${silhouette}`);
+  assert.ok(Math.abs(disc.rx - silhouette) < silhouette * 0.001, `r ${disc.rx} vs ${silhouette}`);
   assert.ok(Math.abs(disc.rx - disc.ry) < 0.5, "seen from above, the outline is a circle");
   assert.ok(Math.abs(disc.x - 800) < 0.5 && Math.abs(disc.y - 500) < 0.5, `centered at ${disc.x},${disc.y}`);
   // The naive sample, 90° from the center, would land inside the silhouette by
@@ -93,6 +93,7 @@ test("the disc is the globe's true silhouette, not the 90° great circle", () =>
 test("a tilted or turned camera still gets the globe's outline", () => {
   for (const view of [
     { zoom: 2, pitch: 60 },
+    { zoom: 3, pitch: 60 },
     { zoom: 2, pitch: 60, bearing: 90 },
     { zoom: 1.2, lat: 30, pitch: 60, bearing: -150 },
     { zoom: 3, lng: -40, lat: 20, pitch: 45, bearing: -30 },
@@ -101,7 +102,7 @@ test("a tilted or turned camera still gets the globe's outline", () => {
     const map = cameraMap(view);
     const disc = globeDisc(map, 1600, 1000);
     const box = map.outline();
-    const near = (a, b) => Math.abs(a - b) < 0.005 * disc.r;
+    const near = (a, b) => Math.abs(a - b) < 1;
     const label = JSON.stringify(view);
     assert.ok(near(disc.x - disc.rx, box.minX) && near(disc.x + disc.rx, box.maxX), `${label}: x ${disc.x}±${disc.rx} vs ${box.minX}..${box.maxX}`);
     assert.ok(near(disc.y - disc.ry, box.minY) && near(disc.y + disc.ry, box.maxY), `${label}: y ${disc.y}±${disc.ry} vs ${box.minY}..${box.maxY}`);
@@ -140,4 +141,15 @@ test("the disc is measured again when the style switches projection", () => {
   map.set({ zoom: 2 });
   map.fire("projectiontransition");
   assert.equal(element.classList.contains("sky"), true, "measured without waiting for a move");
+});
+
+test("a corner outside the tilted outline still shows the sky", () => {
+  // The outline is taller than wide here; the farthest corner lies within the
+  // larger radius but outside the ellipse.
+  const map = cameraMap({ zoom: 4.77, pitch: 30 });
+  const element = document.createElement("div");
+  Object.defineProperty(element, "clientWidth", { value: 1600 });
+  Object.defineProperty(element, "clientHeight", { value: 1000 });
+  installSky(map, element);
+  assert.equal(element.classList.contains("sky"), true);
 });
