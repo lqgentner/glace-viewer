@@ -85,6 +85,10 @@ test("limits apply on change, accept a comma, and revert when invalid", async ()
   await change(el("vmin"), "abc");
   assert.equal(el("vmin").value, "0.20", "so does text");
 
+  await change(el("vmin"), "0.204");
+  assert.equal(el("vmin").value, "0.20", "rounded to the precision shown");
+  assert.equal(ramp(ID).first, 0.2, "and applied as shown");
+
   await change(el("vmin"), "-1");
   assert.equal(el("vmin").value, "0.20", "and a limit below what the archive encodes");
 

@@ -412,12 +412,8 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   color: var(--text);
   text-align: left;
   background: none;
-  border: 1px solid transparent;
   border-radius: 4px;
-  cursor: pointer;
 }
-.cmap-popover .cmap-option:hover { border-color: rgba(255, 255, 255, 0.3); }
-.cmap-popover .cmap-option[aria-pressed="true"] { border-color: #fff; }
 .cmap-popover .ramp { height: 10px; border-radius: 3px; border: 1px solid var(--border); }
 
 #legend-channels {
@@ -619,20 +615,28 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   border-bottom-color: var(--border);
 }
 
+/* Picker choices (attachPicker): a quiet outline on hover, white for the current one. */
+.choice {
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: border-color 0.14s ease;
+}
+.choice:hover { border-color: rgba(255, 255, 255, 0.3); }
+.choice[aria-pressed="true"] { border-color: #fff; }
+
 .palette-popover {
   display: grid;
-  grid-template-columns: repeat(3, 18px);
-  gap: 8px;
+  grid-template-columns: repeat(3, 22px);
+  gap: 6px;
 }
+/* Padding keeps the outline clear of the color, as on the swatch. */
 .palette-popover .chip {
-  width: 18px;
-  height: 18px;
-  padding: 0;
-  border: 2px solid transparent;
+  width: 22px;
+  height: 22px;
+  padding: 2px;
+  background-clip: content-box;
   border-radius: 50%;
-  cursor: pointer;
 }
-.palette-popover .chip[aria-pressed="true"] { border-color: var(--text); }
 
 .credit-popover .cite {
   display: inline-block;

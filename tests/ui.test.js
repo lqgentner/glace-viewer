@@ -161,6 +161,7 @@ test("pickers: the current choice is pressed and focused; picking closes and ref
   assert.equal(box(), null, "click only, not hover");
   button.click();
   assert.equal(choice("b").getAttribute("aria-pressed"), "true");
+  assert.ok(choice("a").classList.contains("choice"), "one look for every picker's choices");
   assert.equal(choice("a").getAttribute("aria-pressed"), "false");
   assert.equal(document.activeElement, choice("b"));
 

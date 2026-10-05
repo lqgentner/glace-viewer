@@ -324,7 +324,8 @@ async function showOnMap(active) {
 
 const unitSuffix = (layer) =>
   typeof layer.units === "string" && layer.units ? ` ${layer.units}` : "";
-const round = (value, span) => value.toFixed(Math.abs(span) < 5 ? 2 : 1);
+const decimals = (span) => (Math.abs(span) < 5 ? 2 : 1);
+const round = (value, span) => value.toFixed(decimals(span));
 
 /* Show a limit unless it is being typed in; remember what was shown for Escape. */
 function showLimit(input, text) {
@@ -427,8 +428,10 @@ function initLegend() {
       const layer = selected();
       if (!encoded(layer)) return;
       const text = input.value.trim().replace(",", ".");
-      const value = Number(text);
       const range = rangeOf(layer);
+      // Round to the precision the legend shows, so what is shown is what is drawn.
+      const other = input.id === "vmin" ? range.vmax : range.vmin;
+      const value = Number(Number(text).toFixed(decimals(other - Number(text))));
       const next = input.id === "vmin" ? { ...range, vmin: value } : { ...range, vmax: value };
       /*
        * Keep limits within the codes the archive encodes: below code 1 the ramp
