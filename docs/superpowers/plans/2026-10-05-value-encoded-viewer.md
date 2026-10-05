@@ -26,7 +26,7 @@ The style's own ramp (its `color-relief-color` stops) is ignored. A layer withou
 
 ### False color
 
-For each product and year that has both a VV and a VH data layer, `js/composite.js` derives one record (`polarization: "RGB"`, ID `glace-{product}_rgb-{year}`). Red is VV over the VV layer's default stretch, green is VH over the VH layer's default stretch, and blue is VV − VH when the units are dB, otherwise VV / VH, over a viewer constant: COH12 `[0.8, 2.6]`, RTC `[3.5, 10.5]`. These are the ranges of the catalog's last RGB archives. A pixel is drawn only where both archives have data. False color is not editable in the legend and has no cursor readout. The RGB × QA fallback (`GIVES_WAY`) stays, since there is no RGB QA layer.
+For each product and year that has both a VV and a VH data layer, `js/composite.js` derives one record (`polarization: "RGB"`, ID `glace-{product}_rgb-{year}`). Red is VV over the VV layer's default stretch, green is VH over the VH layer's default stretch, and blue is VV − VH when the units are dB, otherwise VV / VH, over a viewer constant: COH12 `[0.8, 2.6]`, RTC `[3.5, 10.5]`. These are the ranges of the catalog's last RGB archives. A pixel is drawn only where both archives have data. The protocol returns an `ImageBitmap`, or an empty buffer (drawn transparent) where an archive has no tile; a failed read rejects. False color is not editable in the legend and has no cursor readout. The RGB × QA fallback (`GIVES_WAY`) stays, since there is no RGB QA layer.
 
 ### Legend
 
@@ -37,7 +37,7 @@ Scale  lipari                    ↺
 ```
 
 - `#cmap` is a button showing the short color-map name. It opens a popover (`attachPopover`, `hover: false`) listing the 11 maps with gradient previews, and the current one is pressed.
-- `#vmin` and `#vmax` are `inputmode="decimal"` text inputs, followed by a `.unit` span. Enter or blur applies the value, Escape reverts it, and an empty, non-numeric, or inverted range reverts it. A comma is accepted as the decimal separator. Render never overwrites an input that has focus.
+- `#vmin` and `#vmax` are `inputmode="decimal"` text inputs, followed by a `.unit` span. Enter or blur applies the value, Escape reverts it, and an empty, non-numeric, or inverted range reverts it, as does a minimum below the archive's code 1, where the ramp would fall into the nodata stop. A comma is accepted as the decimal separator. Render never overwrites an input that has focus.
 - Hovering over `#legend`, or focus inside it, shows a `--border` box around every `.editable`. Hovering over one control, focusing it, or opening its popover makes its box `--accent`. On `@media (hover: none)` the `--border` box is always shown. Changed values use `--accent-ink`.
 - Custom choices are stored per stem (`state.custom: Map<stem, {cmap?, vmin?, vmax?}>`), so they survive a year change and stay separate between products. `↺` is shown only when the selected stem has a custom entry, and clears it.
 - The color-map credit button and `COLOUR_MAP_CREDIT` are removed. The Crameri MIT notice and citation go in `js/colormaps.js` and the README.
@@ -67,7 +67,7 @@ The pencil pseudo-elements are removed. The swatch gets the same 1 px, 4 px-radi
 
 1. **Typing in a limit while something else re-renders** (opacity slider, map readout, year change): the text being typed must survive. Pinned in Task 4, step 1 ("render never overwrites a focused limit").
 2. **A composite tile where only one polarization has data, or where one archive has no tile**: transparent pixels or a blank tile, never black. Pinned in Task 3, step 1.
-3. **A transient tile fetch failure**: it must not cache a blank tile for the rest of the session. Pinned in Task 3, step 1 ("a failed tile read is retried").
+3. **A transient tile fetch failure**: it must fail that tile, not cache a blank success, and be retried next time. Pinned in Task 3, step 1 ("a failed tile read fails the tile and is retried next time"). A slow read must not block an aborted tile either ("an aborted tile stops waiting…").
 4. **A European decimal comma** (`0,2`): accepted as 0.2. Pinned in Task 4, step 1.
 5. **False-color credit**: the composite source still credits the data. Pinned in Task 3, step 1, in `store-catalog.test.js`.
 
@@ -188,7 +188,9 @@ def convert_style(path):
         new = {"id": layer["id"], "type": "color-relief", "source": layer["source"]}
         if "layout" in layer:
             new["layout"] = layer["layout"]
-        new["paint"] = ours["paint"]
+        # The viewer ignores the style's ramp; keep a two-stop stand-in so the
+        # fixture stays a valid style without copying every color.
+        new["paint"] = {"color-relief-color": ["interpolate", ["linear"], ["elevation"], 0, "#000000", 1, "#ffffff"]}
         layers.append(new)
     doc["metadata"] = catalog_style["metadata"]
     doc["sources"], doc["layers"] = sources, layers
@@ -236,6 +238,7 @@ const layers = (over = {}) =>
 ```
 
 - "every archive the store publishes becomes a layer": expect `12` (two products × VV, VH × measurement, QA-NUM, QA-CQM) and update the comment.
+- "a layer nothing describes is dropped with a warning" (line 122) and "an asset this page cannot name a layer from…" (line 137): `14` → `12`.
 - Replace "the ramp, the stretch and the zooms come from the style" with:
 
 ```js
@@ -293,7 +296,7 @@ test("a source without the custom encoding is dropped, not drawn as color", asyn
 - Add `stretches` to the destructured import from `js/store.js`.
 - Delete "the false color carries three channels and no ramp" and "one colorless stop is passed over rather than costing the layer its ramp".
 - In "a layer the style describes incompletely is dropped, not drawn", "a source with no zooms costs its layer…", "a year the style does not describe falls back…", and "a year with its own style is drawn from that style…": these build modified styles. Replace any edits to `metadata["portolan:legend"]` with edits to the source (for example, delete `minzoom`) or to `collection.renders`, keeping the behavior each test names. Where a test checked fallback through legend values (`cmap`, `colors`), check `minZoom`, `maxZoom`, and `attribution` instead.
-- "the three documents are read end to end": `readStore()` now also reads `renders` from the collection it already fetches. Expect 12 layers per year.
+- "the three documents are read end to end": `readStore()` now also reads `renders` from the collection it already fetches. Change `56, "four years of fourteen archives"` to `48, "four years of twelve archives"`. Replace `assert.equal(layer.cmap, "cmc.grayC");` with `assert.deepEqual([layer.units, layer.vmin, layer.vmax], ["dB", -14.5, -4.5]);`.
 
 In `tests/encoded.test.js`, change the header comment to `/* Check the decoding of value-encoded archives. */`.
 
@@ -471,10 +474,12 @@ export function defaultCmap(layer) {
 
 - `tests/viewer.test.js`: where the test asserts a GLACE source (not world imagery), expect `source.type === "raster-dem"`. Replace `paint["raster-opacity"]` with `paint["color-relief-opacity"]` at lines 304 and 311.
 - `tests/store-catalog.test.js`:
-  - "the seven-value polarization field becomes two rows": the polarization row is now `["VV", "VH"]`. Task 3 restores RGB.
+  - "the seven-value polarization field becomes two rows": rename it to "the six-value polarization field becomes two rows". Change `fields.size` 7 → 6, the polarization row to `["VV", "VH"]` (Task 3 restores RGB), and `archives.length` 56 → 48, with the comment `// 12 archives per year, 2 products x 2 x 3, over four published years.`
   - "a QA raster brings its own ramp, stretch and color-map credit": expect `legend-min`/`legend-max` `"0.0"`/`"80.0"` for QA_NUM, and `"-2.5 dB"`/`"8.0 dB"` for COH12 QA_CQM. The credit still reads `Colormap: glasgow`.
   - Delete "the false color and the QA rasters gray each other, but stay reachable", "and the other way round: a QA button pressed on false color resets it", "the false color names its channels and the stretch each was baked with", and "going back to a single-band layer restores the ramp". Task 3 brings back adapted versions.
+  - "every archive the store published is reachable": the closing comment becomes `// The twelve above: a layer is created once and kept, so this is every archive the item lists for the year the page sits on.` The count assertion is unchanged for now. Task 3 changes it.
   - Update the file header: remove "and RGB" from the panel-choices sentence, and replace "copied from https://data.source.coop/lqgentner/glace-ch" with "converted from glace-catalog's value-encoded catalog".
+- Run `grep -n -E "portolan:legend|\.cmap\b|\.colors\b|14\b|56\b" tests/*.test.js` and resolve each remaining hit that refers to the old catalog before moving on.
 
 - [ ] **Step 8: Update AGENTS.md**
 
@@ -519,31 +524,44 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   - `compositeLayers(layers) -> Composite[]`, where `Composite = { id, stem, product, polarization: "RGB", year, units, minZoom, maxZoom, attribution, startDate, endDate, channels: [{band, vmin, vmax}×3], composite: {vv: Layer, vh: Layer, decibel: boolean} }`
   - `compositeTiles(id) -> "glace-rgb://{id}/{z}/{x}/{y}"`
   - `compositePixels(vvTile, vhTile, record) -> Uint8ClampedArray`, where tiles are `{size, data: Uint8ClampedArray}` RGBA
-  - `compositeProtocol(params, abortController) -> Promise<{data: ArrayBuffer}>`
-  - `tilePixels(url, z, x, y) -> Promise<{size, data}|null>` (now exported from `values.js`)
+  - `compositeProtocol(params, abortController) -> Promise<{data: ImageBitmap | ArrayBuffer(0)}>` (rejects on a failed read or abort)
+  - `tilePixels(url, z, x, y) -> Promise<{size, data}|null>` (now exported from `values.js`; `null` only for an absent tile, rejects uncached on failure)
 
 - [ ] **Step 1: Write the failing tests**
 
-Add image-decoding stubs to `installBrowser` in `tests/helpers/browser.js`, next to the canvas stub. A fake archive "encodes" a tile as raw RGBA bytes, so decoding copies them back:
+In `tests/helpers/browser.js`, replace the canvas stub (the `ImageData` and `OffscreenCanvas` classes and their comment) with stubs for what `js/values.js` and `js/composite.js` now use. A fake archive "encodes" a tile as raw RGBA bytes, so decoding hands the same pixels back, and a composed bitmap carries its pixels where a test can read them:
 
 ```js
-  /* Decoding mirrors the canvas stub: a tile's bytes are its raw RGBA. */
-  globalThis.createImageBitmap = async (blob) => {
-    const pixels = new Uint8ClampedArray(await blob.arrayBuffer());
-    const size = Math.sqrt(pixels.length / 4);
-    return { width: size, height: size, pixels, close() {} };
+  /* Enough of the image APIs for js/values.js and js/composite.js. A fake
+   * archive's tile bytes are raw RGBA, so decoding hands them straight back,
+   * and a composed bitmap keeps its pixels where a test can assert on them. */
+  globalThis.ImageData = class {
+    constructor(data, width, height) {
+      Object.assign(this, { data, width, height });
+    }
+  };
+  globalThis.createImageBitmap = async (source) => {
+    const data =
+      source instanceof globalThis.ImageData
+        ? source.data
+        : new Uint8ClampedArray(await source.arrayBuffer());
+    const size = Math.sqrt(data.length / 4);
+    return { width: size, height: size, data, close() {} };
+  };
+  globalThis.OffscreenCanvas = class {
+    constructor(width, height) {
+      Object.assign(this, { width, height });
+    }
+    getContext() {
+      return {
+        drawImage: (bitmap) => { this.data = bitmap.data; },
+        getImageData: () => ({ data: this.data }),
+      };
+    }
   };
 ```
 
-Extend the `OffscreenCanvas` stub's `getContext()` so it returns:
-
-```js
-      return {
-        putImageData: (image) => { this.image = image; },
-        drawImage: (bitmap) => { this.pixels = bitmap.pixels; },
-        getImageData: () => ({ data: this.pixels }),
-      };
-```
+(Task 1 already renamed this comment's module reference. This replaces the block wholesale.)
 
 Create `tests/composite.test.js`:
 
@@ -636,20 +654,17 @@ test("the protocol composes a named tile and blanks one an archive lacks", async
   };
   assert.equal(compositeTiles(rgb.id), "glace-rgb://glace-rtc_rgb-2024/{z}/{x}/{y}");
 
-  const drawn = new Uint8ClampedArray(
-    (await compositeProtocol({ url: "glace-rgb://glace-rtc_rgb-2024/13/1/2" })).data,
-  );
-  assert.equal(drawn[3], 255);
+  const drawn = await compositeProtocol({ url: "glace-rgb://glace-rtc_rgb-2024/13/1/2" });
+  assert.equal(drawn.data.width, 2, "a bitmap MapLibre takes as is");
+  assert.equal(drawn.data.data[3], 255);
 
-  const blank = new Uint8ClampedArray(
-    (await compositeProtocol({ url: "glace-rgb://glace-rtc_rgb-2024/13/9/9" })).data,
-  );
-  assert.ok(blank.every((band) => band === 0), "outside the archive: transparent");
+  const absent = await compositeProtocol({ url: "glace-rgb://glace-rtc_rgb-2024/13/9/9" });
+  assert.equal(absent.data.byteLength, 0, "outside the archive: an empty, transparent tile");
 
   await assert.rejects(() => compositeProtocol({ url: "glace-rgb://nope/13/1/2" }), /no false-color composite/);
 });
 
-test("a failed tile read is retried", async () => {
+test("a failed tile read fails the tile and is retried next time", async () => {
   // Fresh archive URLs: js/values.js keeps one PMTiles reader per URL.
   compositeLayers([
     { ...VV, url: "https://retry/VV.pmtiles" },
@@ -663,22 +678,58 @@ test("a failed tile read is retried", async () => {
     }
   };
   const url = "glace-rgb://glace-rtc_rgb-2024/12/3/4";
-  const first = new Uint8ClampedArray((await compositeProtocol({ url })).data);
-  assert.ok(first.every((band) => band === 0));
+  await assert.rejects(() => compositeProtocol({ url }), /network/, "not a blank success");
   failing = false;
-  const second = new Uint8ClampedArray((await compositeProtocol({ url })).data);
-  assert.equal(second[3], 255, "the failure was not cached");
+  const second = await compositeProtocol({ url });
+  assert.equal(second.data.data[3], 255, "the failure was not cached");
+});
+
+test("an aborted tile stops waiting without canceling the shared reads", async () => {
+  compositeLayers([
+    { ...VV, url: "https://slow/VV.pmtiles" },
+    { ...VH, url: "https://slow/VH.pmtiles" },
+  ]);
+  let release;
+  const gate = new Promise((resolve) => { release = resolve; });
+  globalThis.pmtiles.PMTiles = class {
+    async getZxy() {
+      await gate;
+      return { data: tile([91], [91], [91], [91]).data.buffer };
+    }
+  };
+  const url = "glace-rgb://glace-rtc_rgb-2024/11/5/6";
+  const controller = new AbortController();
+  const aborted = compositeProtocol({ url }, controller);
+  const other = compositeProtocol({ url }, new AbortController());
+  controller.abort();
+  await assert.rejects(aborted, { name: "AbortError" }, "rejects before the reads finish");
+  release();
+  assert.equal((await other).data.data[3], 255, "the other consumer still gets its tile");
+
+  const early = new AbortController();
+  early.abort();
+  await assert.rejects(() => compositeProtocol({ url }, early), { name: "AbortError" });
 });
 ```
 
-In `tests/store-catalog.test.js`, restore the RGB checks against composites:
+In `tests/viewer.test.js:130`, the two-year fixture now composes false color: change it to `assert.deepEqual(faces("pol"), ["VV", "VH", "RGB"], "VV is the left-hand button");`.
+
+In `tests/store-catalog.test.js`:
+- In "the six-value polarization field becomes two rows", change the polarization row back to `["VV", "VH", "RGB"]`.
+- In "every archive the store published is reachable", count archives apart from composites, which earlier tests created:
 
 ```js
-test("the polarization field becomes two rows, with composed false color", () => {
-  assert.deepEqual(Object.keys(buttons(el, "pol")), ["VV", "VH", "RGB"]);
-  assert.deepEqual(Object.keys(buttons(el, "quantity")), ["", "QA_NUM", "QA_CQM"]);
-});
+  // The twelve above: a layer is created once and kept, so this is every archive
+  // the item lists for the year the page sits on. Composites have no archive.
+  assert.equal(
+    [...map.layers.keys()].filter((id) => id.startsWith("glace-") && !id.includes("_rgb-")).length,
+    archives.filter(({ year }) => year === 2024).length,
+  );
+```
 
+- Add these, before "every archive the store published is reachable":
+
+```js
 test("false color and the QA rasters gray each other, but stay reachable", async () => {
   await pick("pol", "VV");
   await pick("quantity", "QA_NUM");
@@ -710,8 +761,6 @@ test("false color is a composed raster that names its channels and credits the d
 });
 ```
 
-(Replace the Task 2 version of the "two rows" test with the first block.)
-
 In `tests/layers.test.js`, delete "a false color reports the channels the build published", "without them it names the bands and quotes no range", and "a channel list the page cannot vouch for is dropped, not printed". Remove `falseColourChannels` from its import. In "both rows are ordered by the panel…", the RGB fixture record stays as is, since `indexLayers` still orders RGB.
 
 - [ ] **Step 2: Run them and watch them fail**
@@ -725,9 +774,15 @@ Expected: FAIL (`js/composite.js` does not exist, and there is no RGB button).
 const MAX_TILES = 128;
 ```
 
-Export `tilePixels` and stop caching failures:
+Export `tilePixels`. Keep `null` for a tile the archive lacks, and evict and rethrow a failed read so that it fails the request and is retried next time:
 
 ```js
+/**
+ * The decoded RGBA of one archive tile, shared between consumers.
+ *
+ * @returns {Promise<{size: number, data: Uint8ClampedArray}|null>}  null where
+ *   the archive has no tile; rejects, uncached, when the read or decode fails
+ */
 export function tilePixels(url, z, x, y) {
   const key = `${url}|${z}/${x}/${y}`;
   const cached = tiles.get(key);
@@ -740,10 +795,10 @@ export function tilePixels(url, z, x, y) {
   const pending = archive(url)
     .getZxy(z, x, y)
     .then((response) => (response?.data ? decodeTile(response.data) : null))
-    .catch(() => {
+    .catch((error) => {
       // Not cached: panning back over this tile should retry it.
       tiles.delete(key);
-      return null;
+      throw error;
     });
   tiles.set(key, pending);
   if (tiles.size > MAX_TILES) tiles.delete(tiles.keys().next().value);
@@ -752,6 +807,32 @@ export function tilePixels(url, z, x, y) {
 ```
 
 Change the header comment to say the cache serves both the readout and false-color composites.
+
+The cursor readout in `js/rasters.js` (inside `initRecolor`) must now handle a rejected read, and it must not write a value for a layer that is no longer selected. Replace its `try … finally` body with:
+
+```js
+    try {
+      const value = await valueAt(layer, lng, lat);
+      // The selection may have moved on while the tile was read.
+      if (selected() !== layer) return;
+      const decimals = Math.max(0, Math.ceil(-Math.log10(step(layer.encoding))));
+      el("readout-value").textContent =
+        value === null || value === undefined
+          ? "no data"
+          : `${value.toFixed(decimals)}${unitSuffix(layer)}`;
+    } catch {
+      if (selected() === layer) el("readout-value").textContent = "–";
+    } finally {
+      busy = false;
+      if (pending !== null) lookup();
+    }
+```
+
+In `render()`, reset the readout when the selection changes. Add the following before `syncControls();`:
+
+```js
+  if (active?.id !== state.activeKey) el("readout-value").textContent = "–";
+```
 
 - [ ] **Step 4: Create `js/composite.js`**
 
@@ -846,35 +927,44 @@ export function compositePixels(vvTile, vhTile, record) {
   return out;
 }
 
-/* MapLibre protocols return encoded image bytes. */
-async function encode(rgba, size) {
-  const canvas = new OffscreenCanvas(size, size);
-  canvas.getContext("2d").putImageData(new ImageData(rgba, size, size), 0, 0);
-  return (await canvas.convertToBlob({ type: "image/png" })).arrayBuffer();
-}
+const aborted = () => new DOMException("tile aborted", "AbortError");
 
-/* A cached transparent tile lets MapLibre mark tiles outside the archives loaded. */
-let blank = null;
-const blankTile = async () => (blank ??= await encode(new Uint8ClampedArray(256 * 256 * 4), 256));
+/*
+ * Stop waiting when this request is aborted, without canceling the shared
+ * cached reads another tile may still need.
+ */
+function unlessAborted(promise, signal) {
+  if (!signal) return promise;
+  if (signal.aborted) return Promise.reject(aborted());
+  return new Promise((resolve, reject) => {
+    const abort = () => reject(aborted());
+    signal.addEventListener("abort", abort, { once: true });
+    promise.then(resolve, reject).finally(() => signal.removeEventListener("abort", abort));
+  });
+}
 
 const TILE_URL = /^glace-rgb:\/\/([^/]+)\/(\d+)\/(\d+)\/(\d+)$/;
 
-/** The MapLibre protocol handler. */
+/**
+ * The MapLibre protocol handler. Returns a bitmap MapLibre uploads as is, or an
+ * empty buffer, which it draws transparent, where either archive has no tile.
+ */
 export async function compositeProtocol(params, abortController) {
+  const signal = abortController?.signal;
+  if (signal?.aborted) throw aborted();
   const at = TILE_URL.exec(params.url);
   if (at === null) throw new Error(`not a glace-rgb tile URL: ${params.url}`);
   const record = composites.get(at[1]);
   if (record === undefined) throw new Error(`no false-color composite named ${at[1]}`);
   const [z, x, y] = at.slice(2).map(Number);
   const { vv, vh } = record.composite;
-  /*
-   * Shared cached reads take no abort signal: canceling one consumer would fail
-   * the others. Check for cancellation after the reads instead.
-   */
-  const [a, b] = await Promise.all([tilePixels(vv.url, z, x, y), tilePixels(vh.url, z, x, y)]);
-  if (abortController?.signal?.aborted) throw new DOMException("tile aborted", "AbortError");
-  if (a === null || b === null || a.size !== b.size) return { data: await blankTile() };
-  return { data: await encode(compositePixels(a, b, record), a.size) };
+  const [a, b] = await unlessAborted(
+    Promise.all([tilePixels(vv.url, z, x, y), tilePixels(vh.url, z, x, y)]),
+    signal,
+  );
+  if (a === null || b === null || a.size !== b.size) return { data: new ArrayBuffer(0) };
+  const pixels = new ImageData(compositePixels(a, b, record), a.size, a.size);
+  return { data: await createImageBitmap(pixels) };
 }
 ```
 
@@ -889,7 +979,7 @@ maplibregl.addProtocol("glace-rgb", compositeProtocol);
 
 - [ ] **Step 6: Wire composites into `js/rasters.js`**
 
-- Imports: `import { FALSE_COLOUR, compositeLayers, compositeTiles } from "./composite.js";`. Delete the local `FALSE_COLOUR`.
+- Imports: `import { FALSE_COLOUR, compositeLayers, compositeTiles } from "./composite.js";`. Delete the local `FALSE_COLOUR`. Drop `isFiniteNumber` from the `./store.js` import once `validChannels` is gone.
 - `const opacityProperty = (layer) => (layer.composite ? "raster-opacity" : "color-relief-opacity");`
 - At the top of `ensureLayer`, after the `state.added` check:
 
@@ -943,8 +1033,10 @@ git add -A js tests AGENTS.md
 git commit -m "Compose false color from the VV and VH archives
 
 A glace-rgb protocol decodes both value-encoded tiles and stretches VV,
-VH and their ratio into RGB, so false color no longer needs archives of
-its own. Failed tile reads are no longer cached.
+VH and their ratio into an ImageBitmap, so false color no longer needs
+archives of its own. Failed tile reads fail the tile and are retried
+rather than cached as blank, an aborted tile stops waiting at once, and
+the readout ignores answers for a layer no longer selected.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -988,8 +1080,10 @@ const page = installBrowser({
     "data/inventories.json": path.join(REPO, "data", "inventories.json"),
   },
 });
-const { el, map, window } = page;
+const { el, window } = page;
 await load("js/app.js");
+// The harness exposes the map the modules built, so read it after loading them.
+const { map } = page;
 map.fire("style.load");
 await settle();
 const { COLOR_MAPS } = await load("js/colormaps.js");
@@ -1041,6 +1135,7 @@ test("limits apply on change, accept a comma, and revert when invalid", async ()
   assert.equal(ramp(ID).first, 0.2);
   assert.equal(el("vmin").value, "0.20");
   assert.ok(el("vmin").classList.contains("modified"));
+  assert.equal(el("vmax").classList.contains("modified"), false, "the untouched limit is not");
 
   await change(el("vmax"), "0.1");
   assert.equal(el("vmax").value, "0.75", "an inverted range reverts");
@@ -1048,6 +1143,9 @@ test("limits apply on change, accept a comma, and revert when invalid", async ()
 
   await change(el("vmin"), "abc");
   assert.equal(el("vmin").value, "0.20", "so does text");
+
+  await change(el("vmin"), "-1");
+  assert.equal(el("vmin").value, "0.20", "and a limit below what the archive encodes");
 });
 
 test("Escape reverts a limit being typed", async () => {
@@ -1210,16 +1308,15 @@ In `style.css`, delete the `#recolor` rules (keep the `#readout` rules) and add,
   cursor: pointer;
 }
 #range-reset:hover { color: var(--accent); }
-#cmap { font-size: 11px; color: var(--text); }
 #legend-labels .limit { display: inline-flex; align-items: baseline; }
-#vmax { text-align: right; }
 
 /*
  * Editable values read as plain text until the legend is hovered or focused,
  * then show a quiet box; the control under the pointer or focus gets the accent.
- * Without hover (touch) the quiet box stays.
+ * Without hover (touch) the quiet box stays. Every rule is scoped to #legend so
+ * the state rules, which come later, win on order at equal specificity.
  */
-.editable {
+#legend .editable {
   margin: 0 -4px;
   padding: 0 3px;
   font: inherit;
@@ -1229,15 +1326,18 @@ In `style.css`, delete the `#recolor` rules (keep the `#readout` rules) and add,
   border-radius: 4px;
   cursor: pointer;
 }
-input.editable { min-width: 0; cursor: text; font-variant-numeric: tabular-nums; }
+#legend .control-head .editable { font-size: 11px; color: var(--text); }
+#legend input.editable { min-width: 0; cursor: text; font-variant-numeric: tabular-nums; }
+#vmax { text-align: right; }
 #legend:hover .editable,
 #legend:focus-within .editable { border-color: var(--border); }
-.editable:hover,
-.editable:focus-visible,
-.editable.popover-open { border-color: var(--accent); outline: none; }
-.editable.modified { color: var(--accent-ink); }
+#legend:hover .editable:hover,
+#legend .editable:focus-visible,
+#legend .editable.popover-open { border-color: var(--accent); outline: none; }
+#legend .editable.modified,
+#legend .control-head .editable.modified { color: var(--accent-ink); }
 @media (hover: none) {
-  .editable { border-color: var(--border); }
+  #legend .editable { border-color: var(--border); }
 }
 
 .cmap-popover { padding: 6px; }
@@ -1264,7 +1364,7 @@ input.editable { min-width: 0; cursor: text; font-variant-numeric: tabular-nums;
 
 - [ ] **Step 6: Legend logic in `js/rasters.js`**
 
-- Imports: add `attachPopover, hidePopover` to the `./ui.js` import, and drop `creditButton` if nothing else uses it in this file.
+- Imports: add `attachPopover, hidePopover` to the `./ui.js` import, drop `creditButton` if nothing else uses it in this file, and import `decodePixel` alongside `step` and `valueAt` from `./values.js`.
 - State: replace `cmap: null` and `ranges: new Map()` (and their comments) with:
 
 ```js
@@ -1289,10 +1389,8 @@ const gradient = (colors) => `linear-gradient(to right, ${colors.join(", ")})`;
 function customize(layer, change) {
   const next = { ...customOf(layer), ...change };
   if (next.cmap === defaultCmap(layer)) delete next.cmap;
-  if (next.vmin === layer.vmin && next.vmax === layer.vmax) {
-    delete next.vmin;
-    delete next.vmax;
-  }
+  if (next.vmin === layer.vmin) delete next.vmin;
+  if (next.vmax === layer.vmax) delete next.vmax;
   if (Object.keys(next).length) state.custom.set(layer.stem, next);
   else state.custom.delete(layer.stem);
   render();
@@ -1382,12 +1480,14 @@ function initLegend() {
       const value = Number(text);
       const range = rangeOf(layer);
       const next = input.id === "vmin" ? { ...range, vmin: value } : { ...range, vmax: value };
-      if (text === "" || !Number.isFinite(value) || next.vmin >= next.vmax) {
+      // Below code 1 the ramp would fall into the nodata stop and lose its colors.
+      const lowest = decodePixel(layer.encoding, 1, 1, 1) - step(layer.encoding) / 2;
+      if (text === "" || !Number.isFinite(value) || next.vmin >= next.vmax || next.vmin < lowest) {
         revert();
         return;
       }
       input.blur();
-      customize(layer, next);
+      customize(layer, { [input.id]: value });
     });
     input.addEventListener("keydown", (event) => {
       if (event.key === "Enter") input.blur();
@@ -1404,7 +1504,7 @@ function initLegend() {
     render();
   });
 
-  // ... the existing readout lookup and mousemove handler, unchanged ...
+  // ... the readout lookup and mousemove handler as Task 3 left them ...
 }
 ```
 
@@ -1412,6 +1512,15 @@ function initLegend() {
 - In the readout's `lookup`, leave the `encoded(layer)` guard as it is. Composites have no `encoding`, so they are skipped.
 
 - [ ] **Step 7: README and AGENTS.md**
+
+In `README.md`, replace "The displayed rasters have their colors baked in. For numerical analysis, use the COG assets linked from the STAC items in the browser above." with:
+
+```markdown
+The archives carry quantized values, colored in the browser: you can change
+the color map and its range, and read the value under the cursor. They are
+lossy 8-bit WebP, so for numerical analysis use the COG assets linked from the
+STAC items in the browser above.
+```
 
 Append to `README.md`:
 
