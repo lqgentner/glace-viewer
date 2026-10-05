@@ -1,14 +1,15 @@
 /*
  * Raster selection and legends for records from js/store.js. Sources are created on
- * first display and retained for reuse. Rendering uses pre-styled PMTiles.
+ * first display and retained for reuse. Value-encoded archives are colored here,
+ * with a color map and range the legend edits in place.
  */
 
 import { addStacked, map, styleReady } from "./map.js";
 import { FALSE_COLOUR, compositeLayers, compositeTiles } from "./composite.js";
 import { isNonEmptyString, readStore } from "./store.js";
 import { COLOR_MAPS } from "./colormaps.js";
-import { buildSegmented, clearStatus, creditButton, el, h, setStatus } from "./ui.js";
-import { step, valueAt } from "./values.js";
+import { attachPopover, buildSegmented, clearStatus, el, h, hidePopover, setStatus } from "./ui.js";
+import { decodePixel, step, valueAt } from "./values.js";
 
 const STATUS_KEY = "rasters";
 
@@ -66,12 +67,6 @@ export function defaultCmap(layer) {
 
 const CHANNEL_SWATCHES = ["#e0524f", "#4c9f4c", "#5b8def"];
 
-/* Credit scientific color maps named cmc.<map> in the style. */
-const COLOUR_MAP_CREDIT = {
-  citation: "© Fabio Crameri",
-  links: [{ label: "Scientific color maps", url: "https://www.fabiocrameri.ch/colourmaps/" }],
-};
-
 const state = {
   axes: null,
   product: null,
@@ -81,17 +76,33 @@ const state = {
   opacity: 1,
   added: new Set(),
   activeKey: null,
-  /* Recoloring of value-encoded layers: a color map name, or null for the style's. */
-  cmap: null,
-  /* Restretched ranges by layer stem, so a year change keeps them. */
-  ranges: new Map(),
+  /* Color-map and limit choices by layer stem, so a year change keeps them. */
+  custom: new Map(),
 };
 
 /* ---------- value-encoded layers ---------- */
 
 const encoded = (layer) => Boolean(layer?.encoding);
-const colorsOf = (layer) => COLOR_MAPS[state.cmap ?? defaultCmap(layer)];
-const rangeOf = (layer) => state.ranges.get(layer.stem) ?? { vmin: layer.vmin, vmax: layer.vmax };
+const customOf = (layer) => state.custom.get(layer.stem) ?? {};
+const cmapOf = (layer) => customOf(layer).cmap ?? defaultCmap(layer);
+const colorsOf = (layer) => COLOR_MAPS[cmapOf(layer)];
+const rangeOf = (layer) => ({
+  vmin: customOf(layer).vmin ?? layer.vmin,
+  vmax: customOf(layer).vmax ?? layer.vmax,
+});
+const shortName = (name) => name.replace(/^cmc\./, "");
+const gradient = (colors) => `linear-gradient(to right, ${colors.join(", ")})`;
+
+/* Record a choice, forgetting values equal to the defaults so reset means a change. */
+function customize(layer, change) {
+  const next = { ...customOf(layer), ...change };
+  if (next.cmap === defaultCmap(layer)) delete next.cmap;
+  if (next.vmin === layer.vmin) delete next.vmin;
+  if (next.vmax === layer.vmax) delete next.vmax;
+  if (Object.keys(next).length) state.custom.set(layer.stem, next);
+  else state.custom.delete(layer.stem);
+  render();
+}
 
 /*
  * A color-relief expression: transparent below the first valid code, the ramp
@@ -314,24 +325,40 @@ const unitSuffix = (layer) =>
   typeof layer.units === "string" && layer.units ? ` ${layer.units}` : "";
 const round = (value, span) => value.toFixed(Math.abs(span) < 5 ? 2 : 1);
 
+/* Show a limit unless it is being typed in; remember what was shown for Escape. */
+function showLimit(input, text) {
+  input.dataset.shown = text;
+  input.size = Math.max(2, text.length);
+  if (document.activeElement !== input) input.value = text;
+}
+
 function updateLegend(layer) {
   const falseColour = layer.polarization === FALSE_COLOUR;
   el("legend-bar").hidden = falseColour;
   el("legend-labels").hidden = falseColour;
   el("legend-channels").hidden = !falseColour;
+  el("cmap").hidden = falseColour;
+  el("readout").hidden = falseColour;
 
   if (falseColour) {
+    el("range-reset").hidden = true;
     updateChannelLegend(layer);
   } else {
-    el("legend-bar").style.background = `linear-gradient(to right, ${colorsOf(layer).join(", ")})`;
-    const unit = unitSuffix(layer);
+    const custom = customOf(layer);
     const { vmin, vmax } = rangeOf(layer);
     const span = vmax - vmin;
-    el("legend-min").textContent = round(vmin, span) + unit;
-    el("legend-max").textContent = round(vmax, span) + unit;
+    el("legend-bar").style.background = gradient(colorsOf(layer));
+    el("cmap").textContent = shortName(cmapOf(layer));
+    el("cmap").classList.toggle("modified", "cmap" in custom);
+    showLimit(el("vmin"), round(vmin, span));
+    showLimit(el("vmax"), round(vmax, span));
+    el("vmin").classList.toggle("modified", "vmin" in custom);
+    el("vmax").classList.toggle("modified", "vmax" in custom);
+    for (const unit of el("legend-labels").querySelectorAll(".unit")) {
+      unit.textContent = unitSuffix(layer);
+    }
+    el("range-reset").hidden = !state.custom.has(layer.stem);
   }
-  syncRecolor(layer);
-  updateColourMapCredit(layer);
   el("layer-info").replaceChildren(...layerDetail(layer).map((line) => h("div", { textContent: line })));
 }
 
@@ -367,63 +394,67 @@ export function layerDetail(layer) {
   return lines;
 }
 
-/*
- * Keep the credit button while its color map is unchanged so an open popover
- * survives renders.
- */
-let shownColourMap = null;
+/* ---------- legend editing and readout ---------- */
 
-function updateColourMapCredit(layer) {
-  const name = state.cmap ?? defaultCmap(layer);
-  const cmap = isNonEmptyString(name) ? name.replace(/^cmc\./, "") : "";
-  if (cmap === shownColourMap) return;
-  shownColourMap = cmap;
-  el("legend-credit").replaceChildren(
-    ...(cmap
-      ? [creditButton("Color map", { ...COLOUR_MAP_CREDIT, title: `Colormap: ${cmap}` })]
-      : []),
+function initLegend() {
+  attachPopover(
+    el("cmap"),
+    () => {
+      const layer = selected();
+      const current = layer ? cmapOf(layer) : null;
+      return Object.keys(COLOR_MAPS).map((name) =>
+        h(
+          "button",
+          {
+            type: "button",
+            class: "cmap-option",
+            "aria-pressed": String(name === current),
+            autofocus: name === current,
+            onclick: () => {
+              hidePopover({ refocus: true });
+              if (layer) customize(layer, { cmap: name });
+            },
+          },
+          h("span", { class: "ramp", style: { background: gradient(COLOR_MAPS[name]) } }),
+          h("span", { textContent: shortName(name) }),
+        ),
+      );
+    },
+    { className: "cmap-popover", hover: false },
   );
-}
 
-/* ---------- recoloring and readout ---------- */
+  for (const input of [el("vmin"), el("vmax")]) {
+    const revert = () => {
+      input.value = input.dataset.shown ?? "";
+    };
+    input.addEventListener("change", () => {
+      const layer = selected();
+      if (!encoded(layer)) return;
+      const text = input.value.trim().replace(",", ".");
+      const value = Number(text);
+      const range = rangeOf(layer);
+      const next = input.id === "vmin" ? { ...range, vmin: value } : { ...range, vmax: value };
+      // Below code 1 the ramp would fall into the nodata stop and lose its colors.
+      const lowest = decodePixel(layer.encoding, 1, 1, 1) - step(layer.encoding) / 2;
+      if (text === "" || !Number.isFinite(value) || next.vmin >= next.vmax || next.vmin < lowest) {
+        revert();
+        return;
+      }
+      input.blur();
+      customize(layer, { [input.id]: value });
+    });
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") input.blur();
+      if (event.key === "Escape") {
+        revert();
+        input.blur();
+      }
+    });
+  }
 
-function syncRecolor(layer) {
-  const on = encoded(layer);
-  el("recolor").hidden = !on;
-  el("readout").hidden = !on;
-  if (!on) return;
-  el("cmap").value = state.cmap ?? "";
-  const { vmin, vmax } = rangeOf(layer);
-  el("vmin").value = String(vmin);
-  el("vmax").value = String(vmax);
-}
-
-function initRecolor() {
-  el("cmap").replaceChildren(
-    h("option", { value: "", textContent: "Default" }),
-    ...Object.keys(COLOR_MAPS).map((name) =>
-      h("option", { value: name, textContent: name.replace(/^cmc\./, "") }),
-    ),
-  );
-  el("cmap").addEventListener("change", (event) => {
-    state.cmap = event.target.value || null;
-    render();
-  });
-  const restretch = () => {
-    const layer = selected();
-    if (!encoded(layer)) return;
-    const vmin = Number(el("vmin").value);
-    const vmax = Number(el("vmax").value);
-    if (!Number.isFinite(vmin) || !Number.isFinite(vmax) || vmin >= vmax) return;
-    state.ranges.set(layer.stem, { vmin, vmax });
-    render();
-  };
-  el("vmin").addEventListener("change", restretch);
-  el("vmax").addEventListener("change", restretch);
   el("range-reset").addEventListener("click", () => {
     const layer = selected();
-    if (layer) state.ranges.delete(layer.stem);
-    state.cmap = null;
+    if (layer) state.custom.delete(layer.stem);
     render();
   });
 
@@ -586,7 +617,7 @@ export async function loadRasters() {
   }
 
   initControls(axes);
-  initRecolor();
+  initLegend();
   render();
   return axes;
 }

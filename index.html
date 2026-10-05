@@ -73,21 +73,21 @@
 
             <section id="legend" class="control">
               <div class="control-head">
-                <label>Scale</label>
-                <!-- js/rasters.js supplies the selected color map's credit. -->
-                <span id="legend-credit"></span>
+                <label for="cmap">Scale</label>
+                <!-- Value-encoded layers: color map, limits and reset are edited in place. -->
+                <button type="button" id="cmap" class="editable" title="Color map"></button>
+                <button type="button" id="range-reset" title="Reset color map and range"
+                        aria-label="Reset color map and range" hidden>↺</button>
               </div>
               <div id="legend-bar"></div>
-              <div id="legend-labels"><span id="legend-min"></span><span id="legend-max"></span></div>
-              <!-- RGB channel legend, shown in place of the color ramp. -->
-              <div id="legend-channels" hidden></div>
-              <!-- Value-encoded layers only: recolor, restretch and read values. -->
-              <div id="recolor" hidden>
-                <select id="cmap" aria-label="Color map"></select>
-                <input type="number" id="vmin" step="any" aria-label="Minimum" />
-                <input type="number" id="vmax" step="any" aria-label="Maximum" />
-                <button type="button" id="range-reset">Reset</button>
+              <div id="legend-labels">
+                <span class="limit"><input id="vmin" class="editable" inputmode="decimal"
+                  autocomplete="off" spellcheck="false" aria-label="Minimum" /><span class="unit"></span></span>
+                <span class="limit"><input id="vmax" class="editable" inputmode="decimal"
+                  autocomplete="off" spellcheck="false" aria-label="Maximum" /><span class="unit"></span></span>
               </div>
+              <!-- False-color channel legend, shown in place of the color ramp. -->
+              <div id="legend-channels" hidden></div>
               <div id="readout" hidden>Cursor <output id="readout-value">–</output></div>
             </section>
 

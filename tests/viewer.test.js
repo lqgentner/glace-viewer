@@ -156,19 +156,9 @@ test("the viewer", async (t) => {
     );
   });
 
-  await t.test("the scale carries the color map's credit", async () => {
-    const credit = el("legend-credit").querySelector("button.credit");
-    assert.ok(credit, "an info mark beside the SCALE heading");
-
-    credit.click();
-    const popover = page.window.document.querySelector(".credit-popover");
-    assert.match(popover.textContent, /Colormap: lipari/, "cmc. prefix stripped");
-    assert.match(popover.textContent, /Fabio Crameri/);
-    assert.equal(
-      popover.querySelector("a").href,
-      "https://www.fabiocrameri.ch/colourmaps/",
-    );
-    credit.click();
+  await t.test("the scale names its color map instead of crediting it", async () => {
+    assert.equal(el("cmap").textContent, "lipari");
+    assert.equal(el("legend-credit"), null);
   });
 
   await t.test("the additional layers start collapsed", async () => {

@@ -127,14 +127,16 @@ test("a QA raster is its own archive, drawn in the same slot", async () => {
   assert.ok(map.indexOf("glace-coh12_vv_qa_num-2024") < map.indexOf("places"));
 });
 
-test("a QA raster brings its own ramp, stretch and color-map credit", async () => {
+test("a QA raster brings its own color map and stretch", async () => {
   await pick("quantity", "QA_NUM");
   // 0-80 rather than the observed 26-30 of recent years, and shared by both
   // products: 2021 reaches 58 because S1B was still flying, 2026 flies three
   // satellites, and one ceiling for every year and both products is what keeps
   // the difference legible.
-  assert.equal(el("legend-min").textContent, "0.0");
-  assert.equal(el("legend-max").textContent, "80.0");
+  const units = () => [...el("legend-labels").querySelectorAll(".unit")].map((u) => u.textContent);
+  assert.deepEqual([el("vmin").value, el("vmax").value], ["0.0", "80.0"]);
+  assert.deepEqual(units(), ["", ""]);
+  assert.equal(el("cmap").textContent, "glasgow", "the QA layer's own map");
   assert.deepEqual(
     [...el("layer-info").children].map((line) => line.textContent),
     ["Number of contributing observations", "2024-07-09 to 2024-10-07"],
@@ -143,17 +145,13 @@ test("a QA raster brings its own ramp, stretch and color-map credit", async () =
   await pick("quantity", "QA_CQM");
   // A sequential ramp over the measured one-sided range: CQM is a composite
   // quality indicator where higher is better, and 0 dB is not a meaningful middle.
-  assert.equal(el("legend-min").textContent, "-2.5 dB");
-  assert.equal(el("legend-max").textContent, "8.0 dB");
+  assert.deepEqual([el("vmin").value, el("vmax").value], ["-2.5", "8.0"]);
+  assert.deepEqual(units(), [" dB", " dB"]);
   assert.deepEqual(
     [...el("layer-info").children].map((line) => line.textContent),
     ["Composite quality map (higher is better)", "2024-07-09 to 2024-10-07"],
   );
-
-  el("legend-credit").querySelector("button.credit").click();
-  const popover = page.window.document.querySelector(".credit-popover");
-  assert.match(popover.textContent, /Colormap: glasgow/, "the QA layer's own map");
-  el("legend-credit").querySelector("button.credit").click();
+  assert.equal(el("cmap").textContent, "glasgow");
 });
 
 test("the acquisition window comes from the year's STAC item", () => {
@@ -232,8 +230,7 @@ test("going back to a single-band layer restores the ramp", async () => {
   await pick("pol", "VV");
   assert.equal(el("legend-bar").hidden, false);
   assert.equal(el("legend-channels").hidden, true);
-  assert.equal(el("legend-min").textContent, "0.10");
-  assert.equal(el("legend-max").textContent, "0.75");
+  assert.deepEqual([el("vmin").value, el("vmax").value], ["0.10", "0.75"]);
 });
 
 test("every archive the store published is reachable", async () => {

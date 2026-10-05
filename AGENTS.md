@@ -56,6 +56,7 @@ A gitignored `tiles` symlink to the catalog root also works. The root is above
 | `js/sky.js` | Globe silhouette measurements for CSS |
 | `scripts/serve.py` | Development HTTP server and local catalog mount |
 | `scripts/build-tiles.py` | Inventory GeoJSON to vector PMTiles |
+| `scripts/colormaps.py` | Writes `js/colormaps.js` (`uv run`) |
 | `data/inventories.json` | Inventory build settings, display metadata, citations and licenses |
 
 The inline module in `index.html` exposes `maplibregl`, `pmtiles`, and
@@ -182,8 +183,13 @@ The panel's 640 px breakpoint must agree in `js/app.js` and `style.css`. CSS
 provides the collapsed mobile state before scripts run. Preserve the panel's
 clearance for map controls and the scale bar. Initial opacity and hillshade
 strength in `index.html` must agree with their module defaults. Popovers live
-outside the scrolling panel; avoid replacing a color-map credit button while
-its unchanged credit is being read.
+outside the scrolling panel.
+
+The legend edits value-encoded layers in place: the color-map button opens a
+popover, the limits are inputs that render never overwrites while focused, and
+choices are kept per layer stem. A minimum below the archive's code 1 is
+refused, since the ramp would fall into the nodata stop. False color is not
+editable.
 
 ## Inventories and the tile grid
 
@@ -225,7 +231,8 @@ Use the relevant suites when changing behavior:
 
 | Change | Tests |
 | --- | --- |
-| Settings, catalog joins, selection and legends | `config`, `store`, `layers`, `store-catalog`, `store-local`, `viewer` |
+| Settings, catalog joins, selection and legends | `config`, `store`, `layers`, `store-catalog`, `store-local`, `legend`, `viewer` |
+| False color and tile decoding | `composite`, `encoded` |
 | Overlay loading, retries, popups | `viewer`, `tile-grid`, `ui` |
 | Startup failures, viewport, camera, labels | `viewer-degraded`, `viewer-no-webgl`, `viewer-narrow`, `viewer-3d-restore`, `viewer-light-flavor` |
 | Globe calculations | `sky` |
