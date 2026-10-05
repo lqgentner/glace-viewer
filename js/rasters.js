@@ -434,9 +434,16 @@ function initLegend() {
       const value = Number(text);
       const range = rangeOf(layer);
       const next = input.id === "vmin" ? { ...range, vmin: value } : { ...range, vmax: value };
-      // Below code 1 the ramp would fall into the nodata stop and lose its colors.
-      const lowest = decodePixel(layer.encoding, 1, 1, 1) - step(layer.encoding) / 2;
-      if (text === "" || !Number.isFinite(value) || next.vmin >= next.vmax || next.vmin < lowest) {
+      /*
+       * Keep limits within the codes the archive encodes: below code 1 the ramp
+       * falls into the nodata stop, and above code 255 MapLibre's packed ramp
+       * wraps around.
+       */
+      const half = step(layer.encoding) / 2;
+      const lowest = decodePixel(layer.encoding, 1, 1, 1) - half;
+      const highest = decodePixel(layer.encoding, 255, 255, 255) + half;
+      const outside = next.vmin < lowest || next.vmax > highest;
+      if (text === "" || !Number.isFinite(value) || next.vmin >= next.vmax || outside) {
         revert();
         return;
       }

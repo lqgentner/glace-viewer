@@ -187,9 +187,9 @@ outside the scrolling panel.
 
 The legend edits value-encoded layers in place: the color-map button opens a
 popover, the limits are inputs that render never overwrites while focused, and
-choices are kept per layer stem. A minimum below the archive's code 1 is
-refused, since the ramp would fall into the nodata stop. False color is not
-editable.
+choices are kept per layer stem. Limits outside the archive's codes 1-255 are
+refused: below, the ramp falls into the nodata stop; above, MapLibre's packed
+ramp wraps around. False color is not editable.
 
 ## Inventories and the tile grid
 

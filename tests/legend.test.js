@@ -85,6 +85,10 @@ test("limits apply on change, accept a comma, and revert when invalid", async ()
 
   await change(el("vmin"), "-1");
   assert.equal(el("vmin").value, "0.20", "and a limit below what the archive encodes");
+
+  await change(el("vmax"), "1.5");
+  assert.equal(el("vmax").value, "0.75", "or above it");
+  assert.equal(ramp(ID).last, 0.75);
 });
 
 test("Escape reverts a limit being typed", async () => {
