@@ -436,11 +436,13 @@ function initLegend() {
       /*
        * Keep limits within the codes the archive encodes: below code 1 the ramp
        * falls into the nodata stop, and above code 255 MapLibre's packed ramp
-       * wraps around.
+       * wraps around. It rounds a stop to the smallest factor, so the top
+       * allows less than half of that, enough for floating-point error.
        */
-      const half = step(layer.encoding) / 2;
-      const lowest = decodePixel(layer.encoding, 1, 1, 1) - half;
-      const highest = decodePixel(layer.encoding, 255, 255, 255) + half;
+      const { redFactor, greenFactor, blueFactor } = layer.encoding;
+      const lowest = decodePixel(layer.encoding, 1, 1, 1) - step(layer.encoding) / 2;
+      const highest =
+        decodePixel(layer.encoding, 255, 255, 255) + Math.min(redFactor, greenFactor, blueFactor) / 4;
       const outside = next.vmin < lowest || next.vmax > highest;
       if (text === "" || !Number.isFinite(value) || next.vmin >= next.vmax || outside) {
         revert();

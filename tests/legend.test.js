@@ -144,3 +144,15 @@ test("false color shows channels and nothing to edit", async () => {
   await pick("pol", "VV");
   assert.equal(el("cmap").hidden, false);
 });
+
+test("a maximum above the top code is refused, since MapLibre would wrap it", async () => {
+  await pick("product", "RTC");
+  await change(el("vmax"), "5");
+  assert.equal(ramp("glace-rtc_vv-2022").last, 5, "code 255 is 5, which is fine");
+  await change(el("vmin"), "1"); // a narrow range shows two decimals
+  await change(el("vmax"), "5.04");
+  assert.equal(el("vmax").value, "5.00", "but MapLibre cannot pack 5.04");
+  assert.equal(ramp("glace-rtc_vv-2022").last, 5);
+  el("range-reset").click();
+  await settle();
+});
