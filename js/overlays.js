@@ -7,16 +7,7 @@ import { GRID_INDEX_URL, INVENTORY_BASE, INVENTORY_INDEX_URL } from "./config.js
 import { addStacked, map, styleReady } from "./map.js";
 import { isNonEmptyString } from "./store.js";
 import { loadTileGrid } from "./tile-grid.js";
-import {
-  attachPopover,
-  clearStatus,
-  collapsible,
-  creditButton,
-  el,
-  h,
-  hidePopover,
-  setStatus,
-} from "./ui.js";
+import { attachPicker, clearStatus, collapsible, creditButton, el, h, setStatus } from "./ui.js";
 
 /* ---------- the shared lazy-source lifecycle ---------- */
 
@@ -172,33 +163,27 @@ function colorPicker(entry) {
   const lineId = `inv-line-${entry.id}`;
   const swatch = h("button", {
     type: "button",
-    class: "swatch",
+    class: "swatch edit-box",
     "aria-label": `${entry.title}: outline color`,
     style: { backgroundColor: entry.color },
   });
-  const pick = (color) => {
-    entry.color = color;
-    swatch.style.backgroundColor = color;
-    if (map.getLayer(lineId)) map.setPaintProperty(lineId, "line-color", color);
-    hidePopover({ refocus: true });
-  };
-  const chips = () =>
-    OUTLINE_COLORS.map((color) =>
-      h("button", {
-        type: "button",
+  attachPicker(
+    swatch,
+    () =>
+      OUTLINE_COLORS.map((color) => ({
+        value: color,
+        current: color === entry.color,
+        label: color,
         class: "chip",
-        "aria-label": color,
-        "aria-pressed": String(color === entry.color),
-        autofocus: color === entry.color,
         style: { backgroundColor: color },
-        onclick: () => pick(color),
-      }),
-    );
-  attachPopover(swatch, chips, {
-    className: "palette-popover",
-    caretAt: 1 / 3,
-    hover: false,
-  });
+      })),
+    (color) => {
+      entry.color = color;
+      swatch.style.backgroundColor = color;
+      if (map.getLayer(lineId)) map.setPaintProperty(lineId, "line-color", color);
+    },
+    { className: "palette-popover", caretAt: 1 / 3 },
+  );
   return swatch;
 }
 
@@ -229,7 +214,14 @@ export async function loadInventories() {
       entry.span ? h("span", { class: "span", textContent: `(${entry.span})` }) : null,
     );
     node.append(
-      h("div", { class: "inventory" }, box, colorPicker(entry), label, creditButton(entry.title, entry)),
+      h(
+        "div",
+        { class: "inventory edit-group" },
+        box,
+        colorPicker(entry),
+        label,
+        creditButton(entry.title, entry),
+      ),
     );
   }
   el("inventories-section").hidden = index.length === 0;

@@ -71,19 +71,19 @@
               <input type="range" id="opacity" min="0" max="100" value="100" step="1" />
             </section>
 
-            <section id="legend" class="control">
+            <section id="legend" class="control edit-group">
               <div class="control-head">
                 <label for="cmap">Scale</label>
                 <!-- Value-encoded layers: color map, limits and reset are edited in place. -->
-                <button type="button" id="cmap" class="editable" title="Color map"></button>
+                <button type="button" id="cmap" class="edit-box" title="Color map"></button>
                 <button type="button" id="range-reset" title="Reset range"
                         aria-label="Reset range" hidden>↺</button>
               </div>
               <div id="legend-bar"></div>
               <div id="legend-labels">
-                <span class="limit"><input id="vmin" class="editable" inputmode="decimal"
+                <span class="limit"><input id="vmin" class="edit-box" inputmode="decimal"
                   autocomplete="off" spellcheck="false" aria-label="Minimum" /><span class="unit"></span></span>
-                <span class="limit"><input id="vmax" class="editable" inputmode="decimal"
+                <span class="limit"><input id="vmax" class="edit-box" inputmode="decimal"
                   autocomplete="off" spellcheck="false" aria-label="Maximum" /><span class="unit"></span></span>
               </div>
               <!-- False-color channel legend, shown in place of the color ramp. -->

@@ -376,27 +376,18 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
 /* Clear of the box, so the unit sits the same distance from every value. */
 #legend-labels .unit { margin-left: 4px; }
 
-/*
- * Editable values read as plain text until the legend is hovered or focused,
- * then show an outline, as the inventory swatches do; the control under the
- * pointer or focus gets a white one. Without hover (touch) the outline stays.
- * Every rule is scoped to #legend so the state rules, which come later, win on
- * order at equal specificity.
- */
-#legend .editable {
+/* The legend's editable values read as plain text; see the edit boxes below. */
+#legend .edit-box {
   margin: 0 -4px;
   padding: 0 3px;
   font: inherit;
   color: inherit;
   background: transparent;
-  border: 1px solid transparent;
-  border-radius: 4px;
   cursor: pointer;
-  transition: border-color 0.14s ease;
 }
-#legend .control-head .editable { font-size: 11px; color: var(--text); }
+#legend .control-head .edit-box { font-size: 11px; color: var(--text); }
 /* Size limits to their text; the size attribute is the fallback without field-sizing. */
-#legend input.editable {
+#legend input.edit-box {
   min-width: 0;
   margin-right: 0;
   field-sizing: content;
@@ -404,17 +395,9 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   font-variant-numeric: tabular-nums;
 }
 #vmax { text-align: right; }
-#legend:hover .editable,
-#legend:focus-within .editable { border-color: rgba(255, 255, 255, 0.3); }
-#legend:hover .editable:hover,
-#legend .editable:focus-visible,
-#legend .editable.popover-open { border-color: #fff; outline: none; }
 /* A changed limit takes the accent; one being typed reads white. */
-#legend input.editable.modified { color: var(--accent-ink); }
-#legend input.editable:focus { color: #fff; }
-@media (hover: none) {
-  #legend .editable { border-color: rgba(255, 255, 255, 0.3); }
-}
+#legend input.edit-box.modified { color: var(--accent-ink); }
+#legend input.edit-box:focus { color: #fff; }
 
 .cmap-popover { padding: 6px; }
 .cmap-popover .cmap-option {
@@ -541,19 +524,28 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   height: 19px;
   padding: 7px 2px;
   background-clip: content-box;
-  border: 1px solid transparent;
-  border-radius: 4px;
   flex: none;
   cursor: pointer;
 }
-/* The legend's edit box, in the checkboxes' colors. */
-.inventory .swatch { transition: border-color 0.14s ease; }
-.inventory:hover .swatch { border-color: rgba(255, 255, 255, 0.3); }
-.inventory .swatch:hover,
-.inventory .swatch:focus-visible,
-.inventory .swatch.popover-open { border-color: #fff; outline: none; }
+
+/*
+ * Edit boxes, in the legend and on inventory swatches: no outline until their
+ * group is hovered, then a quiet one; a white one under the pointer, while the
+ * box's picker is open, or while it is typed in. Focus alone leaves the
+ * browser's ring, so closing a picker by a choice or Escape clears the box.
+ * Without hover (touch) the quiet outline stays.
+ */
+.edit-box {
+  border: 1px solid transparent;
+  border-radius: 4px;
+  transition: border-color 0.14s ease;
+}
+.edit-group:hover .edit-box { border-color: rgba(255, 255, 255, 0.3); }
+.edit-group .edit-box:hover,
+.edit-group .edit-box.popover-open,
+.edit-group input.edit-box:focus { border-color: #fff; outline: none; }
 @media (hover: none) {
-  .inventory .swatch { border-color: rgba(255, 255, 255, 0.3); }
+  .edit-box { border-color: rgba(255, 255, 255, 0.3); }
 }
 
 .inventory .span {

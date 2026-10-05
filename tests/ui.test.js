@@ -140,3 +140,33 @@ test("popovers: Escape closes a credit without reopening it", async () => {
   assert.equal(box(), null);
   assert.equal(document.activeElement, button);
 });
+
+test("pickers: the current choice is pressed and focused; picking closes and refocuses", async () => {
+  const { page, ui } = await loadUi();
+  const { document, Event } = page.window;
+  const button = document.createElement("button");
+  document.body.append(button);
+  const picked = [];
+  let current = "b";
+  ui.attachPicker(
+    button,
+    () => ["a", "b", "c"].map((value) => ({ value, current: value === current, label: value })),
+    (value) => picked.push(value),
+    { className: "test-picker" },
+  );
+  const box = () => document.querySelector(".test-picker");
+  const choice = (value) => box().querySelector(`[aria-label="${value}"]`);
+
+  button.dispatchEvent(new Event("mouseenter"));
+  assert.equal(box(), null, "click only, not hover");
+  button.click();
+  assert.equal(choice("b").getAttribute("aria-pressed"), "true");
+  assert.equal(choice("a").getAttribute("aria-pressed"), "false");
+  assert.equal(document.activeElement, choice("b"));
+
+  choice("c").click();
+  assert.deepEqual(picked, ["c"]);
+  assert.equal(box(), null);
+  assert.equal(document.activeElement, button, "focus goes back to the button");
+  assert.equal(button.classList.contains("popover-open"), false);
+});

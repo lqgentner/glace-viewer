@@ -53,7 +53,7 @@ A gitignored `tiles` symlink to the catalog root also works. The root is above
 | `js/values.js` | Tile decoding for false-color composites |
 | `js/overlays.js` | Inventory controls, overlay lifecycle, grid layers, feature popups |
 | `js/tile-grid.js` | GeoParquet index to deduplicated tile footprints |
-| `js/ui.js` | DOM helpers, status messages, segmented controls, popovers |
+| `js/ui.js` | DOM helpers, status messages, segmented controls, popovers, pickers |
 | `js/sky.js` | Globe silhouette measurements for CSS |
 | `scripts/serve.py` | Development HTTP server and local catalog mount |
 | `scripts/build-tiles.py` | Inventory GeoJSON to vector PMTiles |

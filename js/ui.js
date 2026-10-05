@@ -220,6 +220,41 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && popover) hidePopover({ refocus: true });
 });
 
+/* ---------- pickers ---------- */
+
+/**
+ * A click-only popover of choices, shared by the color-map and outline-color
+ * pickers. The current choice is pressed and takes the focus; picking one closes
+ * the popover and returns focus to the button before `onPick` runs.
+ *
+ * @param {() => {value: *, current: boolean, label: string, class?: string,
+ *                 style?: object, content?: Node[]}[]} choices
+ * @param {(value: *) => void} onPick
+ * @param {{className?: string, caretAt?: number}} [options]  as for attachPopover
+ */
+export function attachPicker(button, choices, onPick, { className = "", caretAt } = {}) {
+  const build = () =>
+    choices().map((choice) =>
+      h(
+        "button",
+        {
+          type: "button",
+          class: choice.class,
+          style: choice.style,
+          "aria-label": choice.label,
+          "aria-pressed": String(choice.current),
+          autofocus: choice.current,
+          onclick: () => {
+            hidePopover({ refocus: true });
+            onPick(choice.value);
+          },
+        },
+        ...(choice.content ?? []),
+      ),
+    );
+  attachPopover(button, build, { className, caretAt, hover: false });
+}
+
 /* ---------- attribution popover ---------- */
 
 /* Static MapLibre attribution glyph. No external text reaches this HTML parser. */

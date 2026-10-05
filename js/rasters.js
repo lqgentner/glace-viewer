@@ -9,7 +9,7 @@ import { archive } from "./archive.js";
 import { FALSE_COLOUR, compositeLayers, compositeTiles } from "./composite.js";
 import { isNonEmptyString, readStore } from "./store.js";
 import { COLOR_MAPS } from "./colormaps.js";
-import { attachPopover, buildSegmented, clearStatus, el, h, hidePopover, setStatus } from "./ui.js";
+import { attachPicker, buildSegmented, clearStatus, el, h, setStatus } from "./ui.js";
 import { decodePixel, step } from "./values.js";
 
 const STATUS_KEY = "rasters";
@@ -396,30 +396,27 @@ export function layerDetail(layer) {
 /* ---------- legend editing ---------- */
 
 function initLegend() {
-  attachPopover(
+  attachPicker(
     el("cmap"),
     () => {
       const layer = selected();
       const current = layer ? cmapOf(layer) : null;
-      return Object.keys(COLOR_MAPS).map((name) =>
-        h(
-          "button",
-          {
-            type: "button",
-            class: "cmap-option",
-            "aria-pressed": String(name === current),
-            autofocus: name === current,
-            onclick: () => {
-              hidePopover({ refocus: true });
-              if (layer) customize(layer, { cmap: name });
-            },
-          },
+      return Object.keys(COLOR_MAPS).map((name) => ({
+        value: name,
+        current: name === current,
+        label: shortName(name),
+        class: "cmap-option",
+        content: [
           h("span", { class: "ramp", style: { background: gradient(COLOR_MAPS[name]) } }),
           h("span", { textContent: shortName(name) }),
-        ),
-      );
+        ],
+      }));
     },
-    { className: "cmap-popover", hover: false },
+    (name) => {
+      const layer = selected();
+      if (encoded(layer)) customize(layer, { cmap: name });
+    },
+    { className: "cmap-popover" },
   );
 
   for (const input of [el("vmin"), el("vmax")]) {
