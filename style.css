@@ -406,7 +406,7 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   gap: 8px;
   align-items: center;
   width: 100%;
-  padding: 3px 6px;
+  padding: 1px 6px;
   font: inherit;
   font-size: 12px;
   color: var(--text);
@@ -414,6 +414,8 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   background: none;
   border-radius: 4px;
 }
+/* A gap between options, so their outlines stand apart. */
+.cmap-popover .cmap-option + .cmap-option { margin-top: 4px; }
 .cmap-popover .ramp { height: 10px; border-radius: 3px; border: 1px solid var(--border); }
 
 #legend-channels {
