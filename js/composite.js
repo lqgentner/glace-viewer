@@ -6,6 +6,7 @@
  * through the glace-rgb:// protocol registered in js/map.js.
  */
 
+import { unlessAborted } from "./archive.js";
 import { decodePixel, tilePixels } from "./values.js";
 
 /* RGB shares the polarization field but has channels instead of a ramp. */
@@ -88,22 +89,6 @@ export function compositePixels(vvTile, vhTile, record) {
   return out;
 }
 
-const aborted = () => new DOMException("tile aborted", "AbortError");
-
-/*
- * Stop waiting when this request is aborted, without canceling the shared
- * cached reads another tile may still need.
- */
-function unlessAborted(promise, signal) {
-  if (!signal) return promise;
-  if (signal.aborted) return Promise.reject(aborted());
-  return new Promise((resolve, reject) => {
-    const abort = () => reject(aborted());
-    signal.addEventListener("abort", abort, { once: true });
-    promise.then(resolve, reject).finally(() => signal.removeEventListener("abort", abort));
-  });
-}
-
 const TILE_URL = /^glace-rgb:\/\/([^/]+)\/(\d+)\/(\d+)\/(\d+)$/;
 
 /**
@@ -112,7 +97,7 @@ const TILE_URL = /^glace-rgb:\/\/([^/]+)\/(\d+)\/(\d+)\/(\d+)$/;
  */
 export async function compositeProtocol(params, abortController) {
   const signal = abortController?.signal;
-  if (signal?.aborted) throw aborted();
+  signal?.throwIfAborted();
   const at = TILE_URL.exec(params.url);
   if (at === null) throw new Error(`not a glace-rgb tile URL: ${params.url}`);
   const record = composites.get(at[1]);

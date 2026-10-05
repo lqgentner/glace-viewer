@@ -49,6 +49,7 @@ A gitignored `tiles` symlink to the catalog root also works. The root is above
 | `js/store.js` | Catalog/style/item reads and validation; one record per raster archive |
 | `js/rasters.js` | Raster selection, source creation, panel axes, legend editing |
 | `js/composite.js` | False color composed from VV and VH archives via `glace-rgb://` |
+| `js/archive.js` | Shared PMTiles readers, their byte cache, the `pmtiles://` protocol |
 | `js/values.js` | Tile decoding for false-color composites |
 | `js/overlays.js` | Inventory controls, overlay lifecycle, grid layers, feature popups |
 | `js/tile-grid.js` | GeoParquet index to deduplicated tile footprints |
@@ -125,7 +126,15 @@ with `js/values.js`. Red and green reuse the single-band default stretches;
 blue's range is a viewer constant per product. A pixel needs data in both
 archives. The protocol returns an `ImageBitmap`, or an empty buffer that
 MapLibre draws transparent where an archive has no tile; a failed read rejects
-and is not cached. The composite source carries the style source's credit
+and is not cached.
+
+`js/archive.js` keeps one PMTiles reader per raster archive, registered with
+the `pmtiles://` protocol before its source is added, over a byte cache bounded
+across archives. MapLibre reloads a `raster-dem` source whenever a layer's
+`visibility` changes (only `raster` sources are exempt), so switching layers
+re-requests their tiles; the cache serves those, and composites reuse the bytes
+MapLibre read. It hands out copies, keeps no failed reads, and lets an aborted
+caller stop waiting without canceling a read others share. The composite source carries the style source's credit
 because it has no TileJSON.
 
 ## Map lifecycle and rendering
@@ -232,7 +241,7 @@ Use the relevant suites when changing behavior:
 | Change | Tests |
 | --- | --- |
 | Settings, catalog joins, selection and legends | `config`, `store`, `layers`, `store-catalog`, `store-local`, `legend`, `viewer` |
-| False color and tile decoding | `composite`, `encoded` |
+| False color, tile decoding and caching | `composite`, `encoded`, `archive` |
 | Overlay loading, retries, popups | `viewer`, `tile-grid`, `ui` |
 | Startup failures, viewport, camera, labels | `viewer-degraded`, `viewer-no-webgl`, `viewer-narrow`, `viewer-3d-restore`, `viewer-light-flavor` |
 | Globe calculations | `sky` |

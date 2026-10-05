@@ -5,6 +5,7 @@
  */
 
 import { addStacked, map, styleReady } from "./map.js";
+import { archive } from "./archive.js";
 import { FALSE_COLOUR, compositeLayers, compositeTiles } from "./composite.js";
 import { isNonEmptyString, readStore } from "./store.js";
 import { COLOR_MAPS } from "./colormaps.js";
@@ -241,8 +242,9 @@ function ensureLayer(layer) {
   }
   /*
    * Inherit attribution and bounds from PMTiles metadata. Zoom limits come from the
-   * catalog style.
+   * catalog style. Register the shared reader first, so reloads read from memory.
    */
+  archive(layer.url);
   map.addSource(id, {
     type: "raster-dem",
     url: `pmtiles://${layer.url}`,

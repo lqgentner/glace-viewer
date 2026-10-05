@@ -1,18 +1,10 @@
 /*
  * Decode value-encoded archive tiles for false-color composites
- * (js/composite.js). Tiles are fetched through the PMTiles reader, decoded once
- * and kept; a pixel is decoded with the style's custom encoding.
+ * (js/composite.js). Tiles come through the shared readers of js/archive.js; a
+ * pixel is decoded with the style's custom encoding.
  */
 
-const MAX_TILES = 128;
-
-const archives = new Map();
-const tiles = new Map();
-
-function archive(url) {
-  if (!archives.has(url)) archives.set(url, new pmtiles.PMTiles(url));
-  return archives.get(url);
-}
+import { archive } from "./archive.js";
 
 /* Decode without premultiplication or color management, which would alter the codes. */
 async function decodeTile(bytes) {
@@ -29,31 +21,15 @@ async function decodeTile(bytes) {
 }
 
 /**
- * The decoded RGBA of one archive tile, shared between consumers.
+ * The decoded RGBA of one archive tile. Bytes come from the shared reader's
+ * cache; a failed read rejects.
  *
  * @returns {Promise<{size: number, data: Uint8ClampedArray}|null>}  null where
- *   the archive has no tile; rejects, uncached, when the read or decode fails
+ *   the archive has no tile
  */
-export function tilePixels(url, z, x, y) {
-  const key = `${url}|${z}/${x}/${y}`;
-  const cached = tiles.get(key);
-  if (cached) {
-    // Move to the back of the insertion order: least recently used goes first.
-    tiles.delete(key);
-    tiles.set(key, cached);
-    return cached;
-  }
-  const pending = archive(url)
-    .getZxy(z, x, y)
-    .then((response) => (response?.data ? decodeTile(response.data) : null))
-    .catch((error) => {
-      // Not cached: panning back over this tile should retry it.
-      tiles.delete(key);
-      throw error;
-    });
-  tiles.set(key, pending);
-  if (tiles.size > MAX_TILES) tiles.delete(tiles.keys().next().value);
-  return pending;
+export async function tilePixels(url, z, x, y) {
+  const response = await archive(url).getZxy(z, x, y);
+  return response?.data ? decodeTile(response.data) : null;
 }
 
 /** Decode one RGB pixel; null where the code is the declared nodata. */

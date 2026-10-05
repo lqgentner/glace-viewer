@@ -329,7 +329,25 @@ export function installBrowser({
       }
     },
   };
-  globalThis.pmtiles = { Protocol: class { tile() {} } };
+  /* The pmtiles classes js/archive.js builds on, without a network: a test that
+   * reads tiles replaces FetchSource or PMTiles with one that serves them. */
+  globalThis.pmtiles = {
+    Protocol: class {
+      tiles = new Map();
+      tile() {}
+      add(reader) { this.tiles.set(reader.source.getKey(), reader); }
+      get(key) { return this.tiles.get(key); }
+    },
+    FetchSource: class {
+      constructor(url) { this.url = url; }
+      getKey() { return this.url; }
+      async getBytes() { throw new Error("no network in tests"); }
+    },
+    PMTiles: class {
+      constructor(source) { this.source = source; }
+      async getZxy() { return undefined; }
+    },
+  };
   /* Enough of the image APIs for js/values.js and js/composite.js. A fake
    * archive's tile bytes are raw RGBA, so decoding hands them straight back,
    * and a composed bitmap keeps its pixels where a test can assert on them. */

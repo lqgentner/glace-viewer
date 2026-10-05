@@ -11,12 +11,13 @@ import {
   TERRAIN_TILEJSON,
   WORLD_IMAGERY_URL,
 } from "./config.js";
+import { protocol } from "./archive.js";
 import { compositeProtocol } from "./composite.js";
 import { installSky } from "./sky.js";
 import { setStatus } from "./ui.js";
 
-/* Expose each archive's TileJSON metadata, including attribution. */
-maplibregl.addProtocol("pmtiles", new pmtiles.Protocol({ metadata: true }).tile);
+/* Raster archives are read through the shared, cached readers of js/archive.js. */
+maplibregl.addProtocol("pmtiles", protocol.tile);
 
 /* False color composed from two value-encoded archives; see js/composite.js. */
 maplibregl.addProtocol("glace-rgb", compositeProtocol);

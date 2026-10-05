@@ -110,6 +110,14 @@ test("a source names the archive the item lists, and declares no bounds", () => 
   assert.equal(source.attribution, undefined);
 });
 
+test("an archive is read through the shared, cached reader", async () => {
+  // The same reader serves MapLibre's pmtiles:// requests and false color.
+  const { archive, protocol } = await load("js/archive.js");
+  const url = "http://localhost/tiles/mosaics/2024/coh12_vv_viz.pmtiles";
+  assert.ok(protocol.get(url), "registered before the source asks for it");
+  assert.equal(protocol.get(url), archive(url));
+});
+
 test("a QA raster is its own archive, drawn in the same slot", async () => {
   const { map } = page;
   await pick("quantity", "QA_NUM");

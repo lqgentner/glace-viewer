@@ -49,6 +49,13 @@ test("an unknown product has no blue range and composes nothing", () => {
   assert.deepEqual(compositeLayers([xvv, xvh]), []);
 });
 
+/* A pmtiles reader whose tiles come from `getZxy(url, z, x, y)`. */
+const reader = (getZxy) =>
+  class {
+    constructor(source) { this.source = source; }
+    getZxy(z, x, y) { return getZxy(this.source.getKey(), z, x, y); }
+  };
+
 /* Two-pixel tiles: grey codes, alpha 255 unless stated. */
 const tile = (...pixels) => ({
   size: 2,
@@ -77,13 +84,10 @@ test("the protocol composes a named tile and blanks one an archive lacks", async
     ["https://x/VV.pmtiles|13/1/2", tile([91], [91], [91], [91]).data],
     ["https://x/VH.pmtiles|13/1/2", tile([31], [31], [31], [31]).data],
   ]);
-  globalThis.pmtiles.PMTiles = class {
-    constructor(url) { this.url = url; }
-    async getZxy(z, x, y) {
-      const data = served.get(`${this.url}|${z}/${x}/${y}`);
-      return data ? { data: data.buffer } : undefined;
-    }
-  };
+  globalThis.pmtiles.PMTiles = reader(async (url, z, x, y) => {
+    const data = served.get(`${url}|${z}/${x}/${y}`);
+    return data ? { data: data.buffer } : undefined;
+  });
   assert.equal(compositeTiles(rgb.id), "glace-rgb://glace-rtc_rgb-2024/{z}/{x}/{y}");
 
   const drawn = await compositeProtocol({ url: "glace-rgb://glace-rtc_rgb-2024/13/1/2" });
@@ -97,18 +101,16 @@ test("the protocol composes a named tile and blanks one an archive lacks", async
 });
 
 test("a failed tile read fails the tile and is retried next time", async () => {
-  // Fresh archive URLs: js/values.js keeps one PMTiles reader per URL.
+  // Fresh archive URLs: js/archive.js keeps one reader per URL.
   compositeLayers([
     { ...VV, url: "https://retry/VV.pmtiles" },
     { ...VH, url: "https://retry/VH.pmtiles" },
   ]);
   let failing = true;
-  globalThis.pmtiles.PMTiles = class {
-    async getZxy() {
-      if (failing) throw new Error("network");
-      return { data: tile([91], [91], [91], [91]).data.buffer };
-    }
-  };
+  globalThis.pmtiles.PMTiles = reader(async () => {
+    if (failing) throw new Error("network");
+    return { data: tile([91], [91], [91], [91]).data.buffer };
+  });
   const url = "glace-rgb://glace-rtc_rgb-2024/12/3/4";
   await assert.rejects(() => compositeProtocol({ url }), /network/, "not a blank success");
   failing = false;
@@ -123,12 +125,10 @@ test("an aborted tile stops waiting without canceling the shared reads", async (
   ]);
   let release;
   const gate = new Promise((resolve) => { release = resolve; });
-  globalThis.pmtiles.PMTiles = class {
-    async getZxy() {
-      await gate;
-      return { data: tile([91], [91], [91], [91]).data.buffer };
-    }
-  };
+  globalThis.pmtiles.PMTiles = reader(async () => {
+    await gate;
+    return { data: tile([91], [91], [91], [91]).data.buffer };
+  });
   const url = "glace-rgb://glace-rtc_rgb-2024/11/5/6";
   const controller = new AbortController();
   const aborted = compositeProtocol({ url }, controller);
