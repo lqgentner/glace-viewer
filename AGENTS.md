@@ -47,7 +47,9 @@ A gitignored `tiles` symlink to the catalog root also works. The root is above
 | `js/config.js`, `site-config.js` | Resolved settings and deployment overrides |
 | `js/map.js` | Map singleton, style readiness, draw order, basemap, labels, terrain |
 | `js/store.js` | Catalog/style/item reads and validation; one record per raster archive |
-| `js/rasters.js` | Raster selection, source creation, panel axes, legends |
+| `js/rasters.js` | Raster selection, source creation, panel axes, legend editing |
+| `js/composite.js` | False color composed from VV and VH archives via `glace-rgb://` |
+| `js/values.js` | Tile decoding for the cursor readout and composites |
 | `js/overlays.js` | Inventory controls, overlay lifecycle, grid layers, feature popups |
 | `js/tile-grid.js` | GeoParquet index to deduplicated tile footprints |
 | `js/ui.js` | DOM helpers, status messages, segmented controls, popovers |
@@ -99,8 +101,9 @@ tiles/items.parquet
    stretch.
 
 The style's sources supply each archive's custom encoding, zoom limits and
-credit; its ramp is not read. Default color maps are viewer constants in
-`js/rasters.js`, because they are presentation, not data. Stretches are fixed per layer so years stay comparable.
+credit; its ramp is not read. Default color maps and the false-color blue range
+are viewer constants in `js/rasters.js` and `js/composite.js`, because they are
+presentation, not data. Stretches are fixed per layer so years stay comparable.
 
 Incomplete layers are skipped with a warning. A failed collection or nominated
 style prevents raster startup; an unreadable item removes that year's layers.
@@ -112,6 +115,17 @@ PMTiles metadata supplies bounds and attribution through
 Remote stores need anonymous reads, CORS, and exposed range headers:
 `Content-Range`, `Content-Length`, `Accept-Ranges`, and `ETag`. Missing headers
 can look like an invalid archive.
+
+### False color
+
+`js/composite.js` derives one RGB record per product and year with VV and VH
+data layers and serves it through `glace-rgb://`, decoding both archives' tiles
+with `js/values.js`. Red and green reuse the single-band default stretches;
+blue's range is a viewer constant per product. A pixel needs data in both
+archives. The protocol returns an `ImageBitmap`, or an empty buffer that
+MapLibre draws transparent where an archive has no tile; a failed read rejects
+and is not cached. The composite source carries the style source's credit
+because it has no TileJSON.
 
 ## Map lifecycle and rendering
 

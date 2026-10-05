@@ -9,7 +9,7 @@ import test from "node:test";
 import { captureWarnings, installBrowser, load } from "./helpers/browser.js";
 
 installBrowser();
-const { falseColourChannels, indexLayers, layerDetail } = await load("js/rasters.js");
+const { indexLayers, layerDetail } = await load("js/rasters.js");
 const { utmZone } = await load("js/overlays.js");
 
 /* One record as js/store.js hands it over. */
@@ -21,11 +21,9 @@ const layer = (overrides = {}) => ({
   url: "https://tiles.example/glace/mosaics/pmtiles/2023/coh12_vv.pmtiles",
   minZoom: 5,
   maxZoom: 12,
-  cmap: "cmc.lipari",
   vmin: 0.1,
   vmax: 0.8,
   units: "",
-  colors: ["#031326", "#fdf5da"],
   ...overrides,
 });
 
@@ -70,7 +68,7 @@ test("both rows are ordered by the panel, not by the catalog", () => {
   // VV is the button to open on, and the measurement the quantity to open on,
   // whatever order the archives were listed in.
   const axes = indexLayers([
-    layer({ id: "rgb", polarization: "RGB", colors: [] }),
+    layer({ id: "rgb", polarization: "RGB" }),
     layer({ id: "cqm", polarization: "VH_QA_CQM" }),
     layer({ id: "vh", polarization: "VH" }),
     layer({ id: "num", polarization: "VV_QA_NUM" }),
@@ -98,58 +96,6 @@ test("a layer is found by product, polarization and year together", () => {
   const axes = indexLayers([layer(), layer({ id: "b", year: 2022 })]);
   assert.equal(axes.index.get("COH12|VV|2022").id, "b");
   assert.equal(axes.index.get("COH12|VV|2021"), undefined);
-});
-
-test("a false color reports the channels the build published", () => {
-  // The one record of what was baked into the archive. The page holds no
-  // stretch of its own, so this is the only way numbers reach that legend.
-  const channels = [
-    { band: "VV", vmin: -18.5, vmax: -5 },
-    { band: "VH", vmin: -26, vmax: -11 },
-    { band: "VV − VH", vmin: 4, vmax: 14 },
-  ];
-  assert.deepEqual(
-    falseColourChannels(layer({ polarization: "RGB", colors: [], units: "dB", channels })),
-    channels,
-  );
-});
-
-test("without them it names the bands and quotes no range", () => {
-  // Which way the ratio is written follows the layer's own `units`, not a table
-  // keyed on the product: a difference in dB, a quotient otherwise.
-  assert.deepEqual(falseColourChannels(layer({ polarization: "RGB" })), [
-    { band: "VV" },
-    { band: "VH" },
-    { band: "VV / VH" },
-  ]);
-  assert.deepEqual(falseColourChannels(layer({ polarization: "RGB", units: "dB" })).at(-1), {
-    band: "VV − VH",
-  });
-});
-
-test("a channel list the page cannot vouch for is dropped, not printed", () => {
-  const good = { band: "VV", vmin: 0.1, vmax: 0.8 };
-  for (const channels of [
-    undefined,
-    null,
-    "VV,VH",
-    [],
-    [good, good],
-    [good, good, good, good],
-    [good, good, { band: "B", vmin: 1 }],
-    [good, good, { band: "B", vmin: 2, vmax: 1 }],
-    [good, good, { band: "B", vmin: 1, vmax: 1 }],
-    [good, good, { band: "", vmin: 1, vmax: 2 }],
-    [good, good, { band: "B", vmin: "1", vmax: 2 }],
-    [good, good, null],
-  ]) {
-    const shown = falseColourChannels(layer({ polarization: "RGB", channels }));
-    assert.deepEqual(
-      shown.map((channel) => channel.vmin),
-      [undefined, undefined, undefined],
-      `for ${JSON.stringify(channels)}`,
-    );
-  }
 });
 
 test("UTM zone is read off an MGRS tile name", () => {

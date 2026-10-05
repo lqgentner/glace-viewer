@@ -127,7 +127,7 @@ test("the viewer", async (t) => {
       ["COH12", "RTC"],
     );
 
-    assert.deepEqual(faces("pol"), ["VV", "VH"], "VV is the left-hand button");
+    assert.deepEqual(faces("pol"), ["VV", "VH", "RGB"], "VV is the left-hand button");
     const checked = (id) =>
       [...el(id).children].find((b) => b.getAttribute("aria-checked") === "true");
     assert.equal(checked("pol").dataset.value, "VV", "and the one selected");

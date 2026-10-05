@@ -1,0 +1,144 @@
+/* Check false-color records, pixel composition and the glace-rgb protocol. */
+
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import { installBrowser, load } from "./helpers/browser.js";
+
+installBrowser();
+const { compositeLayers, compositePixels, compositeProtocol, compositeTiles } = await load(
+  "js/composite.js",
+);
+
+/* value = code / 10 - 19.1 in the blue channel; code 0 in all three is nodata. */
+const ENCODING = { encoding: "custom", redFactor: 0, greenFactor: 0, blueFactor: 0.1, baseShift: 19.1 };
+const record = (over) => ({
+  product: "RTC", year: 2024, units: "dB", encoding: ENCODING, minZoom: 5, maxZoom: 13,
+  attribution: "Credit 2024", url: `https://x/${over.polarization}.pmtiles`, ...over,
+});
+/* Stretches chosen so no expected channel lands on a rounding half. */
+const VV = record({ id: "glace-rtc_vv-2024", stem: "rtc_vv", polarization: "VV", vmin: -16, vmax: -5 });
+const VH = record({ id: "glace-rtc_vh-2024", stem: "rtc_vh", polarization: "VH", vmin: -22, vmax: -11 });
+
+test("one composite per product and year with both polarizations", () => {
+  const qa = record({ id: "glace-rtc_vv_qa_num-2024", stem: "rtc_vv_qa_num", polarization: "VV_QA_NUM", vmin: 0, vmax: 80 });
+  const lonely = record({ id: "glace-rtc_vv-2023", stem: "rtc_vv", polarization: "VV", year: 2023, vmin: -16, vmax: -5 });
+  const [rgb, ...rest] = compositeLayers([VV, VH, qa, lonely]);
+  assert.equal(rest.length, 0, "no VH in 2023, and QA never composes");
+  assert.equal(rgb.id, "glace-rtc_rgb-2024");
+  assert.equal(rgb.polarization, "RGB");
+  assert.equal(rgb.attribution, "Credit 2024");
+  assert.deepEqual(rgb.channels, [
+    { band: "VV", vmin: -16, vmax: -5 },
+    { band: "VH", vmin: -22, vmax: -11 },
+    { band: "VV − VH", vmin: 3.5, vmax: 10.5 },
+  ]);
+});
+
+test("coherence composes a quotient over its own blue range", () => {
+  const cvv = record({ id: "glace-coh12_vv-2024", stem: "coh12_vv", product: "COH12", polarization: "VV", units: "", vmin: 0.1, vmax: 0.75 });
+  const cvh = record({ id: "glace-coh12_vh-2024", stem: "coh12_vh", product: "COH12", polarization: "VH", units: "", vmin: 0.1, vmax: 0.55 });
+  const [rgb] = compositeLayers([cvv, cvh]);
+  assert.deepEqual(rgb.channels[2], { band: "VV / VH", vmin: 0.8, vmax: 2.6 });
+  assert.equal(rgb.composite.decibel, false);
+});
+
+test("an unknown product has no blue range and composes nothing", () => {
+  const xvv = record({ id: "glace-x_vv-2024", stem: "x_vv", product: "X", polarization: "VV", vmin: 0, vmax: 1 });
+  const xvh = record({ id: "glace-x_vh-2024", stem: "x_vh", product: "X", polarization: "VH", vmin: 0, vmax: 1 });
+  assert.deepEqual(compositeLayers([xvv, xvh]), []);
+});
+
+/* Two-pixel tiles: grey codes, alpha 255 unless stated. */
+const tile = (...pixels) => ({
+  size: 2,
+  data: new Uint8ClampedArray(pixels.flatMap(([code, alpha = 255]) => [code, code, code, alpha])),
+});
+
+test("each channel is stretched, and a pixel needs both polarizations", () => {
+  const [rgb] = compositeLayers([VV, VH]);
+  // VV code 91 -> -10 dB, VH code 31 -> -16 dB, ratio 6 dB.
+  const out = compositePixels(
+    tile([91], [91], [0], [91, 0]),
+    tile([31], [0], [31], [31]),
+    rgb,
+  );
+  const px = (at) => [...out.slice(at * 4, at * 4 + 4)];
+  // 6/11, 6/11 and 2.5/7 of 255.
+  assert.deepEqual(px(0), [139, 139, 91, 255]);
+  assert.deepEqual(px(1), [0, 0, 0, 0], "VH nodata: transparent, not black");
+  assert.deepEqual(px(2), [0, 0, 0, 0], "VV nodata");
+  assert.deepEqual(px(3), [0, 0, 0, 0], "VV transparent in a lossy tile");
+});
+
+test("the protocol composes a named tile and blanks one an archive lacks", async () => {
+  const [rgb] = compositeLayers([VV, VH]);
+  const served = new Map([
+    ["https://x/VV.pmtiles|13/1/2", tile([91], [91], [91], [91]).data],
+    ["https://x/VH.pmtiles|13/1/2", tile([31], [31], [31], [31]).data],
+  ]);
+  globalThis.pmtiles.PMTiles = class {
+    constructor(url) { this.url = url; }
+    async getZxy(z, x, y) {
+      const data = served.get(`${this.url}|${z}/${x}/${y}`);
+      return data ? { data: data.buffer } : undefined;
+    }
+  };
+  assert.equal(compositeTiles(rgb.id), "glace-rgb://glace-rtc_rgb-2024/{z}/{x}/{y}");
+
+  const drawn = await compositeProtocol({ url: "glace-rgb://glace-rtc_rgb-2024/13/1/2" });
+  assert.equal(drawn.data.width, 2, "a bitmap MapLibre takes as is");
+  assert.equal(drawn.data.data[3], 255);
+
+  const absent = await compositeProtocol({ url: "glace-rgb://glace-rtc_rgb-2024/13/9/9" });
+  assert.equal(absent.data.byteLength, 0, "outside the archive: an empty, transparent tile");
+
+  await assert.rejects(() => compositeProtocol({ url: "glace-rgb://nope/13/1/2" }), /no false-color composite/);
+});
+
+test("a failed tile read fails the tile and is retried next time", async () => {
+  // Fresh archive URLs: js/values.js keeps one PMTiles reader per URL.
+  compositeLayers([
+    { ...VV, url: "https://retry/VV.pmtiles" },
+    { ...VH, url: "https://retry/VH.pmtiles" },
+  ]);
+  let failing = true;
+  globalThis.pmtiles.PMTiles = class {
+    async getZxy() {
+      if (failing) throw new Error("network");
+      return { data: tile([91], [91], [91], [91]).data.buffer };
+    }
+  };
+  const url = "glace-rgb://glace-rtc_rgb-2024/12/3/4";
+  await assert.rejects(() => compositeProtocol({ url }), /network/, "not a blank success");
+  failing = false;
+  const second = await compositeProtocol({ url });
+  assert.equal(second.data.data[3], 255, "the failure was not cached");
+});
+
+test("an aborted tile stops waiting without canceling the shared reads", async () => {
+  compositeLayers([
+    { ...VV, url: "https://slow/VV.pmtiles" },
+    { ...VH, url: "https://slow/VH.pmtiles" },
+  ]);
+  let release;
+  const gate = new Promise((resolve) => { release = resolve; });
+  globalThis.pmtiles.PMTiles = class {
+    async getZxy() {
+      await gate;
+      return { data: tile([91], [91], [91], [91]).data.buffer };
+    }
+  };
+  const url = "glace-rgb://glace-rtc_rgb-2024/11/5/6";
+  const controller = new AbortController();
+  const aborted = compositeProtocol({ url }, controller);
+  const other = compositeProtocol({ url }, new AbortController());
+  controller.abort();
+  await assert.rejects(aborted, { name: "AbortError" }, "rejects before the reads finish");
+  release();
+  assert.equal((await other).data.data[3], 255, "the other consumer still gets its tile");
+
+  const early = new AbortController();
+  early.abort();
+  await assert.rejects(() => compositeProtocol({ url }, early), { name: "AbortError" });
+});

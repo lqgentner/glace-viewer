@@ -2,7 +2,7 @@
  * Exercise the page against fixtures converted from glace-catalog's
  * value-encoded catalog, with item geometry reduced and the collection's
  * archive links removed, as the catalog no longer writes them. Cover item/style
- * joins and the polarization and QA panel choices. A separate process isolates
+ * joins and the polarization, QA, and false-color panel choices. A separate process isolates
  * the map singleton.
  */
 
@@ -73,7 +73,7 @@ test("the six-value polarization field becomes two rows", () => {
 
   assert.deepEqual(
     [...el("pol").children].map((b) => b.dataset.value),
-    ["VV", "VH"],
+    ["VV", "VH", "RGB"],
   );
   // The measurement is the absence of a suffix, so its value is the empty
   // string — `data-value` carries the catalog's own spelling throughout.
@@ -164,6 +164,78 @@ test("the acquisition window comes from the year's STAC item", () => {
   assert.equal(item.properties.end_datetime, "2024-10-07T00:00:00Z");
 });
 
+test("false color and the QA rasters gray each other, but stay reachable", async () => {
+  // False color is composed only from the measurements, never from QA. The button
+  // still says so by going gray, but the click is accepted rather than refused:
+  // whichever of the two is pressed wins, and the other row follows it.
+  await pick("quantity", "QA_CQM");
+  const rgb = buttons(el, "pol").RGB;
+  assert.equal(rgb.getAttribute("aria-disabled"), "true", "grayed…");
+  assert.equal(rgb.disabled, false, "…but live");
+  assert.equal(buttons(el, "pol").VH.hasAttribute("aria-disabled"), false, "VH has a QA raster");
+
+  await pick("pol", "RGB");
+  assert.equal(buttons(el, "pol").RGB.getAttribute("aria-checked"), "true", "the click won");
+  assert.equal(
+    buttons(el, "quantity")[""].getAttribute("aria-checked"),
+    "true",
+    "and the quantity fell back to the measurement",
+  );
+  assert.equal(page.map.getLayer("glace-coh12_rgb-2024").layout.visibility, "visible");
+});
+
+test("and the other way round: a QA button pressed on false color resets it", async () => {
+  await pick("pol", "RGB");
+  const count = buttons(el, "quantity").QA_NUM;
+  assert.equal(count.getAttribute("aria-disabled"), "true");
+  assert.equal(count.disabled, false);
+
+  await pick("quantity", "QA_NUM");
+  assert.equal(buttons(el, "quantity").QA_NUM.getAttribute("aria-checked"), "true");
+  assert.equal(
+    buttons(el, "pol").VV.getAttribute("aria-checked"),
+    "true",
+    "VV is the leftmost polarization that has one",
+  );
+  assert.equal(page.map.getLayer("glace-coh12_vv_qa_num-2024").layout.visibility, "visible");
+});
+
+test("false color is composed, names its channels, and credits the data", async () => {
+  await pick("pol", "RGB");
+  assert.equal(el("legend-bar").hidden, true, "there is no ramp to show");
+  assert.equal(el("legend-channels").hidden, false);
+
+  const cells = [...el("legend-channels").children].map((node) => node.textContent);
+  // Red and green repeat the single-band default stretches; blue's range is the
+  // page's own.
+  assert.deepEqual(cells.filter(Boolean), [
+    "VV",
+    "0.10 to 0.75",
+    "VH",
+    "0.10 to 0.55",
+    "VV / VH",
+    "0.80 to 2.60",
+  ]);
+  const source = page.map.getSource("glace-coh12_rgb-2024");
+  assert.equal(source.type, "raster");
+  assert.deepEqual(source.tiles, ["glace-rgb://glace-coh12_rgb-2024/{z}/{x}/{y}"]);
+  assert.match(source.attribution, /Copernicus Sentinel data 2024/, "it has no archive to credit");
+  assert.equal(page.map.getLayer("glace-coh12_rgb-2024").paint["raster-opacity"], 1);
+
+  // Backscatter's third channel is a difference, because it is read in dB.
+  await pick("product", "RTC");
+  assert.ok([...el("legend-channels").children].some((node) => node.textContent === "VV − VH"));
+});
+
+test("going back to a single-band layer restores the ramp", async () => {
+  await pick("product", "COH12");
+  await pick("pol", "VV");
+  assert.equal(el("legend-bar").hidden, false);
+  assert.equal(el("legend-channels").hidden, true);
+  assert.equal(el("legend-min").textContent, "0.10");
+  assert.equal(el("legend-max").textContent, "0.75");
+});
+
 test("every archive the store published is reachable", async () => {
   const { map } = page;
   for (const product of ["COH12", "RTC"]) {
@@ -179,9 +251,9 @@ test("every archive the store published is reachable", async () => {
     }
   }
   // The twelve above: a layer is created once and kept, so this is every archive
-  // the item lists for the year the page sits on.
+  // the item lists for the year the page sits on. Composites have no archive.
   assert.equal(
-    [...map.layers.keys()].filter((id) => id.startsWith("glace-")).length,
+    [...map.layers.keys()].filter((id) => id.startsWith("glace-") && !id.includes("_rgb-")).length,
     archives.filter(({ year }) => year === 2024).length,
   );
 });

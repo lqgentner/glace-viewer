@@ -330,25 +330,31 @@ export function installBrowser({
     },
   };
   globalThis.pmtiles = { Protocol: class { tile() {} } };
-  /* Enough of the canvas for js/composite.js to turn its RGBA into tile bytes.
-   * The real one encodes a PNG; this hands the raw pixels straight back, which
-   * is both simpler and more useful — a test can assert on a channel value
-   * instead of decoding an image to find it. */
+  /* Enough of the image APIs for js/values.js and js/composite.js. A fake
+   * archive's tile bytes are raw RGBA, so decoding hands them straight back,
+   * and a composed bitmap keeps its pixels where a test can assert on them. */
   globalThis.ImageData = class {
     constructor(data, width, height) {
       Object.assign(this, { data, width, height });
     }
+  };
+  globalThis.createImageBitmap = async (source) => {
+    const data =
+      source instanceof globalThis.ImageData
+        ? source.data
+        : new Uint8ClampedArray(await source.arrayBuffer());
+    const size = Math.sqrt(data.length / 4);
+    return { width: size, height: size, data, close() {} };
   };
   globalThis.OffscreenCanvas = class {
     constructor(width, height) {
       Object.assign(this, { width, height });
     }
     getContext() {
-      return { putImageData: (image) => { this.image = image; } };
-    }
-    async convertToBlob() {
-      const { image } = this;
-      return { arrayBuffer: async () => image.data.buffer };
+      return {
+        drawImage: (bitmap) => { this.data = bitmap.data; },
+        getImageData: () => ({ data: this.data }),
+      };
     }
   };
   globalThis.basemaps = {

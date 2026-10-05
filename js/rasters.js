@@ -4,15 +4,13 @@
  */
 
 import { addStacked, map, styleReady } from "./map.js";
-import { isFiniteNumber, isNonEmptyString, readStore } from "./store.js";
+import { FALSE_COLOUR, compositeLayers, compositeTiles } from "./composite.js";
+import { isNonEmptyString, readStore } from "./store.js";
 import { COLOR_MAPS } from "./colormaps.js";
 import { buildSegmented, clearStatus, creditButton, el, h, setStatus } from "./ui.js";
 import { step, valueAt } from "./values.js";
 
 const STATUS_KEY = "rasters";
-
-/* RGB shares the polarization field but uses channel recipes instead of a ramp. */
-const FALSE_COLOUR = "RGB";
 
 /* Display labels differ from catalog values; unknown products keep their names. */
 const PRODUCT_LABELS = { COH12: "Coherence", RTC: "Backscatter" };
@@ -124,7 +122,7 @@ function applyRamp(layer) {
   );
 }
 
-const opacityProperty = (layer) => (encoded(layer) ? "color-relief-opacity" : "raster-opacity");
+const opacityProperty = (layer) => (layer.composite ? "raster-opacity" : "color-relief-opacity");
 
 const key = (product, polarization, year) => `${product}|${polarization}|${year}`;
 
@@ -210,6 +208,26 @@ export function indexLayers(layers) {
 function ensureLayer(layer) {
   const id = layer.id;
   if (state.added.has(id)) return;
+  /* A composite has no archive of its own, so its source names the credit. */
+  if (layer.composite) {
+    map.addSource(id, {
+      type: "raster",
+      tiles: [compositeTiles(id)],
+      tileSize: 256,
+      minzoom: layer.minZoom,
+      maxzoom: layer.maxZoom,
+      attribution: layer.attribution,
+    });
+    addStacked("data", {
+      id,
+      type: "raster",
+      source: id,
+      layout: { visibility: "none" },
+      paint: { "raster-opacity": state.opacity, "raster-resampling": "nearest" },
+    });
+    state.added.add(id);
+    return;
+  }
   /*
    * Inherit attribution and bounds from PMTiles metadata. Zoom limits come from the
    * catalog style.
@@ -271,6 +289,7 @@ function render() {
     el("layer-info").replaceChildren();
     setStatus(STATUS_KEY, `No ${selectionName()} for ${state.year}`, "info");
   }
+  if (active?.id !== state.activeKey) el("readout-value").textContent = "–";
   syncControls();
   showOnMap(active);
 }
@@ -319,50 +338,12 @@ function updateLegend(layer) {
 function updateChannelLegend(layer) {
   const unit = unitSuffix(layer);
   el("legend-channels").replaceChildren(
-    ...falseColourChannels(layer).flatMap(({ band, vmin, vmax }, at) => [
+    ...layer.channels.flatMap(({ band, vmin, vmax }, at) => [
       h("span", { class: "swatch", style: { background: CHANNEL_SWATCHES[at] } }),
       h("span", { class: "band", textContent: band }),
-      h("span", {
-        textContent:
-          vmin === undefined
-            ? ""
-            : `${round(vmin, vmax - vmin)} to ${round(vmax, vmax - vmin)}${unit}`,
-      }),
+      h("span", { textContent: `${round(vmin, vmax - vmin)} to ${round(vmax, vmax - vmin)}${unit}` }),
     ]),
   );
-}
-
-/*
- * Validate the three {band, vmin, vmax} channel records. Invalid metadata omits
- * legend numbers without hiding the pre-styled layer.
- */
-function validChannels(channels) {
-  const usable =
-    Array.isArray(channels) &&
-    channels.length === 3 &&
-    channels.every(
-      (channel) =>
-        channel !== null &&
-        typeof channel === "object" &&
-        isNonEmptyString(channel.band) &&
-        isFiniteNumber(channel.vmin) &&
-        isFiniteNumber(channel.vmax) &&
-        channel.vmin < channel.vmax,
-    );
-  return usable ? channels : null;
-}
-
-/**
- * Use the style's published channel stretches. Without them, show band names and
- * the ratio (a difference in dB) but never infer ranges from sibling layers.
- *
- * @param {object} layer
- * @returns {{band: string, vmin?: number, vmax?: number}[]}
- */
-export function falseColourChannels(layer) {
-  const published = validChannels(layer.channels);
-  if (published !== null) return published;
-  return [{ band: "VV" }, { band: "VH" }, { band: layer.units === "dB" ? "VV − VH" : "VV / VH" }];
 }
 
 const isDate = (value) => isNonEmptyString(value) && /^\d{4}-\d{2}-\d{2}$/.test(value);
@@ -458,11 +439,15 @@ function initRecolor() {
     busy = true;
     try {
       const value = await valueAt(layer, lng, lat);
+      // The selection may have moved on while the tile was read.
+      if (selected() !== layer) return;
       const decimals = Math.max(0, Math.ceil(-Math.log10(step(layer.encoding))));
       el("readout-value").textContent =
         value === null || value === undefined
           ? "no data"
           : `${value.toFixed(decimals)}${unitSuffix(layer)}`;
+    } catch {
+      if (selected() === layer) el("readout-value").textContent = "–";
     } finally {
       busy = false;
       if (pending !== null) lookup();
@@ -570,7 +555,8 @@ export async function loadRasters() {
   setStatus(STATUS_KEY, "Loading layers…");
   let axes;
   try {
-    axes = indexLayers(await readStore());
+    const layers = await readStore();
+    axes = indexLayers([...layers, ...compositeLayers(layers)]);
   } catch (error) {
     noRasters(error.message);
     return null;

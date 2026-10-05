@@ -1,11 +1,12 @@
 /*
- * Read the value under the cursor out of a value-encoded archive. The tile at
- * the archive's maximum zoom is fetched through the PMTiles reader, decoded once
- * and kept, and the pixel is decoded with the style's custom encoding.
+ * Decode value-encoded archive tiles. Tiles are fetched through the PMTiles
+ * reader, decoded once and kept, for the cursor readout (at the archive's
+ * maximum zoom) and for false-color composites (js/composite.js). A pixel is
+ * decoded with the style's custom encoding.
  */
 
 const TILE_PX = 256;
-const MAX_TILES = 48;
+const MAX_TILES = 128;
 
 const archives = new Map();
 const tiles = new Map();
@@ -29,7 +30,13 @@ async function decodeTile(bytes) {
   return { size: canvas.width, data: context.getImageData(0, 0, canvas.width, canvas.height).data };
 }
 
-function tilePixels(url, z, x, y) {
+/**
+ * The decoded RGBA of one archive tile, shared between consumers.
+ *
+ * @returns {Promise<{size: number, data: Uint8ClampedArray}|null>}  null where
+ *   the archive has no tile; rejects, uncached, when the read or decode fails
+ */
+export function tilePixels(url, z, x, y) {
   const key = `${url}|${z}/${x}/${y}`;
   const cached = tiles.get(key);
   if (cached) {
@@ -41,7 +48,11 @@ function tilePixels(url, z, x, y) {
   const pending = archive(url)
     .getZxy(z, x, y)
     .then((response) => (response?.data ? decodeTile(response.data) : null))
-    .catch(() => null);
+    .catch((error) => {
+      // Not cached: panning back over this tile should retry it.
+      tiles.delete(key);
+      throw error;
+    });
   tiles.set(key, pending);
   if (tiles.size > MAX_TILES) tiles.delete(tiles.keys().next().value);
   return pending;
