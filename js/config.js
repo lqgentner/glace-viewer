@@ -40,9 +40,9 @@ const DEFAULTS = {
 
   /*
    * Opening view over Aletsch, overridden by the URL hash. minZoom limits how small
-   * the globe can appear.
+   * the globe can appear; maxZoom keeps a pitched camera clear of the terrain.
    */
-  initialView: { center: [8.03, 46.51], zoom: 10, minZoom: 1, maxZoom: 14 },
+  initialView: { center: [8.03, 46.51], zoom: 10, minZoom: 1, maxZoom: 13 },
 };
 
 /* Only viewing endpoints and flavor are query-configurable. */
