@@ -49,6 +49,15 @@ class CachedSource {
     return this.source.getKey();
   }
 
+  forget() {
+    const prefix = `${this.getKey()}|`;
+    for (const [key, entry] of ranges) {
+      if (!key.startsWith(prefix)) continue;
+      ranges.delete(key);
+      cachedBytes -= entry.size;
+    }
+  }
+
   getBytes(offset, length, signal, etag) {
     const key = `${this.getKey()}|${offset}|${length}`;
     let entry = ranges.get(key);
@@ -65,8 +74,10 @@ class CachedSource {
           cachedBytes += entry.size;
           evict();
         },
-        () => {
+        (error) => {
           if (ranges.get(key) === entry) ranges.delete(key);
+          // The archive changed: PMTiles rereads its header, so drop the old one.
+          if (error instanceof pmtiles.EtagMismatch) this.forget();
         },
       );
     }

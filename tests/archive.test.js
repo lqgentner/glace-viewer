@@ -13,9 +13,9 @@ let serve = async (_url, _offset, length) => ({ data: new Uint8Array(length).fil
 globalThis.pmtiles.FetchSource = class {
   constructor(url) { this.url = url; }
   getKey() { return this.url; }
-  getBytes(offset, length) {
+  getBytes(offset, length, _signal, etag) {
     fetches.push(`${this.url}|${offset}|${length}`);
-    return serve(this.url, offset, length);
+    return serve(this.url, offset, length, etag);
   }
 };
 const { archive, protocol } = await load("js/archive.js");
@@ -75,4 +75,20 @@ test("past the budget, the least recently used bytes go first", async () => {
   assert.equal(count(`https://x/e.pmtiles|0|${30 * MB}`), 1, "kept");
   await source.getBytes(1, 30 * MB);
   assert.equal(count(`https://x/e.pmtiles|1|${30 * MB}`), 2, "evicted, so read again");
+});
+
+test("a replaced archive is read afresh", async () => {
+  const { source } = archive("https://x/f.pmtiles");
+  await source.getBytes(0, 3); // the header, under ETag e1
+  await source.getBytes(5, 3);
+  const previous = serve;
+  serve = async (_url, _offset, length, etag) => {
+    if (etag && etag !== "e2") throw new pmtiles.EtagMismatch("replaced");
+    return { data: new Uint8Array(length).buffer, etag: "e2" };
+  };
+  await assert.rejects(() => source.getBytes(9, 3, undefined, "e1"), pmtiles.EtagMismatch);
+  assert.equal((await source.getBytes(0, 3)).etag, "e2", "PMTiles' retry gets the new header");
+  await source.getBytes(5, 3);
+  assert.equal(count("https://x/f.pmtiles|5|3"), 2, "and none of the old bytes");
+  serve = previous;
 });

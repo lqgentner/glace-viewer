@@ -347,6 +347,7 @@ export function installBrowser({
       constructor(source) { this.source = source; }
       async getZxy() { return undefined; }
     },
+    EtagMismatch: class extends Error {},
   };
   /* Enough of the image APIs for js/values.js and js/composite.js. A fake
    * archive's tile bytes are raw RGBA, so decoding hands them straight back,
