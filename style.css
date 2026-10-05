@@ -523,42 +523,24 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   color: var(--text);
   cursor: pointer;
 }
-/* Padding enlarges the hit target around the color bar. */
+/* Padding enlarges the hit target around the color bar; the border is the edit box. */
 .inventory .swatch {
-  position: relative;
-  width: 18px;
-  height: 17px;
+  width: 20px;
+  height: 19px;
   padding: 7px 2px;
   background-clip: content-box;
-  border: 0;
-  border-radius: 2px;
+  border: 1px solid transparent;
+  border-radius: 4px;
   flex: none;
   cursor: pointer;
 }
-/*
- * Show a pencil disc on hover or while the picker is open. Focus alone keeps the
- * plain ring so Escape restores the bar.
- */
-.inventory .swatch::before,
-.inventory .swatch::after {
-  content: "";
-  position: absolute;
-  opacity: 0;
+.inventory:hover .swatch { border-color: var(--border); }
+.inventory .swatch:hover,
+.inventory .swatch:focus-visible,
+.inventory .swatch.popover-open { border-color: var(--accent); outline: none; }
+@media (hover: none) {
+  .inventory .swatch { border-color: var(--border); }
 }
-.inventory .swatch::before {
-  inset: 0 1px 1px;
-  border-radius: 50%;
-  background-color: inherit;
-}
-.inventory .swatch::after {
-  inset: 2.5px 3.5px 3.5px;
-  background: #000;
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M2 22l1.5-6.5L14 5l5 5L8.5 20.5z M15.5 3.5l2-2a1.4 1.4 0 0 1 2 0l3 3a1.4 1.4 0 0 1 0 2l-2 2z'/%3E%3C/svg%3E") center / contain no-repeat;
-}
-.inventory:hover .swatch::before,
-.inventory:hover .swatch::after,
-.inventory .swatch.popover-open::before,
-.inventory .swatch.popover-open::after { opacity: 1; }
 
 .inventory .span {
   color: var(--muted);

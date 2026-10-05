@@ -413,7 +413,7 @@ test("the viewer", async (t) => {
     // In the body, like the credit popover, so it can reach past the panel.
     assert.equal(palette().parentElement, page.window.document.body);
     assert.equal(palette().children.length, 9);
-    assert.ok(swatch("sgi2023").classList.contains("popover-open"), "the disc stays while open");
+    assert.ok(swatch("sgi2023").classList.contains("popover-open"), "the box stays while open");
     assert.equal(page.window.document.activeElement, chip("#ff7f00"), "focus lands on the current color");
     swatch("sgi2023").click();
     assert.equal(palette(), null, "a second click closes it");
@@ -427,7 +427,7 @@ test("the viewer", async (t) => {
     page.window.document.dispatchEvent(escape);
     assert.equal(palette(), null, "Escape closes it");
     assert.equal(page.window.document.activeElement, swatch("sgi2023"), "and hands focus back");
-    assert.equal(swatch("sgi2023").classList.contains("popover-open"), false, "and drops the disc");
+    assert.equal(swatch("sgi2023").classList.contains("popover-open"), false, "and drops the box");
 
     swatch("sgi2023").click();
     palette().dispatchEvent(new page.window.Event("mouseleave"));
