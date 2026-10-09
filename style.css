@@ -207,8 +207,11 @@ html, body {
 #panel.collapsed #panel-body { display: none; }
 /* js/app.js opens the panel on a click anywhere on its collapsed header. */
 #panel.collapsed header { cursor: pointer; }
-/* The outlined wordmark has an ink-cropped viewBox, so height sets its cap height. */
-#panel h1 { margin: 0; grid-area: 1 / 1; }
+/*
+ * The outlined wordmark has an ink-cropped viewBox, so height sets its cap height.
+ * Raised 3px to center it on the 26px header buttons, which rise 6px.
+ */
+#panel h1 { margin: -3px 0 0; grid-area: 1 / 1; }
 #panel h1 img { display: block; height: 20px; width: auto; }
 #panel :is(#subtitle, #selection-summary) {
   grid-column: 1 / -1;
@@ -220,9 +223,9 @@ html, body {
 #panel:not(.collapsed) #selection-summary { display: none; }
 
 /*
- * The panel toggle and the dialogs' close buttons: boxed, in each surface's top
- * right corner 10px from its edges, so they read above the headings beside them.
- * The panel's padding is 16px, the dialogs' 10px by 16px.
+ * The panel's header buttons and the dialogs' close buttons: boxed, in each
+ * surface's top right corner 10px from its edges, so they read above the
+ * headings beside them. The panel's padding is 16px, the dialogs' 10px by 16px.
  */
 .header-actions {
   grid-area: 1 / 2;
@@ -231,6 +234,7 @@ html, body {
   margin: -6px -6px 0 0;
 }
 #panel-toggle,
+#about-open,
 :is(#scale-editor, #about) .close {
   flex: none;
   display: flex;
@@ -250,30 +254,25 @@ html, body {
     background-color 0.14s ease,
     border-color 0.14s ease;
 }
-#panel-toggle { margin: 0; }
-/* About opens information rather than controlling the panel, so it is plain text. */
+#panel-toggle,
+#about-open { margin: 0; }
+/* Outlined without fill, so the panel toggle beside it reads as the stronger. */
 #about-open {
-  height: 26px;
-  margin: 0;
-  padding: 0 6px;
+  width: auto;
+  padding: 0 9px;
   font: inherit;
   font-size: calc(12px * var(--text-scale));
-  color: var(--muted);
-  background: none;
-  border: 0;
-  cursor: pointer;
-  text-underline-offset: 3px;
-  transition: color 0.14s ease;
+  background-color: transparent;
 }
 :is(#panel-toggle, #scale-editor .close, #about .close) svg { width: 14px; height: 14px; }
 @media (hover: hover) {
   #panel-toggle:hover,
+  #about-open:hover,
   :is(#scale-editor, #about) .close:hover {
     color: #fff;
     background-color: rgba(255, 255, 255, 0.24);
     border-color: rgba(255, 255, 255, 0.3);
   }
-  #about-open:hover { color: var(--text); text-decoration: underline; }
 }
 
 .control { margin-bottom: 14px; }
@@ -310,9 +309,9 @@ html, body {
 }
 
 /*
- * Segments, checkboxes and the Edit button share off and hover colors;
- * segments and checkboxes also share on. Use a translucent wash
- * over the panel rather than another backdrop-filter.
+ * Segments, checkboxes and the Edit button share off and hover colors, though
+ * Edit drops the off fill; segments and checkboxes also share on. Use a
+ * translucent wash over the panel rather than another backdrop-filter.
  */
 .segmented button,
 input[type="checkbox"],
@@ -681,7 +680,9 @@ details[open] > summary .chevron { transform: rotate(180deg); }
   font: inherit;
   font-size: calc(11px * var(--text-scale));
   line-height: 1.5;
-  color: #fff;
+  color: var(--text);
+  /* Outlined without fill, as About is. */
+  background-color: transparent;
   border-radius: 4px;
 }
 #legend-edit::after {
