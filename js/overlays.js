@@ -24,19 +24,23 @@ class LazyOverlay {
   constructor(spec) {
     Object.assign(this, spec);
     this.loaded = false;
+    this.loading = false;
+    this.wanted = false;
   }
 
-  /* Wait for the style before creating or toggling layers. */
+  /*
+   * Wait for the style before creating or toggling layers. One load runs at a time
+   * and ends showing the latest choice.
+   */
   async setEnabled(on) {
+    this.wanted = on;
     await styleReady;
     if (this.loaded) {
-      const visibility = on ? "visible" : "none";
-      for (const id of this.layerIds) {
-        if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", visibility);
-      }
+      this.show();
       return;
     }
-    if (!on) return;
+    if (!on || this.loading) return;
+    this.loading = true;
     setStatus(this.sourceId, `Loading ${this.label}…`);
     /*
      * The grid reads its data here; PMTiles sources load through MapLibre. Both
@@ -47,9 +51,19 @@ class LazyOverlay {
     } catch (error) {
       this.fail(error);
       return;
+    } finally {
+      this.loading = false;
     }
     this.loaded = true;
+    this.show();
     this.watch();
+  }
+
+  show() {
+    const visibility = this.wanted ? "visible" : "none";
+    for (const id of this.layerIds) {
+      if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", visibility);
+    }
   }
 
   /* Remove failed state so the next activation can retry. */

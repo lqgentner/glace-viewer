@@ -299,21 +299,20 @@ function ensureLayer(layer) {
 }
 
 /*
- * Report the first failure per raster source. Ignore canceled requests, which are
- * normal during panning.
+ * Keep the first failure per raster source, shown while its layer is selected.
+ * Ignore canceled requests, which are normal during panning.
  */
-const reportedFailures = new Set();
+const failures = new Map();
 
 map.on("error", (event) => {
   const source = event.sourceId;
-  if (!source || !state.added.has(source) || reportedFailures.has(source)) return;
+  if (!source || !state.added.has(source) || failures.has(source)) return;
   if (event.error?.name === "AbortError") return;
-  reportedFailures.add(source);
-  setStatus(
-    STATUS_KEY,
+  failures.set(
+    source,
     `This layer could not be drawn — ${event.error?.message ?? "its tiles could not be read"}`,
-    "error",
   );
+  if (source === selected()?.id) setStatus(STATUS_KEY, failures.get(source), "error");
 });
 
 function selectionName() {
@@ -325,9 +324,12 @@ function selectionName() {
 /* Update controls immediately; map rendering waits for the parsed style. */
 function render() {
   const active = selected();
+  el("legend").hidden = !active;
   if (active) {
     updateLegend(active);
-    clearStatus(STATUS_KEY);
+    const failure = failures.get(active.id);
+    if (failure) setStatus(STATUS_KEY, failure, "error");
+    else clearStatus(STATUS_KEY);
   } else {
     el("layer-info").replaceChildren();
     setStatus(STATUS_KEY, `No ${selectionName()} for ${state.year}`, "info");
@@ -601,14 +603,15 @@ const drawBars = (counts) =>
 /*
  * Count the values in view. A new layer starts blank; a recount of the same
  * one, after the map moves, keeps the old bars until the new ones are ready.
+ * Either way the presets wait for the new counts.
  */
 async function showHistogram(layer) {
   reading?.abort();
   const controller = (reading = new AbortController());
+  viewed = null;
+  syncEditor(layer);
   if (shown !== layer) {
     shown = layer;
-    viewed = null;
-    syncEditor(layer);
     drawBars(null);
     note(layer, "Loading…");
   }

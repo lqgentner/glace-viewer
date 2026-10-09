@@ -232,8 +232,8 @@ the close button or Escape closes it. It holds one block per band from
 ratio channel has a fixed axis of 255 steps. Each histogram counts the band in
 the view at the zoom MapLibre draws, coarser past a tile budget sized to the
 viewport, again after each `moveend`; a recount keeps the old bars until it is
-ready. Bars span three codes and average the codes counted, because lossy WebP
-never produces about one code in seven. The open editor follows the selection
+ready, and the presets wait for it. Bars span three codes and average the codes
+counted, because lossy WebP never produces about one code in seven. The open editor follows the selection
 and closes when the selection has no layer. The axis spans codes 1-255, and the
 limits are handles on it: a press moves the nearer one. A touch moves it only
 once it travels across, or as a tap, so a vertical swipe scrolls the editor.
@@ -257,8 +257,9 @@ change and retain its citation and license. A wrong `source_layer` can produce
 an empty overlay without an error. Force a full rebuild after a tippecanoe
 upgrade; `--skip-existing` compares only source and index timestamps.
 
-Inventories load on first activation. `LazyOverlay` removes failed layers and
-sources, unticks the control, and permits retry. Preserve that recovery path.
+Inventories load on first activation. `LazyOverlay` runs one load at a time and
+ends it showing the latest tick. It removes failed layers and sources, unticks the
+control, and permits retry. Preserve that recovery path.
 Popup properties can be absent: tippecanoe drops nulls, including missing names.
 Respect `has_names` and the inventory's identifier fields.
 
@@ -291,9 +292,9 @@ Use the relevant suites when changing behavior:
 
 | Change | Tests |
 | --- | --- |
-| Settings, catalog joins, selection and legends | `config`, `store`, `layers`, `store-catalog`, `store-local`, `legend`, `viewer` |
+| Settings, catalog joins, selection and legends | `config`, `store`, `layers`, `store-catalog`, `store-local`, `legend`, `viewer`, `stale-state` |
 | False color, tile decoding and caching | `composite`, `encoded`, `archive`, `histogram` |
-| Overlay loading, retries, popups | `viewer`, `tile-grid`, `ui` |
+| Overlay loading, retries, popups | `viewer`, `tile-grid`, `ui`, `stale-state` |
 | Startup failures, viewport, camera, labels | `viewer-degraded`, `viewer-no-webgl`, `viewer-narrow`, `viewer-3d-restore`, `viewer-light-flavor` |
 | Globe calculations | `sky` |
 | Static assets, dependency pins, CSP, integrity, preloads | `page-assets` |
