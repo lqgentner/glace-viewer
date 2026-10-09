@@ -211,6 +211,16 @@ clearance for map controls and the scale bar. Initial opacity and hillshade
 strength in `index.html` must agree with their module defaults. Popovers live
 outside the scrolling panel.
 
+One layout serves mouse and touch. Popovers open on click only: a tap fires
+`mouseenter` before its click, so opening on hover made the click close them.
+Hover styles sit under `@media (hover: hover)`. The `(pointer: coarse)` block
+at the end of `style.css` holds the touch sizes, mostly as invisible `::after`
+tap areas that leave the layout alone. It also raises `--text-scale`, so write
+every font size as a multiple of it and text grows uniformly on touch screens.
+Below 640 px the status message sits above the scale bar, clear of the panel
+toggle. The expanded attribution may cover the scale bar until MapLibre
+collapses it on the first drag, which the OSMF attribution guidelines allow.
+
 The legend edits value-encoded layers in place: the color-map button opens a
 popover, the limits are inputs that render never overwrites while focused, and
 choices are kept per layer stem. Reset restores the default limits only. Limits outside the archive's codes 1-255 are

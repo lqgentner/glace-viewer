@@ -8,6 +8,8 @@
   --accent: #d7acce;
   /* Darker accent for readable text on white controls. */
   --accent-ink: #b8479f;
+  /* Every font size is a multiple of this, so touch screens can enlarge them all. */
+  --text-scale: 1;
 }
 
 * { box-sizing: border-box; }
@@ -17,7 +19,7 @@ html, body {
   color-scheme: dark;
   margin: 0;
   height: 100%;
-  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font: calc(14px * var(--text-scale))/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   color: var(--text);
   background: var(--bg);
 }
@@ -178,7 +180,7 @@ html, body {
 /* The outlined wordmark has an ink-cropped viewBox, so height sets its cap height. */
 #panel h1 { margin: 0; }
 #panel h1 img { display: block; height: 20px; width: auto; }
-#panel #subtitle { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
+#panel #subtitle { margin: 6px 0 0; font-size: calc(12px * var(--text-scale)); color: var(--muted); }
 
 #panel-toggle {
   flex: none;
@@ -203,7 +205,7 @@ html, body {
 .control-head > label {
   display: block;
   margin-bottom: 6px;
-  font-size: 11px;
+  font-size: calc(11px * var(--text-scale));
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--muted);
@@ -226,7 +228,7 @@ html, body {
   margin: 0;
   text-transform: none;
   letter-spacing: 0;
-  font-size: 13px;
+  font-size: calc(13px * var(--text-scale));
   color: var(--text);
 }
 
@@ -267,7 +269,7 @@ input[type="checkbox"]:checked {
   flex: 1;
   padding: 6px 4px;
   font: inherit;
-  font-size: 12px;
+  font-size: calc(12px * var(--text-scale));
   color: #fff;
   border-radius: 6px;
 }
@@ -322,7 +324,7 @@ details:not([open]) > summary .chevron { transform: rotate(180deg); }
  */
 #panel hr {
   height: 0;
-  margin: 16px 0 14px;
+  margin: 20px 0 18px;
   border: 0;
   border-top: 1px solid var(--border);
   border-top-color: color-mix(in srgb, var(--muted) 45%, transparent);
@@ -334,7 +336,7 @@ details:not([open]) > summary .chevron { transform: rotate(180deg); }
 
 /* MapLibre buttons default to image glyphs; the 3D/2D text needs explicit styling. */
 .maplibregl-ctrl-3d {
-  font: 600 11px/1 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font: 600 calc(11px * var(--text-scale))/1 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   letter-spacing: 0.04em;
   color: #333;
 }
@@ -342,7 +344,7 @@ details:not([open]) > summary .chevron { transform: rotate(180deg); }
 .ticks {
   display: flex;
   justify-content: space-between;
-  font-size: 10px;
+  font-size: calc(10px * var(--text-scale));
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
@@ -362,7 +364,7 @@ details:not([open]) > summary .chevron { transform: rotate(180deg); }
   display: flex;
   justify-content: space-between;
   margin-top: 3px;
-  font-size: 11px;
+  font-size: calc(11px * var(--text-scale));
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
@@ -373,7 +375,7 @@ details:not([open]) > summary .chevron { transform: rotate(180deg); }
   margin-left: auto;
   padding: 0 2px;
   font: inherit;
-  font-size: 13px;
+  font-size: calc(13px * var(--text-scale));
   line-height: 1;
   color: var(--muted);
   background: none;
@@ -396,7 +398,7 @@ details:not([open]) > summary .chevron { transform: rotate(180deg); }
   background: transparent;
   cursor: pointer;
 }
-#legend .control-head .edit-box { font-size: 11px; color: var(--text); }
+#legend .control-head .edit-box { font-size: calc(11px * var(--text-scale)); color: var(--text); }
 /* Size limits to their text; the size attribute is the fallback without field-sizing. */
 #legend input.edit-box {
   min-width: 0;
@@ -406,10 +408,6 @@ details:not([open]) > summary .chevron { transform: rotate(180deg); }
   font-variant-numeric: tabular-nums;
 }
 #vmax { text-align: right; }
-/* iOS zooms the page into a focused field under 16px. */
-@media (pointer: coarse) {
-  #legend input.edit-box { font-size: 16px; }
-}
 /* A changed limit takes the accent; one being typed reads white. */
 #legend input.edit-box.modified { color: var(--accent-ink); }
 #legend input.edit-box:focus { color: #fff; }
@@ -423,7 +421,7 @@ details:not([open]) > summary .chevron { transform: rotate(180deg); }
   width: 100%;
   padding: 1px 6px;
   font: inherit;
-  font-size: 12px;
+  font-size: calc(12px * var(--text-scale));
   color: var(--text);
   text-align: left;
   background: none;
@@ -438,7 +436,7 @@ details:not([open]) > summary .chevron { transform: rotate(180deg); }
   grid-template-columns: auto auto 1fr;
   gap: 2px 7px;
   align-items: center;
-  font-size: 11px;
+  font-size: calc(11px * var(--text-scale));
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
@@ -455,7 +453,7 @@ details:not([open]) > summary .chevron { transform: rotate(180deg); }
 /* Tabular dates prevent jitter when switching years. */
 #layer-info {
   margin: 10px 0 0;
-  font-size: 11px;
+  font-size: calc(11px * var(--text-scale));
   line-height: 1.5;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
@@ -471,7 +469,7 @@ details:not([open]) > summary .chevron { transform: rotate(180deg); }
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--panel);
-  font-size: 13px;
+  font-size: calc(13px * var(--text-scale));
   z-index: 3;
 }
 
@@ -484,7 +482,7 @@ details:not([open]) > summary .chevron { transform: rotate(180deg); }
   box-shadow: 0 8px 26px rgba(0, 0, 0, 0.55);
 }
 .maplibregl-popup-content {
-  font-size: 12px;
+  font-size: calc(12px * var(--text-scale));
   /* Leave room for the close button in the right inset. */
   padding: 9px 12px 10px;
 }
@@ -493,7 +491,7 @@ details:not([open]) > summary .chevron { transform: rotate(180deg); }
   top: 1px;
   right: 3px;
   color: var(--muted);
-  font-size: 15px;
+  font-size: calc(15px * var(--text-scale));
 }
 @media (hover: hover) {
   .maplibregl-popup-close-button:hover { color: var(--text); background: transparent; }
@@ -524,8 +522,6 @@ details:not([open]) > summary .chevron { transform: rotate(180deg); }
     transform: none;
     text-align: center;
   }
-  /* Wrap the expanded attribution beside the scale bar's 120px, not over it. */
-  .maplibregl-ctrl-attrib.maplibregl-compact-show { max-width: calc(100vw - 150px); }
 }
 
 /* Inventory controls. */
@@ -539,7 +535,7 @@ details:not([open]) > summary .chevron { transform: rotate(180deg); }
 .inventory input[type="checkbox"] { margin-top: 2px; }
 .inventory label {
   flex: 1;
-  font-size: 13px;
+  font-size: calc(13px * var(--text-scale));
   line-height: 1.3;
   color: var(--text);
   cursor: pointer;
@@ -614,7 +610,7 @@ details:not([open]) > summary .chevron { transform: rotate(180deg); }
 }
 .credit-popover {
   width: 320px;
-  font-size: 11px;
+  font-size: calc(11px * var(--text-scale));
   line-height: 1.5;
 }
 .credit-popover a { color: var(--accent); }
@@ -622,7 +618,7 @@ details:not([open]) > summary .chevron { transform: rotate(180deg); }
 .credit-popover strong {
   display: block;
   margin-bottom: 5px;
-  font-size: 11px;
+  font-size: calc(11px * var(--text-scale));
   font-weight: 400;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -688,17 +684,16 @@ details:not([open]) > summary .chevron { transform: rotate(180deg); }
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  margin-bottom: 8px;
-  padding: 0;
-  font: inherit;
-  font-size: 11px;
+  font-size: calc(11px * var(--text-scale));
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--muted);
-  background: none;
-  border: 0;
   cursor: pointer;
 }
+/* Space the header from its content only while open. Closed, it sits midway
+ * between the rules: 18px under the rule above, as the rule below keeps. */
+details[open] > :is(#inventories-toggle, #extras-toggle) { margin-bottom: 8px; }
+#panel details:not([open]) + hr { margin-top: 18px; }
 #inventories-toggle::-webkit-details-marker,
 #extras-toggle::-webkit-details-marker { display: none; }
 @media (hover: hover) {
@@ -718,7 +713,7 @@ details:not([open]) > summary .chevron { transform: rotate(180deg); }
 
 .maplibregl-popup-content .pop-head {
   margin-bottom: 4px;
-  font-size: 11px;
+  font-size: calc(11px * var(--text-scale));
   font-weight: 400;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -734,6 +729,8 @@ details:not([open]) > summary .chevron { transform: rotate(180deg); }
  * areas enlarge small buttons without moving the layout; the rest grow in place.
  */
 @media (pointer: coarse) {
+  :root { --text-scale: 1.15; }
+
   #panel-toggle,
   #range-reset,
   #cmap,
@@ -752,10 +749,12 @@ details:not([open]) > summary .chevron { transform: rotate(180deg); }
     position: absolute;
     inset: -11px;
   }
-  .credit::after { inset: -13px; }
+  .credit { width: 24px; height: 24px; }
+  .credit svg { width: 18px; height: 18px; }
+  .credit::after { inset: -10px; }
   .inventory .swatch::after { inset: -8px; }
   #cmap::after { inset: -12px -6px; }
-  /* Stop short of the first control below; the summary's margin is 8px. */
+  /* Stop short of the first control below the open summary's 8px margin. */
   #inventories-toggle::after,
   #extras-toggle::after { inset: -12px 0 -8px; }
 
@@ -773,9 +772,9 @@ details:not([open]) > summary .chevron { transform: rotate(180deg); }
   .cmap-popover .cmap-option { padding-block: 10px; }
   .palette-popover { grid-template-columns: repeat(3, 36px); }
   .palette-popover .chip { width: 36px; height: 36px; padding: 3px; }
-  .credit-popover { font-size: 13px; line-height: 1.7; }
+  .credit-popover { line-height: 1.7; }
 
   .maplibregl-ctrl-group button { width: 40px; height: 40px; }
-  .maplibregl-popup-close-button { padding: 4px 9px; font-size: 20px; }
+  .maplibregl-popup-close-button { padding: 4px 9px; }
   .maplibregl-popup-content .pop-head:first-child { padding-right: 28px; }
 }
