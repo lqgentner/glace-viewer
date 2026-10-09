@@ -7,7 +7,7 @@ import { GRID_INDEX_URL, INVENTORY_BASE, INVENTORY_INDEX_URL } from "./config.js
 import { addStacked, map, styleReady } from "./map.js";
 import { isNonEmptyString } from "./store.js";
 import { loadTileGrid } from "./tile-grid.js";
-import { attachPicker, clearStatus, collapsible, creditButton, el, h, setStatus } from "./ui.js";
+import { attachPicker, clearStatus, creditButton, el, h, setStatus } from "./ui.js";
 
 /* ---------- the shared lazy-source lifecycle ---------- */
 
@@ -225,8 +225,6 @@ export async function loadInventories() {
     );
   }
   el("inventories-section").hidden = index.length === 0;
-
-  collapsible("inventories-toggle", "inventories");
 }
 
 /* ---------- catalog tile grid ---------- */

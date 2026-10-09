@@ -49,7 +49,7 @@ test("the viewer", async (t) => {
     assert.equal(collapsed(), true, "and can still be collapsed by hand");
     assert.equal(el("panel").classList.contains("expanded"), false);
     assert.equal(el("panel-toggle").getAttribute("aria-expanded"), "false");
-    // `up` marks the collapsed state here as it does on the inventories toggle.
+    // `up` marks the collapsed state.
     assert.ok(el("panel-toggle").querySelector(".chevron").classList.contains("up"));
 
     el("panel-toggle").click();
@@ -162,8 +162,7 @@ test("the viewer", async (t) => {
   });
 
   await t.test("the additional layers start collapsed", async () => {
-    assert.equal(el("extras").hidden, true);
-    assert.equal(el("extras-toggle").getAttribute("aria-expanded"), "false");
+    assert.equal(el("extras-section").open, false);
     // The toggles moved inside it, and still work from there.
     assert.ok(el("extras").contains(el("hillshade-row")));
     assert.ok(el("extras").contains(el("grid")));
@@ -171,8 +170,7 @@ test("the viewer", async (t) => {
     assert.ok(el("extras").contains(el("basemap-style")));
 
     el("extras-toggle").click();
-    assert.equal(el("extras").hidden, false);
-    assert.equal(el("extras-toggle").getAttribute("aria-expanded"), "true");
+    assert.equal(el("extras-section").open, true);
   });
 
   await t.test("the dark flavor's labels are lifted through the flavor, not patched after", async () => {

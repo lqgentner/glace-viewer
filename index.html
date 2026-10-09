@@ -3,7 +3,14 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Hashes allow the two inline scripts below; page-assets.test.js checks them.
+         MapLibre runs its worker from a blob that imports from unpkg, which worker-src
+         governs, and stores may live on any HTTPS host. -->
+    <meta http-equiv="Content-Security-Policy"
+          content="default-src 'self'; script-src 'self' https://unpkg.com https://esm.sh 'sha256-hnvnq61naOLqPcnUawD5h8TgoJLfUcvBIdEzljK4Me4=' 'sha256-6h8qqahDQjUTtzvmhn+n6/MoNHltOJxupIIfNqSXRTI='; style-src 'self' https://unpkg.com; img-src 'self' data: blob:; connect-src 'self' https: data: blob:; worker-src 'self' blob: https://unpkg.com; object-src 'none'; base-uri 'self'; form-action 'none'" />
     <title>GLACE — Sentinel-1 composites, European Alps</title>
+    <meta name="description"
+          content="Explore annual Sentinel-1 coherence and backscatter composites of the European Alps, with glacier inventories, hillshade and 3D terrain." />
 
     <!-- Use relative asset paths for Pages project subpaths. -->
     <link rel="icon" href="assets/favicon.ico" sizes="16x16 32x32 48x48" />
@@ -11,8 +18,55 @@
     <link rel="manifest" href="assets/site.webmanifest" />
     <meta name="theme-color" content="#10141c" />
 
-    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@6.12.0/dist/maplibre-gl.css" />
+    <!-- Start the catalog read before the scripts load. Keep it equal to
+         site-config.js's tilesBase + config.js's mosaicCollection. -->
+    <link rel="preload" href="https://data.source.coop/giuz/glace-alps/mosaics/collection.json"
+          as="fetch" crossorigin />
+    <link rel="preconnect" href="https://api.protomaps.com" crossorigin />
+    <link rel="preconnect" href="https://protomaps.github.io" crossorigin />
+
+    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@6.12.0/dist/maplibre-gl.css"
+          integrity="sha384-pGcTesCDxgCFx0yvZdwOw9yHx4Gw6kQK19wigRk1RcuDoLTLdbPMEnK7w8e9MgjS"
+          crossorigin="anonymous" />
     <link rel="stylesheet" href="style.css" />
+
+    <!-- Parse the import map before any module fetch. MapLibre loads sibling chunks
+         and a worker; PMTiles needs the bare fflate mapping. Integrity covers every
+         CDN module, including those preloaded below. -->
+    <script type="importmap">
+      {
+        "imports": {
+          "maplibre-gl": "https://unpkg.com/maplibre-gl@6.12.0/dist/maplibre-gl.mjs",
+          "pmtiles": "https://unpkg.com/pmtiles@4.5.0/dist/esm/index.js",
+          "fflate": "https://unpkg.com/fflate@0.8.3/esm/browser.js",
+          "@protomaps/basemaps": "https://unpkg.com/@protomaps/basemaps@5.7.2/dist/esm/index.js"
+        },
+        "integrity": {
+          "https://unpkg.com/maplibre-gl@6.12.0/dist/maplibre-gl.mjs": "sha384-vBS3VmrCg3Nx8PUcTevNEjjj7+TCKU6VjJdezON8yplGOARpTkld7CN+keiqcPmj",
+          "https://unpkg.com/maplibre-gl@6.12.0/dist/maplibre-gl-shared.mjs": "sha384-OGp4zg2g805tukqDpmZzKOURd8MNCD2kvcC/OxRKuwSGKokyy00oiZ5ULT1Gl99V",
+          "https://unpkg.com/pmtiles@4.5.0/dist/esm/index.js": "sha384-Ohx3fvw/UYxrc8vmqvMaO2aAWouBFSe7w9VKOU/siixKmoPu14eYMCPNz+k8CPTW",
+          "https://unpkg.com/fflate@0.8.3/esm/browser.js": "sha384-qEYGUupjunWfiQrMjBBQ8XYX03MQwNxGZJuPkxRr/5vErQwQZwbqaBxk/pjvWAx6",
+          "https://unpkg.com/@protomaps/basemaps@5.7.2/dist/esm/index.js": "sha384-4gIgDkmrvXb4bDGA88krbayOq48DRB8Eljy1EP01Z/i9e8qIqDZOfbLaxHoBZ60g"
+        }
+      }
+    </script>
+
+    <!-- Fetch modules found only one or two imports deep in parallel with their
+         importers. page-assets.test.js requires every js/ module but app.js here. -->
+    <link rel="modulepreload" href="https://unpkg.com/maplibre-gl@6.12.0/dist/maplibre-gl-shared.mjs" />
+    <link rel="modulepreload" href="https://unpkg.com/fflate@0.8.3/esm/browser.js" />
+    <link rel="modulepreload" href="js/config.js" />
+    <link rel="modulepreload" href="js/map.js" />
+    <link rel="modulepreload" href="js/overlays.js" />
+    <link rel="modulepreload" href="js/rasters.js" />
+    <link rel="modulepreload" href="js/ui.js" />
+    <link rel="modulepreload" href="js/archive.js" />
+    <link rel="modulepreload" href="js/composite.js" />
+    <link rel="modulepreload" href="js/sky.js" />
+    <link rel="modulepreload" href="js/store.js" />
+    <link rel="modulepreload" href="js/tile-grid.js" />
+    <link rel="modulepreload" href="js/values.js" />
+    <link rel="modulepreload" href="js/colormaps.js" />
   </head>
   <body>
     <div id="map"></div>
@@ -95,32 +149,29 @@
 
           <hr />
 
-          <section class="control" id="inventories-section" hidden>
-
-            <button type="button" id="inventories-toggle" aria-expanded="false"
-                    aria-controls="inventories">
-              <span>Glacier inventories</span><span class="chevron up" aria-hidden="true"
+          <details class="control" id="inventories-section" hidden>
+            <summary id="inventories-toggle">
+              <span>Glacier inventories</span><span class="chevron" aria-hidden="true"
                     ><svg viewBox="0 0 12 12" width="12" height="12" fill="none"
                           stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
                           stroke-linejoin="round"><path d="M2.5 4.5 6 8 9.5 4.5" /></svg
                   ></span>
-            </button>
-            <div id="inventories" hidden></div>
-          </section>
+            </summary>
+            <div id="inventories"></div>
+          </details>
 
           <!-- Hide this separator with empty inventories. -->
           <hr id="inventories-rule" />
 
-          <section class="control" id="extras-section">
-
-            <button type="button" id="extras-toggle" aria-expanded="false" aria-controls="extras">
-              <span>Map options</span><span class="chevron up" aria-hidden="true"
+          <details class="control" id="extras-section">
+            <summary id="extras-toggle">
+              <span>Map options</span><span class="chevron" aria-hidden="true"
                     ><svg viewBox="0 0 12 12" width="12" height="12" fill="none"
                           stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
                           stroke-linejoin="round"><path d="M2.5 4.5 6 8 9.5 4.5" /></svg
                   ></span>
-            </button>
-            <div id="extras" hidden>
+            </summary>
+            <div id="extras">
               <section class="control">
                 <div id="basemap-style" class="segmented" role="radiogroup" aria-label="Basemap"></div>
               </section>
@@ -146,26 +197,12 @@
                 <label for="basemap">Basemap labels</label>
               </section>
             </div>
-          </section>
+          </details>
         </div>
       </aside>
     </div>
 
     <div id="status" hidden></div>
-
-    <!-- Parse the import map before loading modules. MapLibre loads sibling chunks
-         and a worker; PMTiles needs the bare fflate mapping. -->
-    <script type="importmap">
-      {
-        "imports": {
-          "maplibre-gl": "https://unpkg.com/maplibre-gl@6.12.0/dist/maplibre-gl.mjs",
-          "pmtiles": "https://unpkg.com/pmtiles@4.5.0/dist/esm/index.js",
-          "fflate": "https://unpkg.com/fflate@0.8.3/esm/browser.js",
-          "@protomaps/basemaps": "https://unpkg.com/@protomaps/basemaps@5.7.2/dist/esm/index.js"
-        }
-      }
-    </script>
-
     <!-- Expose library globals before app.js so tests can substitute fakes. -->
     <script type="module">
       import * as maplibregl from "maplibre-gl";
@@ -173,8 +210,9 @@
       import * as basemaps from "@protomaps/basemaps";
       Object.assign(globalThis, { maplibregl, pmtiles, basemaps });
     </script>
-    <!-- Load deployment overrides before application modules. -->
-    <script src="site-config.js"></script>
+    <!-- Load deployment overrides before application modules: deferred scripts and
+         modules run in document order. -->
+    <script defer src="site-config.js"></script>
     <script type="module" src="js/app.js"></script>
   </body>
 </html>

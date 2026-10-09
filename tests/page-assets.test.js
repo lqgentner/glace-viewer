@@ -1,12 +1,15 @@
 /*
- * Check that page assets exist, dependency pins agree, and deployment stages the
+ * Check that page assets exist, dependency pins agree, the CSP and integrity
+ * hashes cover the page, preloads stay complete, and deployment stages the
  * runtime files.
  */
 
 import assert from "node:assert/strict";
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
+import vm from "node:vm";
 
 import { JSDOM } from "jsdom";
 
@@ -62,4 +65,73 @@ test("the deploy stages every directory the page reads from", () => {
     const root = ref.split("/")[0];
     assert.match(stage, new RegExp(`\\b${root}\\b`), `deploy.yml never copies ${root}`);
   }
+});
+
+const page = () =>
+  new JSDOM(fs.readFileSync(path.join(REPO, "index.html"), "utf8")).window.document;
+
+/* An edited inline script no longer matches its hash, and the browser skips it. */
+test("the content security policy allows each inline script by hash", () => {
+  const document = page();
+  const policy = document
+    .querySelector('meta[http-equiv="Content-Security-Policy"]')
+    .getAttribute("content");
+  const scriptSrc = policy.split(";").find((part) => part.trim().startsWith("script-src"));
+  const inline = [...document.querySelectorAll("script:not([src])")];
+  assert.equal(inline.length, 2, "the import map and the globals module");
+  for (const script of inline) {
+    const hash = crypto.createHash("sha256").update(script.textContent).digest("base64");
+    assert.ok(scriptSrc.includes(`'sha256-${hash}'`), `CSP lacks the hash of:\n${script.textContent}`);
+  }
+});
+
+test("every CDN file the page loads carries an integrity hash", () => {
+  const document = page();
+  const map = JSON.parse(document.querySelector('script[type="importmap"]').textContent);
+  const cdn = [
+    ...Object.values(map.imports),
+    ...[...document.querySelectorAll('link[rel="modulepreload"]')]
+      .map((link) => link.getAttribute("href"))
+      .filter((href) => /^https:/.test(href)),
+  ];
+  for (const url of cdn) {
+    assert.match(map.integrity[url] ?? "", /^sha384-/, `the import map has no integrity for ${url}`);
+  }
+  for (const link of document.querySelectorAll('link[rel="stylesheet"][href^="https:"]')) {
+    assert.match(link.getAttribute("integrity") ?? "", /^sha384-/, link.getAttribute("href"));
+    assert.equal(link.getAttribute("crossorigin"), "anonymous");
+  }
+});
+
+/* app.js is fetched as a script; the modules below it would otherwise wait for
+ * their importers, one level at a time. */
+test("every module app.js imports is preloaded", () => {
+  const preloaded = new Set(
+    [...page().querySelectorAll('link[rel="modulepreload"]')].map((link) => link.getAttribute("href")),
+  );
+  const modules = fs
+    .readdirSync(path.join(REPO, "js"))
+    .filter((name) => name.endsWith(".js") && name !== "app.js")
+    .map((name) => `js/${name}`);
+  for (const module of modules) assert.ok(preloaded.has(module), `index.html does not preload ${module}`);
+});
+
+test("the preloaded collection is the one config.js reads by default", () => {
+  const site = { window: {} };
+  vm.runInNewContext(fs.readFileSync(path.join(REPO, "site-config.js"), "utf8"), site);
+  const config = fs.readFileSync(path.join(REPO, "js", "config.js"), "utf8");
+  const collection = /mosaicCollection: "([^"]+)"/.exec(config)[1];
+  const preload = page().querySelector('link[rel="preload"][as="fetch"]');
+
+  assert.equal(preload.getAttribute("href"), `${site.window.GLACE_CONFIG.tilesBase}/${collection}`);
+  // fetch() reads without credentials across origins; a preload must match to be used.
+  assert.equal(preload.getAttribute("crossorigin"), "");
+});
+
+test("the deploy stages the service worker app.js registers", () => {
+  const app = fs.readFileSync(path.join(REPO, "js", "app.js"), "utf8");
+  assert.match(app, /register\("sw\.js"\)/);
+  assert.ok(fs.existsSync(path.join(REPO, "sw.js")));
+  const workflow = fs.readFileSync(path.join(REPO, ".github", "workflows", "deploy.yml"), "utf8");
+  assert.match(workflow, /cp [^\n]*\bsw\.js\b[^\n]* _site\//);
 });

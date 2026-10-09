@@ -194,7 +194,9 @@ html, body {
   border: 0;
   cursor: pointer;
 }
-#panel-toggle:hover { color: var(--text); }
+@media (hover: hover) {
+  #panel-toggle:hover { color: var(--text); }
+}
 
 .control { margin-bottom: 14px; }
 .control > label,
@@ -242,11 +244,17 @@ input[type="checkbox"] {
     background-color 0.14s ease,
     border-color 0.14s ease;
 }
-/* Exclude selected controls: hover specificity would override their white fill. */
-.segmented button:hover:not(:disabled):not([aria-checked="true"]),
-input[type="checkbox"]:hover:not(:checked) {
-  background-color: rgba(255, 255, 255, 0.24);
-  border-color: rgba(255, 255, 255, 0.3);
+/*
+ * Exclude selected controls: hover specificity would override their white fill.
+ * Hover rules here and below apply only to pointers that hover, so a tap leaves
+ * no stuck highlight.
+ */
+@media (hover: hover) {
+  .segmented button:hover:not(:disabled):not([aria-checked="true"]),
+  input[type="checkbox"]:hover:not(:checked) {
+    background-color: rgba(255, 255, 255, 0.24);
+    border-color: rgba(255, 255, 255, 0.3);
+  }
 }
 .segmented button[aria-checked="true"],
 input[type="checkbox"]:checked {
@@ -303,9 +311,10 @@ input[type="checkbox"]:focus-visible {
 /* Remove the native margin so the full-width slider fits its column. */
 input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
 
-/* Shared collapse chevron; up marks the collapsed state. */
+/* Shared collapse chevron; up, or a closed <details>, marks the collapsed state. */
 .chevron { display: flex; transition: transform 0.15s ease; }
-.chevron.up { transform: rotate(180deg); }
+.chevron.up,
+details:not([open]) > summary .chevron { transform: rotate(180deg); }
 
 /*
  * Use a translucent separator over bright or dark rasters. The first declaration is
@@ -371,7 +380,9 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   border: 0;
   cursor: pointer;
 }
-#range-reset:hover { color: #fff; }
+@media (hover: hover) {
+  #range-reset:hover { color: #fff; }
+}
 #legend-labels .limit { display: inline-flex; align-items: baseline; }
 /* Clear of the box, so the unit sits the same distance from every value. */
 #legend-labels .unit { margin-left: 4px; }
@@ -395,6 +406,10 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   font-variant-numeric: tabular-nums;
 }
 #vmax { text-align: right; }
+/* iOS zooms the page into a focused field under 16px. */
+@media (pointer: coarse) {
+  #legend input.edit-box { font-size: 16px; }
+}
 /* A changed limit takes the accent; one being typed reads white. */
 #legend input.edit-box.modified { color: var(--accent-ink); }
 #legend input.edit-box:focus { color: #fff; }
@@ -480,24 +495,37 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   color: var(--muted);
   font-size: 15px;
 }
-.maplibregl-popup-close-button:hover { color: var(--text); background: transparent; }
+@media (hover: hover) {
+  .maplibregl-popup-close-button:hover { color: var(--text); background: transparent; }
+}
 /* Include the map ID to override MapLibre's per-anchor tip colors. */
 #map .maplibregl-popup-tip { border-width: 6px; }
 #map [class*="maplibregl-popup-anchor-top"] .maplibregl-popup-tip { border-bottom-color: var(--border); }
 #map [class*="maplibregl-popup-anchor-bottom"] .maplibregl-popup-tip { border-top-color: var(--border); }
 #map .maplibregl-popup-anchor-left .maplibregl-popup-tip { border-right-color: var(--border); }
 #map .maplibregl-popup-anchor-right .maplibregl-popup-tip { border-left-color: var(--border); }
-.maplibregl-ctrl-attrib { font-size: 10px; }
 
 @media (max-width: 640px) {
   #panel-shell {
-    /* Leave room for the map controls and their margin. */
-    right: 52px;
+    /* Leave room for the map controls, at their touch size, and their margin. */
+    right: 62px;
     width: auto;
     max-height: 46%;
   }
   /* Collapse before scripts run; expanded overrides this default. */
   #panel:not(.expanded) #panel-body { display: none; }
+
+  /* Above the scale bar and attribution, clear of the panel toggle. */
+  #status {
+    top: auto;
+    bottom: 64px;
+    left: 12px;
+    right: 12px;
+    transform: none;
+    text-align: center;
+  }
+  /* Wrap the expanded attribution beside the scale bar's 120px, not over it. */
+  .maplibregl-ctrl-attrib.maplibregl-compact-show { max-width: calc(100vw - 150px); }
 }
 
 /* Inventory controls. */
@@ -538,8 +566,10 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   border-radius: 4px;
   transition: border-color 0.14s ease;
 }
-.edit-group:hover .edit-box { border-color: rgba(255, 255, 255, 0.3); }
-.edit-group .edit-box:hover,
+@media (hover: hover) {
+  .edit-group:hover .edit-box { border-color: rgba(255, 255, 255, 0.3); }
+  .edit-group .edit-box:hover { border-color: #fff; }
+}
 .edit-group .edit-box.popover-open,
 .edit-group input.edit-box:focus { border-color: #fff; outline: none; }
 @media (hover: none) {
@@ -566,7 +596,9 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   border: 0;
   cursor: pointer;
 }
-.credit:hover { color: var(--accent); }
+@media (hover: hover) {
+  .credit:hover { color: var(--accent); }
+}
 .inventory .credit { margin-top: 2px; }
 
 /* Position outside the scrolling panel; see ui.js. */
@@ -623,7 +655,9 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   cursor: pointer;
   transition: border-color 0.14s ease;
 }
-.choice:hover { border-color: rgba(255, 255, 255, 0.3); }
+@media (hover: hover) {
+  .choice:hover { border-color: rgba(255, 255, 255, 0.3); }
+}
 .choice[aria-pressed="true"] { border-color: #fff; }
 
 .palette-popover {
@@ -646,9 +680,11 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   color: var(--text);
 }
 
+/* Section summaries: the chevron replaces the disclosure marker. */
 #inventories-toggle,
 #extras-toggle {
   display: flex;
+  list-style: none;
   align-items: center;
   justify-content: space-between;
   width: 100%;
@@ -663,8 +699,12 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   border: 0;
   cursor: pointer;
 }
-#inventories-toggle:hover,
-#extras-toggle:hover { color: var(--text); }
+#inventories-toggle::-webkit-details-marker,
+#extras-toggle::-webkit-details-marker { display: none; }
+@media (hover: hover) {
+  #inventories-toggle:hover,
+  #extras-toggle:hover { color: var(--text); }
+}
 
 #extras .control:last-child { margin-bottom: 0; }
 #extras-section { margin-bottom: 0; }
@@ -689,3 +729,53 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
 /* Reserve close-button space on the first heading only. */
 .maplibregl-popup-content .pop-head:first-child { padding-right: 16px; }
 
+/*
+ * Touch: larger targets for a fingertip, about 40px or more. Invisible ::after
+ * areas enlarge small buttons without moving the layout; the rest grow in place.
+ */
+@media (pointer: coarse) {
+  #panel-toggle,
+  #range-reset,
+  #cmap,
+  .credit,
+  .inventory .swatch,
+  #inventories-toggle,
+  #extras-toggle { position: relative; }
+  #panel-toggle::after,
+  #range-reset::after,
+  #cmap::after,
+  .credit::after,
+  .inventory .swatch::after,
+  #inventories-toggle::after,
+  #extras-toggle::after {
+    content: "";
+    position: absolute;
+    inset: -11px;
+  }
+  .credit::after { inset: -13px; }
+  .inventory .swatch::after { inset: -8px; }
+  #cmap::after { inset: -12px -6px; }
+  /* Stop short of the first control below; the summary's margin is 8px. */
+  #inventories-toggle::after,
+  #extras-toggle::after { inset: -12px 0 -8px; }
+
+  .segmented button { padding-block: 10px; }
+
+  input[type="checkbox"] { width: 20px; height: 20px; }
+  input[type="checkbox"]:checked { background-size: 16px; }
+  .inventory input[type="checkbox"] { margin-top: 0; }
+  /* Rows tile without overlapping: 19px label + 14px row margin. */
+  .control.checkbox > label { padding-block: 7px; margin-block: -7px; }
+
+  /* A taller input is a taller grip; the negative margin keeps the spacing. */
+  input[type="range"] { height: 32px; margin-block: -8px; }
+
+  .cmap-popover .cmap-option { padding-block: 10px; }
+  .palette-popover { grid-template-columns: repeat(3, 36px); }
+  .palette-popover .chip { width: 36px; height: 36px; padding: 3px; }
+  .credit-popover { font-size: 13px; line-height: 1.7; }
+
+  .maplibregl-ctrl-group button { width: 40px; height: 40px; }
+  .maplibregl-popup-close-button { padding: 4px 9px; font-size: 20px; }
+  .maplibregl-popup-content .pop-head:first-child { padding-right: 28px; }
+}

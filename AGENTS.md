@@ -25,8 +25,24 @@ For focused checks, use `pixi run --locked test-py` or
 installation. Browser dependencies are pinned CDN imports in `index.html` and
 `js/config.js`. Keep MapLibre's CSS and JavaScript pins aligned.
 
+`index.html` carries a Content-Security-Policy and Subresource Integrity, and
+`page-assets.test.js` checks both offline. When changing a pin, update the
+import map's `integrity` entry, or the stylesheet's `integrity` attribute, with
+`curl -s URL | openssl dgst -sha384 -binary | openssl base64 -A`. The worker and
+MapLibre's sibling chunk follow the main module's version. When editing either
+inline script, replace its `sha256-` hash in the policy; the test prints the
+failing script. hyparquet from esm.sh has no hash because esm.sh builds per
+browser. A new script or data host needs a CSP entry. Module workers' imports
+fall under `worker-src`, not `script-src`.
+
+The head preloads the default `mosaics/collection.json` and every module that
+`app.js` reaches. Keep the preload equal to `site-config.js`'s `tilesBase`, and
+add a new `js/` module to the `modulepreload` list; the tests enforce both.
+
 Use the supplied server, which implements byte ranges and disables caching for
-page code and JSON. Open `localhost`, not `127.0.0.1`, for the configured
+page code and JSON. `sw.js` serves JSON stale-while-revalidate on the deployed
+site, so a catalog change shows on the next visit. It is not registered on
+`localhost` or `127.0.0.1`. To discard every client's cache, rename its `CACHE`. Open `localhost`, not `127.0.0.1`, for the configured
 Protomaps API's local-development access. To inspect a local store:
 
 ```sh
@@ -55,6 +71,7 @@ A gitignored `tiles` symlink to the catalog root also works. The root is above
 | `js/tile-grid.js` | GeoParquet index to deduplicated tile footprints |
 | `js/ui.js` | DOM helpers, status messages, segmented controls, popovers, pickers |
 | `js/sky.js` | Globe silhouette measurements for CSS |
+| `sw.js` | Service worker: stale-while-revalidate for JSON reads |
 | `scripts/serve.py` | Development HTTP server and local catalog mount |
 | `scripts/build-tiles.py` | Inventory GeoJSON to vector PMTiles |
 | `scripts/colormaps.py` | Writes `js/colormaps.js` (`uv run`) |
@@ -245,7 +262,7 @@ Use the relevant suites when changing behavior:
 | Overlay loading, retries, popups | `viewer`, `tile-grid`, `ui` |
 | Startup failures, viewport, camera, labels | `viewer-degraded`, `viewer-no-webgl`, `viewer-narrow`, `viewer-3d-restore`, `viewer-light-flavor` |
 | Globe calculations | `sky` |
-| Static assets and dependency pins | `page-assets` |
+| Static assets, dependency pins, CSP, integrity, preloads | `page-assets` |
 | Server or inventory build | `test_serve.py`, `test_build_tiles.py` |
 
 JavaScript names above refer to `tests/<name>.test.js`. Server traversal tests

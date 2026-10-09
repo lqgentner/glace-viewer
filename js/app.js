@@ -13,7 +13,7 @@ import {
 } from "./map.js";
 import { grid, loadInventories } from "./overlays.js";
 import { loadRasters } from "./rasters.js";
-import { buildSegmented, collapsible, creditButton, el } from "./ui.js";
+import { buildSegmented, creditButton, el } from "./ui.js";
 
 /*
  * Match the CSS breakpoint. Crossing it resets the panel to the default for the new
@@ -30,7 +30,7 @@ function setPanelOpen(open) {
   const action = open ? "Hide the controls" : "Show the controls";
   toggle.title = action;
   toggle.setAttribute("aria-label", action);
-  // `up` marks the collapsed state, as it does on the inventories toggle.
+  // `up` marks the collapsed state.
   toggle.querySelector(".chevron").classList.toggle("up", !open);
 }
 
@@ -66,11 +66,24 @@ function initControls() {
 
   el("basemap").addEventListener("change", (event) => toggleBasemapLabels(event.target.checked));
   el("grid").addEventListener("change", (event) => grid.setEnabled(event.target.checked));
-  collapsible("extras-toggle", "extras");
+}
+
+/*
+ * Repeat visits read JSON from sw.js's cache while it revalidates. Skip localhost,
+ * where the development server keeps JSON fresh.
+ */
+function registerServiceWorker() {
+  if (!("serviceWorker" in navigator) || ["localhost", "127.0.0.1"].includes(location.hostname)) {
+    return;
+  }
+  navigator.serviceWorker
+    .register("sw.js")
+    .catch((error) => console.warn("service worker:", error.message));
 }
 
 async function boot() {
   initControls();
+  registerServiceWorker();
   // Load the independent inventory list immediately to avoid panel layout shifts.
   loadInventories();
 

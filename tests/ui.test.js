@@ -71,7 +71,7 @@ async function popoverFor(credit) {
   const { page, ui } = await loadUi();
   const button = ui.creditButton("Fallback title", credit);
   page.window.document.body.append(button);
-  button.dispatchEvent(new page.window.Event("mouseenter"));
+  button.click();
   return page.window.document.querySelector(".credit-popover");
 }
 
@@ -119,22 +119,41 @@ test("credits: every external link opens safely", async () => {
   assert.equal(link.rel, "noopener noreferrer");
 });
 
-test("popovers: Escape closes a credit without reopening it", async () => {
+/* A tap fires mouseenter and focus before its click; the click must not close
+ * what they opened. */
+test("popovers: a credit opens on a tap's click, not on hover or focus", async () => {
   const { page, ui } = await loadUi();
-  const { document, Event, KeyboardEvent } = page.window;
+  const { document, Event } = page.window;
+  const button = ui.creditButton("T", { title: "T" });
+  document.body.append(button);
+  const box = () => document.querySelector(".credit-popover");
+
+  button.dispatchEvent(new Event("mouseenter"));
+  button.focus();
+  assert.equal(box(), null, "hover and focus leave it closed");
+  button.click();
+  assert.ok(box(), "the click opens it");
+  button.click();
+  assert.equal(box(), null, "a second click closes it");
+});
+
+test("popovers: Escape closes a credit, refocusing the button only from inside", async () => {
+  const { page, ui } = await loadUi();
+  const { document, KeyboardEvent } = page.window;
   const button = ui.creditButton("T", { title: "T", links: [{ label: "D", url: "https://example.org" }] });
   document.body.append(button);
   const escape = () => document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
   const box = () => document.querySelector(".credit-popover");
 
-  // Opened by hover, with focus elsewhere: focus is left alone.
-  button.dispatchEvent(new Event("mouseenter"));
+  // Focus elsewhere is left alone.
+  button.click();
+  document.activeElement.blur();
   escape();
   assert.equal(box(), null);
   assert.notEqual(document.activeElement, button);
 
-  // Focus inside the box goes back to the mark, whose focus handler must not reopen it.
-  button.dispatchEvent(new Event("mouseenter"));
+  // Focus inside the box goes back to the button.
+  button.click();
   box().querySelector("a").focus();
   escape();
   assert.equal(box(), null);

@@ -91,21 +91,6 @@ export function buildSegmented(node, entries, onSelect) {
   );
 }
 
-/* ---------- collapsible sections ---------- */
-
-/* Initial state lives in markup: aria-expanded, hidden, and the chevron's up class. */
-export function collapsible(toggleId, bodyId) {
-  const toggle = el(toggleId);
-  const body = el(bodyId);
-  toggle.addEventListener("click", () => {
-    const open = toggle.getAttribute("aria-expanded") === "true";
-    toggle.setAttribute("aria-expanded", String(!open));
-    // `up` marks the collapsed state, here and on the panel's own toggle.
-    toggle.querySelector(".chevron").classList.toggle("up", open);
-    body.hidden = open;
-  });
-}
-
 /* ---------- popovers ---------- */
 
 /*
@@ -115,74 +100,43 @@ export function collapsible(toggleId, bodyId) {
 
 const POPOVER_GAP_PX = 10;
 const POPOVER_MARGIN_PX = 8;
-const POPOVER_HIDE_DELAY_MS = 180;
 
 let popover = null;
 let popoverAnchor = null;
-let popoverTimer = null;
-// Set while focus is handed back to a button, so its focus handler does not reopen the box.
-let refocusing = false;
 
 /**
- * Open `build()` in a popover over `button` on click, and on hover and focus
- * unless `hover` is false. An `autofocus` element inside takes the focus.
+ * Open `build()` in a popover over `button` on click; a second click closes it.
+ * Hover does not open it, so a tap behaves as a click does. An `autofocus`
+ * element inside takes the focus.
  *
  * @param {object} [options]
  * @param {string} [options.className]  Styles the box.
  * @param {number} [options.caretAt]    Where along the box the caret sits, 0-1.
- * @param {boolean} [options.hover]     Whether hover and focus open it too.
  */
 export function attachPopover(button, build, options = {}) {
-  const { className = "", caretAt = 0.5, hover = true } = options;
-  const show = () => showPopover(button, build, className, caretAt, hover);
-  // Support pointer hover, keyboard focus, and touch clicks.
-  if (hover) {
-    button.addEventListener("mouseenter", show);
-    button.addEventListener("focus", () => refocusing || show());
-    button.addEventListener("mouseleave", scheduleHidePopover);
-    button.addEventListener("blur", scheduleHidePopover);
-  }
+  const { className = "", caretAt = 0.5 } = options;
   button.addEventListener("click", (event) => {
     event.preventDefault();
     if (popoverAnchor === button) hidePopover();
-    else show();
+    else showPopover(button, build, className, caretAt);
   });
 }
 
 /* Optionally return focus from the closing popover to its trigger. */
 export function hidePopover({ refocus = false } = {}) {
-  clearTimeout(popoverTimer);
   const anchor = popoverAnchor;
   const focusInside = popover?.contains(document.activeElement);
   anchor?.classList.remove("popover-open");
   popover?.remove();
   popover = null;
   popoverAnchor = null;
-  if (refocus && focusInside) {
-    refocusing = true;
-    anchor.focus();
-    refocusing = false;
-  }
+  if (refocus && focusInside) anchor.focus();
 }
 
-/* Allow pointer travel from the trigger and keep the box open while hovered. */
-function scheduleHidePopover() {
-  clearTimeout(popoverTimer);
-  popoverTimer = setTimeout(() => {
-    if (!popover?.matches(":hover")) hidePopover();
-  }, POPOVER_HIDE_DELAY_MS);
-}
-
-function showPopover(anchor, build, className, caretAt, hover) {
-  clearTimeout(popoverTimer);
-  if (popoverAnchor === anchor) return;
+function showPopover(anchor, build, className, caretAt) {
   hidePopover();
 
   const box = h("div", { class: `popover ${className}` }, build());
-  if (hover) {
-    box.addEventListener("mouseenter", () => clearTimeout(popoverTimer));
-    box.addEventListener("mouseleave", scheduleHidePopover);
-  }
   document.body.append(box);
 
   // Measured after insertion: the height depends on how far the content wraps.
@@ -223,7 +177,7 @@ document.addEventListener("keydown", (event) => {
 /* ---------- pickers ---------- */
 
 /**
- * A click-only popover of choices, shared by the color-map and outline-color
+ * A popover of choices, shared by the color-map and outline-color
  * pickers, styled by the .choice rules. The current choice is pressed and takes
  * the focus; picking one closes the popover and returns focus to the button
  * before `onPick` runs.
@@ -253,7 +207,7 @@ export function attachPicker(button, choices, onPick, { className = "", caretAt 
         ...(choice.content ?? []),
       ),
     );
-  attachPopover(button, build, { className, caretAt, hover: false });
+  attachPopover(button, build, { className, caretAt });
 }
 
 /* ---------- attribution popover ---------- */
