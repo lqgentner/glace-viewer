@@ -3,9 +3,10 @@
  * layers and source so the control can retry.
  */
 
-import { GRID_INDEX_URL, INVENTORY_BASE, INVENTORY_INDEX_URL } from "./config.js";
+import { INVENTORY_BASE, INVENTORY_INDEX_URL } from "./config.js";
 import { addStacked, map, styleReady } from "./map.js";
 import { isNonEmptyString } from "./store.js";
+import { valuesAt } from "./rasters.js";
 import { loadTileGrid } from "./tile-grid.js";
 import { attachPicker, clearStatus, creditButton, el, h, setStatus } from "./ui.js";
 
@@ -18,7 +19,7 @@ class LazyOverlay {
    * @param {string[]} spec.layerIds  Layers to add, remove and toggle together.
    * @param {string} spec.label       Shown while the archive is loading.
    * @param {() => void} spec.add     Adds the source and the layers.
-   * @param {(error?: Error) => string} spec.failure  Message for a failed load.
+   * @param {string} spec.failure     Message for a failed load; the error goes to the console.
    * @param {() => HTMLInputElement} spec.checkbox    The box to untick on failure.
    */
   constructor(spec) {
@@ -68,10 +69,11 @@ class LazyOverlay {
 
   /* Remove failed state so the next activation can retry. */
   fail(error) {
+    console.warn(`${this.sourceId}:`, error?.message ?? "load failed");
     this.remove();
     const box = this.checkbox();
     if (box) box.checked = false;
-    setStatus(this.sourceId, this.failure(error), "error");
+    setStatus(this.sourceId, this.failure, "error");
   }
 
   remove() {
@@ -132,7 +134,7 @@ function inventoryOverlay(entry) {
     layerIds: [`${lineId}-casing`, lineId],
     label: entry.title,
     checkbox: () => el(`inv-${entry.id}`),
-    failure: (error) => `${entry.title} unavailable (${error?.message ?? "load failed"})`,
+    failure: `Error loading ${entry.title}. Tick it again to retry.`,
     add() {
       map.addSource(this.sourceId, {
         type: "vector",
@@ -166,11 +168,18 @@ function inventoryOverlay(entry) {
   });
 }
 
-/* ColorBrewer Set1: the index's defaults are its first five. */
-const OUTLINE_COLORS = [
-  "#e41a1c", "#377eb8", "#4daf4a", "#984ea3", "#ff7f00", "#ffff33", "#a65628", "#f781bf",
-  "#999999",
-];
+/* ColorBrewer Set1, named for screen readers: the index's defaults are its first five. */
+const OUTLINE_COLORS = {
+  "#e41a1c": "Red",
+  "#377eb8": "Blue",
+  "#4daf4a": "Green",
+  "#984ea3": "Purple",
+  "#ff7f00": "Orange",
+  "#ffff33": "Yellow",
+  "#a65628": "Brown",
+  "#f781bf": "Pink",
+  "#999999": "Gray",
+};
 
 /* Update loaded outlines immediately; unloaded layers read entry.color on creation. */
 function colorPicker(entry) {
@@ -184,10 +193,10 @@ function colorPicker(entry) {
   attachPicker(
     swatch,
     () =>
-      OUTLINE_COLORS.map((color) => ({
+      Object.entries(OUTLINE_COLORS).map(([color, name]) => ({
         value: color,
         current: color === entry.color,
-        label: color,
+        label: name,
         class: "chip",
         style: { backgroundColor: color },
       })),
@@ -250,8 +259,7 @@ export const grid = new LazyOverlay({
   layerIds: [GRID_LAYER, "grid-line"],
   label: "tile grid",
   checkbox: () => el("grid"),
-  failure: (error) =>
-    `Tile grid unavailable — ${GRID_INDEX_URL}${error?.message ? ` (${error.message})` : ""}`,
+  failure: "Error loading the tile grid. Tick it again to retry.",
   async add() {
     /* The decoded footprints are small enough to supply as one GeoJSON source. */
     map.addSource(this.sourceId, { type: "geojson", data: await loadTileGrid() });
@@ -337,11 +345,10 @@ function gridRow(feature) {
   ]);
 }
 
-map.on("click", (event) => {
+/* The overlays' sections at a point, inventories first and the grid after. */
+function featureSections({ x, y }) {
   const layers = clickableLayers();
-  if (!layers.length) return;
-
-  const { x, y } = event.point;
+  if (!layers.length) return [];
   const hits = map.queryRenderedFeatures(
     [
       [x - CLICK_RADIUS_PX, y - CLICK_RADIUS_PX],
@@ -349,9 +356,8 @@ map.on("click", (event) => {
     ],
     { layers },
   );
-  if (!hits.length) return;
 
-  // Deduplicate hits per layer and place grid context after inventory sections.
+  // Deduplicate hits per layer.
   const seen = new Set();
   const sections = [];
   let gridSection = null;
@@ -362,11 +368,34 @@ map.on("click", (event) => {
     else sections.push(inventoryRow(hit));
   }
   if (gridSection) sections.push(gridSection);
+  return sections;
+}
+
+/* The latest inspection, so a slow read cannot open a popup over a newer one. */
+let inspections = 0;
+
+/* One popup: the raster's values on top, then the overlays under the point. */
+async function inspect(point, lngLat) {
+  const inspection = ++inspections;
+  const sections = featureSections(point);
+  const values = await valuesAt([lngLat.lng, lngLat.lat]).catch(() => null);
+  if (inspection !== inspections) return;
+  if (values) sections.unshift(popupSection(values.heading, values.fields));
+  if (!sections.length) return;
 
   const content = document.createDocumentFragment();
   sections.forEach((section, i) => {
     if (i > 0) content.append(document.createElement("hr"));
     content.append(...section);
   });
-  new maplibregl.Popup().setLngLat(event.lngLat).setDOMContent(content).addTo(map);
+  new maplibregl.Popup().setLngLat(lngLat).setDOMContent(content).addTo(map);
+}
+
+map.on("click", (event) => inspect(event.point, event.lngLat));
+
+/* Enter on the focused map inspects its center, for keyboards. */
+map.getCanvasContainer().addEventListener("keydown", (event) => {
+  if (event.key !== "Enter") return;
+  const { clientWidth, clientHeight } = map.getContainer();
+  inspect({ x: clientWidth / 2, y: clientHeight / 2 }, map.getCenter());
 });

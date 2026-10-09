@@ -31,6 +31,8 @@ You can choose among the available years, VV or VH polarization, false color,
 and quality layers. The map also offers adjustable raster opacity, vector or
 satellite basemaps, hillshade, 3D terrain, glacier inventories, and
 the catalog's tile grid. Available raster choices come from the catalog.
+Click the map to read the layer's value there. The address keeps your choices,
+so a copied link opens the same view.
 
 The archives carry quantized values, colored in the browser, so you can change
 the color map and its range. They are lossy 8-bit WebP, so for numerical analysis use the COG assets linked from the

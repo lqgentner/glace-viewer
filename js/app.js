@@ -13,7 +13,21 @@ import {
 } from "./map.js";
 import { grid, loadInventories } from "./overlays.js";
 import { loadRasters } from "./rasters.js";
-import { buildSegmented, creditButton, el } from "./ui.js";
+import { buildSegmented, creditButton, el, rove, setUrlParams, urlParam } from "./ui.js";
+
+/* What the tile grid shows, in its info popover. */
+const GRID_INFO = {
+  citation:
+    "The catalog's tiling grid: the 10 km squares of the Military Grid Reference System " +
+    "(MGRS). The brighter a square, the more of it is covered by Randolph Glacier " +
+    "Inventory 7.0 outlines.",
+  links: [
+    {
+      label: "Military Grid Reference System (Wikipedia)",
+      url: "https://en.wikipedia.org/wiki/Military_Grid_Reference_System",
+    },
+  ],
+};
 
 /*
  * Match the CSS breakpoint. Crossing it resets the panel to the default for the new
@@ -43,18 +57,21 @@ function initControls() {
 
   const basemapOptions = [
     { value: "vector", label: "Vector" },
-    { value: "imagery", label: "World Imagery" },
+    { value: "imagery", label: "Imagery" },
   ];
   const selectBasemap = (value) => {
     for (const button of el("basemap-style").children) {
       button.setAttribute("aria-checked", String(button.dataset.value === value));
     }
+    rove(el("basemap-style"));
     setBasemap(value);
+    setUrlParams({ base: value === "imagery" ? value : null });
   };
   buildSegmented(el("basemap-style"), basemapOptions, selectBasemap);
-  selectBasemap("vector");
+  selectBasemap(urlParam("base") === "imagery" ? "imagery" : "vector");
 
   el("hillshade-row").append(creditButton(TERRAIN_CREDIT.title, TERRAIN_CREDIT));
+  el("grid-row").append(creditButton("Catalog tile grid", GRID_INFO, "what it shows"));
   el("hillshade").addEventListener("change", (event) => {
     el("hillshade-strength-row").hidden = !event.target.checked;
     setHillshade(event.target.checked);

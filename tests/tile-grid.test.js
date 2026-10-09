@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import test from "node:test";
 
-import { installBrowser, load, REPO, settle } from "./helpers/browser.js";
+import { captureWarnings, installBrowser, load, REPO, settle } from "./helpers/browser.js";
 
 const READER = new URL("./fixtures/fake-hyparquet.mjs", import.meta.url).href;
 
@@ -80,7 +80,7 @@ test("the grid sits above the relief and under the basemap labels", () => {
   assert.ok(map.indexOf("grid-line") < map.indexOf("places"));
 });
 
-test("an unreadable index unticks the box and says which file", async () => {
+test("an unreadable index unticks the box and logs why", async () => {
   change(el("grid"), false);
   await settle();
   map.removeLayer("grid-fill");
@@ -90,12 +90,13 @@ test("an unreadable index unticks the box and says which file", async () => {
   grid.loaded = false;
 
   fake.failWith(new Error("unsupported codec ZSTD"));
-  change(el("grid"), true);
-  await settle();
+  const warnings = await captureWarnings(async () => {
+    change(el("grid"), true);
+    await settle();
+  });
 
   assert.equal(el("grid").checked, false, "re-ticking is a fresh attempt, not a no-op");
-  assert.match(el("status").textContent, /Tile grid unavailable/);
-  assert.match(el("status").textContent, /items\.parquet/);
-  assert.match(el("status").textContent, /unsupported codec ZSTD/);
+  assert.equal(el("status").textContent, "Error loading the tile grid. Tick it again to retry.");
+  assert.ok(warnings.some((line) => line.includes("unsupported codec ZSTD")), "the detail goes to the console");
   assert.equal(map.getLayer("grid-fill"), undefined, "nothing half-added is left behind");
 });

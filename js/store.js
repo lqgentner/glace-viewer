@@ -206,10 +206,23 @@ export function storeLayers(items, style, collection) {
   return layers;
 }
 
+/** The collection's [west, south, east, north], or null without a valid one. */
+export function catalogBounds(collection) {
+  const bbox = collection?.extent?.spatial?.bbox?.[0];
+  const valid =
+    Array.isArray(bbox) &&
+    bbox.length === 4 &&
+    bbox.every(isFiniteNumber) &&
+    bbox[0] < bbox[2] &&
+    bbox[1] < bbox[3];
+  return valid ? bbox : null;
+}
+
 /**
  * Fetch raster inventory, styles, and optional acquisition dates.
  *
- * @returns {Promise<object[]>}  one record per archive
+ * @returns {Promise<{layers: object[], bounds: number[]|null}>}  one record per
+ *   archive, and the catalog's extent
  */
 export async function readStore() {
   const collectionUrl = new URL(MOSAIC_COLLECTION_URL, location.href).href;
@@ -240,5 +253,8 @@ export async function readStore() {
   const documents = new Map(unique.map((href, index) => [href, answered[index]]));
   const drawnAs = new Map([...hrefs].map(([key, href]) => [key, documents.get(href)]));
 
-  return storeLayers(answered.slice(unique.length).filter(Boolean), drawnAs, collection);
+  return {
+    layers: storeLayers(answered.slice(unique.length).filter(Boolean), drawnAs, collection),
+    bounds: catalogBounds(collection),
+  };
 }

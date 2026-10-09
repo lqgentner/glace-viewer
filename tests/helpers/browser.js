@@ -144,6 +144,10 @@ class FakeMap {
     return window.document.getElementById(this.options.container);
   }
 
+  getCanvasContainer() {
+    return this.getContainer();
+  }
+
   /* A plate carrée about the center, scaled like the mercator equator: no
    * globe, no perspective, but enough to tell a whole earth from a glacier —
    * which is all js/sky.js asks of it. */
@@ -154,6 +158,13 @@ class FakeMap {
       x: element.clientWidth / 2 + (lng - this.center.lng) * scale,
       y: element.clientHeight / 2 - (lat - this.center.lat) * scale,
     };
+  }
+
+  flyTo(options) {
+    if (options.center) this.center = { lng: options.center[0], lat: options.center[1] };
+    if (options.zoom !== undefined) this.zoom = options.zoom;
+    this.calls.push(`flyTo ${options.center} z${options.zoom}`);
+    this.fire("moveend");
   }
 
   easeTo(options) {
@@ -291,7 +302,7 @@ export function installBrowser({
   });
   const { window } = dom;
 
-  for (const name of ["window", "document", "location", "HTMLElement", "Node", "Event"]) {
+  for (const name of ["window", "document", "location", "history", "HTMLElement", "Node", "Event"]) {
     Object.defineProperty(globalThis, name, {
       value: window[name],
       configurable: true,

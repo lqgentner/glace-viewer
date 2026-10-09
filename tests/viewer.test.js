@@ -115,6 +115,8 @@ test("the viewer", async (t) => {
     assert.deepEqual(glaceLayers(map), ["glace-coh12_vv-2023"]);
     assert.ok(visible(map, "glace-coh12_vv-2023"));
     assert.equal(el("year-value").textContent, "2023");
+    assert.equal(el("selection-summary").textContent, "Coherence · VV · 2023", "for the collapsed panel");
+    assert.equal(el("year").getAttribute("aria-valuetext"), "2023", "the slider speaks the year, not its index");
   });
 
   await t.test("the panel opens on VV, and names the products in words", async () => {
@@ -186,11 +188,11 @@ test("the viewer", async (t) => {
     }
   });
 
-  await t.test("World Imagery replaces the vector fills but keeps labels independent", async () => {
+  await t.test("Imagery replaces the vector fills but keeps labels independent", async () => {
     const buttons = [...el("basemap-style").children];
     assert.deepEqual(
       buttons.map((button) => button.textContent),
-      ["Vector", "World Imagery"],
+      ["Vector", "Imagery"],
     );
     assert.equal(buttons[0].getAttribute("aria-checked"), "true");
     assert.equal(map.getSource("world-imagery"), undefined, "imagery is lazy");
@@ -275,6 +277,37 @@ test("the viewer", async (t) => {
     assert.deepEqual(map.options.center, [8.03, 46.51]);
     assert.equal(map.options.zoom, 10);
     assert.equal(map.options.minZoom, 1, "and cannot zoom out past a whole earth");
+  });
+
+  await t.test("the tile grid explains itself in an info box", async () => {
+    const info = el("grid-row").querySelector(".credit");
+    assert.equal(info.getAttribute("aria-label"), "Catalog tile grid: what it shows");
+    info.click();
+    const box = page.window.document.getElementById("popover");
+    assert.match(box.textContent, /Randolph Glacier Inventory/);
+    assert.equal(box.querySelector("a").href, "https://en.wikipedia.org/wiki/Military_Grid_Reference_System");
+    info.click();
+  });
+
+  await t.test("the home button shows only while the catalog is out of view", async () => {
+    const home = el("home");
+    const shown = () => !home.hidden;
+    assert.equal(home.textContent, "Back to the Alps", "a button on the map, in words");
+    assert.equal(shown(), false, "over Aletsch");
+
+    const { center, zoom } = map;
+    map.center = { lng: -100, lat: 40 };
+    map.fire("moveend");
+    assert.equal(shown(), true, "panned off the catalog's extent");
+    map.center = center;
+    map.zoom = 3;
+    map.fire("moveend");
+    assert.equal(shown(), true, "zoomed out past the rasters");
+
+    home.click();
+    assert.deepEqual([map.center, map.zoom], [{ lng: 9.548, lat: 46.01 }, 6.64], "the overview");
+    assert.equal(shown(), false);
+    Object.assign(map, { center, zoom });
   });
 
   await t.test("changing product adds the new raster and hides the old", async () => {
@@ -400,7 +433,7 @@ test("the viewer", async (t) => {
   await t.test("the swatch picks an outline color, now or for when the layer is added", async () => {
     const swatch = (id) => el(`inv-${id}`).parentElement.querySelector(".swatch");
     const palette = () => page.window.document.querySelector(".palette-popover");
-    const chip = (color) => palette().querySelector(`[aria-label="${color}"]`);
+    const chip = (color) => palette().querySelector(`[data-value="${color}"]`);
 
     assert.equal(palette(), null);
     swatch("sgi2023").dispatchEvent(new page.window.Event("mouseenter"));
@@ -413,6 +446,7 @@ test("the viewer", async (t) => {
     assert.equal(palette().children.length, 9);
     assert.ok(swatch("sgi2023").classList.contains("popover-open"), "the box stays while open");
     assert.equal(page.window.document.activeElement, chip("#ff7f00"), "focus lands on the current color");
+    assert.equal(chip("#ff7f00").getAttribute("aria-label"), "Orange", "named, not read out as a code");
     swatch("sgi2023").click();
     assert.equal(palette(), null, "a second click closes it");
 
@@ -460,7 +494,8 @@ test("the viewer", async (t) => {
       { layer: { id: "inv-line-sgi2023" }, properties: { name: "Aletschgletscher", year: 2023 } },
       { layer: { id: "grid-fill" }, properties: { tile: "32TMS", glacier_fraction: 0.42 } },
     ];
-    map.fire("click", { point: { x: 10, y: 10 }, lngLat: [8, 46] });
+    map.fire("click", { point: { x: 10, y: 10 }, lngLat: { lng: 8, lat: 46 } });
+    await settle();
 
     assert.equal(page.popups.length, 1);
     const text = page.popups.at(-1).content.textContent;
@@ -477,7 +512,8 @@ test("the viewer", async (t) => {
         properties: { name: '<img src=x onerror="fail()">', year: 2023 },
       },
     ];
-    map.fire("click", { point: { x: 10, y: 10 }, lngLat: [8, 46] });
+    map.fire("click", { point: { x: 10, y: 10 }, lngLat: { lng: 8, lat: 46 } });
+    await settle();
 
     const { content } = page.popups.at(-1);
     const wrapper = page.window.document.createElement("div");
@@ -491,7 +527,7 @@ test("the viewer", async (t) => {
     await settle();
     assert.ok(map.getSource("inv-sgi2016"));
 
-    await captureWarnings(async () => {
+    const warnings = await captureWarnings(async () => {
       map.fire("error", { sourceId: "inv-sgi2016", error: new Error("HTTP 404") });
       await settle();
     });
@@ -499,7 +535,12 @@ test("the viewer", async (t) => {
     assert.equal(map.getSource("inv-sgi2016"), undefined);
     assert.equal(map.getLayer("inv-line-sgi2016"), undefined);
     assert.equal(el("inv-sgi2016").checked, false, "the box is unticked");
-    assert.ok(el("status").textContent.includes("HTTP 404"));
+    assert.equal(
+      el("status").textContent,
+      "Error loading Swiss Glacier Inventory 2016. Tick it again to retry.",
+      "in words, and how to retry",
+    );
+    assert.ok(warnings.some((line) => line.includes("HTTP 404")), "the detail goes to the console");
 
     change(el("inv-sgi2016"), true);
     await settle();
@@ -517,13 +558,13 @@ test("the viewer", async (t) => {
       map.fire("error", { sourceId: "inv-sgi2016", error: new Error("HTTP 500") });
       await settle();
     });
-    assert.match(el("status").textContent, /HTTP 500/, "a failure outranks another's progress");
+    assert.match(el("status").textContent, /Error loading Swiss/, "a failure outranks another's progress");
 
     map.settle();
     await settle();
     assert.match(
       el("status").textContent,
-      /HTTP 500/,
+      /Error loading Swiss/,
       "the other inventory finishing must not wipe the failure",
     );
   });
@@ -538,7 +579,8 @@ test("the viewer", async (t) => {
       },
       { layer: { id: "inv-line-pauletal2020" }, properties: { glacier_nr: 1234, year: 2015 } },
     ];
-    map.fire("click", { point: { x: 10, y: 10 }, lngLat: [8, 46] });
+    map.fire("click", { point: { x: 10, y: 10 }, lngLat: { lng: 8, lat: 46 } });
+    await settle();
 
     const text = page.popups.at(-1).content.textContent;
     assert.ok(text.includes("Grosser Aletschgletscher"));

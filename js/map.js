@@ -8,13 +8,14 @@ import {
   BASEMAP_FLAVOR,
   BASEMAP_URL,
   INITIAL_VIEW,
+  OVERVIEW,
   TERRAIN_TILEJSON,
   WORLD_IMAGERY_URL,
 } from "./config.js";
 import { protocol } from "./archive.js";
 import { compositeProtocol } from "./composite.js";
 import { installSky } from "./sky.js";
-import { setStatus } from "./ui.js";
+import { el, setStatus } from "./ui.js";
 
 /* Raster archives are read through the shared, cached readers of js/archive.js. */
 maplibregl.addProtocol("pmtiles", protocol.tile);
@@ -94,7 +95,12 @@ function createMap() {
       attributionControl: false,
     });
   } catch (error) {
-    setStatus("map", "This browser cannot draw the map: it has no WebGL2.", "error");
+    setStatus(
+      "map",
+      "This browser cannot display the map: it needs WebGL2. " +
+        "Try another browser, or turn on hardware acceleration.",
+      "error",
+    );
     throw error;
   }
 }
@@ -327,6 +333,39 @@ function syncThreeDButton() {
 }
 
 map.addControl(new ThreeDControl(), "top-right");
+
+/* ---------- home ---------- */
+
+/* Below this zoom the GLACE rasters do not draw. */
+const HOME_MIN_ZOOM = 4;
+let dataBounds = null;
+
+const home = el("home");
+home.querySelector("span").textContent = OVERVIEW.label;
+home.addEventListener("click", () =>
+  map.flyTo({ center: OVERVIEW.center, zoom: OVERVIEW.zoom, bearing: 0 }),
+);
+
+/* Shown when zoomed out past the rasters or panned off the catalog's extent. */
+function syncHome() {
+  let away = map.getZoom() < HOME_MIN_ZOOM;
+  if (!away && dataBounds) {
+    const view = map.getBounds();
+    const [west, south, east, north] = dataBounds;
+    away =
+      view.getEast() < west || view.getWest() > east || view.getNorth() < south || view.getSouth() > north;
+  }
+  home.hidden = !away;
+}
+
+/** The catalog's [west, south, east, north], once read. */
+export function setDataBounds(bounds) {
+  dataBounds = bounds;
+  syncHome();
+}
+
+syncHome();
+map.on("moveend", syncHome);
 
 /* The hash saves pitch but not terrain. */
 if (map.getPitch() > 0) setThreeD(true, { tilt: false });

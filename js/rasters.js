@@ -5,14 +5,14 @@
  * color's three channel ranges.
  */
 
-import { addStacked, map, styleReady } from "./map.js";
+import { addStacked, map, setDataBounds, styleReady } from "./map.js";
 import { archive } from "./archive.js";
-import { FALSE_COLOUR, compositeLayers, compositeTiles, restretch } from "./composite.js";
+import { FALSE_COLOUR, channelValues, compositeLayers, compositeTiles, restretch } from "./composite.js";
 import { isNonEmptyString, readStore } from "./store.js";
 import { COLOR_MAPS } from "./colormaps.js";
-import { buildSegmented, clearStatus, el, h, setStatus } from "./ui.js";
+import { buildSegmented, clearStatus, el, h, rove, setStatus, setUrlParams, urlParam } from "./ui.js";
 import { decodePixel, step } from "./values.js";
-import { codeAt, codeRange, compositeCounts, histogramPath, viewCounts } from "./histogram.js";
+import { codeAt, codeRange, compositeCounts, histogramPath, pixelAt, viewCounts } from "./histogram.js";
 
 const STATUS_KEY = "rasters";
 
@@ -105,11 +105,17 @@ const stretchOf = (layer) => bandsOf(layer).map((_, band) => rangeOf(layer, band
 const shortName = (name) => name.replace(/^cmc\./, "");
 const gradient = (colors) => `linear-gradient(to right, ${colors.join(", ")})`;
 
+/* Record a color map or limits, and redraw. */
+function customize(layer, change) {
+  remember(layer, change);
+  render();
+}
+
 /*
  * Record a color map, or limits by band index, forgetting values equal to the
  * defaults so reset means a change.
  */
-function customize(layer, { cmap, limits = {} }) {
+function remember(layer, { cmap, limits = {} }) {
   const custom = customOf(layer);
   const next = {};
   const chosen = cmap ?? custom.cmap;
@@ -122,7 +128,6 @@ function customize(layer, { cmap, limits = {} }) {
   if (own.some((limit) => Object.keys(limit).length)) next.limits = own;
   if (Object.keys(next).length) state.custom.set(layer.stem, next);
   else state.custom.delete(layer.stem);
-  render();
 }
 
 /*
@@ -308,10 +313,8 @@ map.on("error", (event) => {
   const source = event.sourceId;
   if (!source || !state.added.has(source) || failures.has(source)) return;
   if (event.error?.name === "AbortError") return;
-  failures.set(
-    source,
-    `This layer could not be drawn — ${event.error?.message ?? "its tiles could not be read"}`,
-  );
+  console.warn(`${source}:`, event.error?.message);
+  failures.set(source, "Error loading this layer's tiles. Try again later.");
   if (source === selected()?.id) setStatus(STATUS_KEY, failures.get(source), "error");
 });
 
@@ -337,6 +340,62 @@ function render() {
   syncControls();
   followSelection(active);
   showOnMap(active);
+  syncUrl(active);
+  const quantity = quantityOf(state.quantity)?.name;
+  el("selection-summary").textContent = [
+    productLabel(state.product),
+    quantity ? `${state.pol} ${quantity}` : state.pol,
+    state.year,
+  ].join(" · ");
+}
+
+/*
+ * The selection in the URL, with the selected layer's own color map and limits:
+ * ?year=2024&product=coh12&pol=vv&layer=qa_num&opacity=60&cmap=…&range=min_max…
+ */
+function syncUrl(layer) {
+  const custom = layer ? customOf(layer) : {};
+  setUrlParams({
+    year: state.year,
+    product: state.product.toLowerCase(),
+    pol: state.pol.toLowerCase(),
+    layer: state.quantity === MEASUREMENT ? null : state.quantity.toLowerCase(),
+    opacity: state.opacity === 1 ? null : Math.round(state.opacity * 100),
+    cmap: custom.cmap ?? null,
+    range: custom.limits ? stretchOf(layer).flatMap(({ vmin, vmax }) => [vmin, vmax]).join("_") : null,
+  });
+}
+
+/* Restore what syncUrl() wrote, wherever the catalog and the limits allow it. */
+function restoreFromUrl() {
+  const upper = (name) => urlParam(name)?.toUpperCase();
+  const wanted = {
+    product: upper("product") ?? state.product,
+    pol: upper("pol") ?? state.pol,
+    quantity: upper("layer") ?? state.quantity,
+    year: Number(urlParam("year") ?? state.year),
+  };
+  if (findLayer(wanted.product, wanted.pol, wanted.quantity, wanted.year)) Object.assign(state, wanted);
+
+  const opacity = Number(urlParam("opacity") ?? NaN);
+  if (Number.isInteger(opacity) && opacity >= 0 && opacity <= 100) {
+    state.opacity = opacity / 100;
+    el("opacity").value = opacity;
+    el("opacity-value").textContent = `${opacity}%`;
+  }
+
+  const layer = selected();
+  if (!layer) return;
+  const cmap = urlParam("cmap");
+  if (cmap in COLOR_MAPS && !layer.composite) remember(layer, { cmap });
+  const values = (urlParam("range") ?? "").split("_").map(Number);
+  const bands = bandsOf(layer);
+  const limits = bands.map((band, at) => ({ vmin: values[2 * at], vmax: values[2 * at + 1] }));
+  const fits = limits.every(({ vmin, vmax }, at) => {
+    const { lowest, highest } = limitsRange(bands[at]);
+    return Number.isFinite(vmin) && Number.isFinite(vmax) && lowest <= vmin && vmin < vmax && vmax <= highest;
+  });
+  if (values.length === 2 * bands.length && fits) remember(layer, { limits });
 }
 
 /* Hide only the previous raster. Calls settle in order, so the last selection wins. */
@@ -378,8 +437,11 @@ function updateLegend(layer) {
     el("cmap").textContent = shortName(cmapOf(layer));
     el("legend-min").textContent = round(vmin, span);
     el("legend-max").textContent = round(vmax, span);
-    el("legend-min").classList.toggle("modified", "vmin" in own);
-    el("legend-max").classList.toggle("modified", "vmax" in own);
+    for (const which of ["vmin", "vmax"]) {
+      const limit = el(which === "vmin" ? "legend-min" : "legend-max");
+      limit.classList.toggle("modified", which in own);
+      limit.parentElement.querySelector(".visually-hidden").hidden = !(which in own);
+    }
     for (const unit of el("legend-labels").querySelectorAll(".unit")) {
       unit.textContent = unitSuffix(layer);
     }
@@ -394,14 +456,53 @@ function updateChannelLegend(layer) {
       const { vmin, vmax } = rangeOf(layer, at);
       const own = ownLimits(layer, at);
       const limit = (which, value) =>
-        h("span", { class: which in own ? "modified" : null, textContent: round(value, vmax - vmin) });
+        h(
+          "span",
+          { class: which in own ? "modified" : null },
+          round(value, vmax - vmin),
+          which in own ? h("span", { class: "visually-hidden", textContent: " (custom)" }) : null,
+        );
       return [
         h("span", { class: "swatch", style: { background: CHANNEL_SWATCHES[at] } }),
+        h("span", { class: "channel", style: { color: CHANNEL_SWATCHES[at] }, textContent: "RGB"[at] }),
         h("span", { class: "band", textContent: band.band }),
-        h("span", {}, limit("vmin", vmin), " to ", limit("vmax", vmax), unitSuffix(band)),
+        h("span", { class: "range" }, limit("vmin", vmin), " to ", limit("vmax", vmax), unitSuffix(band)),
       ];
     }),
   );
+}
+
+/* ---------- the value under a click ---------- */
+
+/* Whole numbers for an encoding in whole steps, as counts are; else as the legend rounds. */
+const formatValue = (band, value) =>
+  (Number.isInteger(step(band.encoding)) ? Math.round(value).toString() : round(value, band.vmax - band.vmin)) +
+  unitSuffix(band);
+
+/**
+ * The selected layer's values at [lng, lat], from the pixel MapLibre draws:
+ * VV and VH for false color. Null where it draws nothing.
+ *
+ * @returns {Promise<{heading: string, fields: string[][]}|null>}
+ */
+export async function valuesAt(lngLat) {
+  const layer = selected();
+  if (!editable(layer)) return null;
+  const heading = `${productLabel(layer.product)} ${layer.year}`;
+  const read = (record) => pixelAt(record.url, layer.minZoom, layer.maxZoom, lngLat, map.getZoom());
+  if (layer.composite) {
+    const { vv, vh } = layer.composite;
+    const [a, b] = await Promise.all([read(vv), read(vh)]);
+    const values = new Float64Array(3);
+    if (!a || !b || !channelValues(layer, a, b, 0, values)) return null;
+    const fields = [vv, vh].map((record, at) => [record.polarization, formatValue(record, values[at])]);
+    return { heading, fields };
+  }
+  const pixel = await read(layer);
+  const value = pixel && pixel[3] !== 0 ? decodePixel(layer.encoding, pixel[0], pixel[1], pixel[2]) : null;
+  if (value === null) return null;
+  const quantity = quantityOf(state.quantity)?.name;
+  return { heading, fields: [[quantity ? `${state.pol} ${quantity}` : state.pol, formatValue(layer, value)]] };
 }
 
 const isDate = (value) => isNonEmptyString(value) && /^\d{4}-\d{2}-\d{2}$/.test(value);
@@ -506,7 +607,9 @@ function buildBands(layer) {
       const input = node.querySelector(`input.${which}`);
       input.id = `${which}-${at}`;
       const name = which === "vmin" ? "Min" : "Max";
-      input.setAttribute("aria-label", layer.composite ? `${band.band} ${name.toLowerCase()}` : name);
+      const label = layer.composite ? `${band.band} ${name.toLowerCase()}` : name;
+      const unit = unitSuffix(band).trim();
+      input.setAttribute("aria-label", unit ? `${label} (${unit})` : label);
       initField(input, at, which);
     }
     const name = node.querySelector(".band-name");
@@ -585,13 +688,19 @@ let reading = null;
 let shown = null;
 let viewed = null;
 
-/* A note over the charts; a chart is an image, so its label carries the note too. */
-function note(layer, text) {
+/*
+ * A note over the charts; a chart is an image, so its label carries the note
+ * too, or the range of values counted.
+ */
+function note(layer, text, counts = null) {
   bandNodes().forEach((node, at) => {
     node.querySelector(".note").textContent = text;
-    const band = bandsOf(layer)[at].band;
-    const label = `Histogram of ${band ?? "the values"} in view`;
-    node.querySelector(".histogram").setAttribute("aria-label", text ? `${label}: ${text}` : label);
+    const band = bandsOf(layer)[at];
+    const label = `Histogram of ${band.band ?? "the values"} in view`;
+    const range = counts && codeRange(counts[at]);
+    const value = (code) => round(code * step(band.encoding) - band.encoding.baseShift, band.vmax - band.vmin);
+    const detail = text || (range ? `from ${value(range[0])} to ${value(range[1])}${unitSuffix(band)}` : "");
+    node.querySelector(".histogram").setAttribute("aria-label", detail ? `${label}: ${detail}` : label);
   });
 }
 
@@ -627,7 +736,7 @@ async function showHistogram(layer) {
       ? await compositeCounts(layer, view, map.getZoom(), controller.signal, budget)
       : [await viewCounts(layer, view, map.getZoom(), controller.signal, budget)];
     drawBars(counts);
-    note(layer, counts.some((band) => codeRange(band) !== null) ? "" : "No data in view");
+    note(layer, counts.some((band) => codeRange(band) !== null) ? "" : "No data in view", counts);
     viewed = { layer, counts };
     syncEditor(layer);
   } catch {
@@ -888,6 +997,8 @@ function syncControls() {
   }
   el("year-value").textContent = state.year;
   el("year").value = state.axes.years.indexOf(state.year);
+  el("year").setAttribute("aria-valuetext", String(state.year));
+  for (const id of ["product", "quantity", "pol"]) rove(el(id));
 }
 
 function initControls(axes) {
@@ -948,9 +1059,10 @@ function initControls(axes) {
 function noRasters(reason) {
   el("raster-controls").hidden = true;
   el("layer-info").replaceChildren();
+  console.warn("rasters:", reason);
   setStatus(
     STATUS_KEY,
-    `No GLACE layers: ${reason}. Basemap, terrain and inventories still work.`,
+    "Error loading the GLACE layers. The basemap, terrain and inventories still work.",
     "error",
   );
 }
@@ -959,7 +1071,8 @@ export async function loadRasters() {
   setStatus(STATUS_KEY, "Loading layers…");
   let axes;
   try {
-    const layers = await readStore();
+    const { layers, bounds } = await readStore();
+    setDataBounds(bounds);
     axes = indexLayers([...layers, ...compositeLayers(layers)]);
   } catch (error) {
     noRasters(error.message);
@@ -989,6 +1102,7 @@ export async function loadRasters() {
     state.year = fallback.year;
   }
 
+  restoreFromUrl();
   initControls(axes);
   initLegend();
   render();

@@ -216,10 +216,13 @@ test("false color is composed, names its channels, and credits the data", async 
   // Red and green repeat the single-band default stretches; blue's range is the
   // page's own.
   assert.deepEqual(cells.filter(Boolean), [
+    "R",
     "VV",
     "0.10 to 0.75",
+    "G",
     "VH",
     "0.10 to 0.55",
+    "B",
     "VV / VH",
     "0.80 to 2.60",
   ]);

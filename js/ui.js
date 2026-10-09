@@ -40,6 +40,34 @@ function externalLink(url, label) {
   return h("a", { href: url, target: "_blank", rel: "noopener noreferrer" }, text);
 }
 
+/* ---------- choices in the URL ---------- */
+
+/*
+ * The panel's choices live in the query string, beside the deployment
+ * parameters; MapLibre keeps the camera in the hash. Writes are batched because
+ * browsers limit how often history.replaceState may run.
+ */
+const URL_DELAY_MS = 300;
+const pendingParams = new Map();
+let urlTimer = null;
+
+export const urlParam = (name) => new URLSearchParams(location.search).get(name);
+
+/** Set query parameters soon; null removes one. */
+export function setUrlParams(params) {
+  for (const [name, value] of Object.entries(params)) pendingParams.set(name, value);
+  urlTimer ??= setTimeout(() => {
+    urlTimer = null;
+    const url = new URL(location.href);
+    for (const [name, value] of pendingParams) {
+      if (value === null || value === undefined) url.searchParams.delete(name);
+      else url.searchParams.set(name, String(value));
+    }
+    pendingParams.clear();
+    history.replaceState(history.state, "", url);
+  }, URL_DELAY_MS);
+}
+
 /* ---------- status line ---------- */
 
 /*
@@ -66,15 +94,27 @@ function paintStatus() {
   const node = el("status");
   node.hidden = !top;
   node.textContent = top ? top.message : "";
+  el("status-live").textContent = top && top.level !== "busy" ? top.message : "";
 }
 
 /* ---------- segmented controls ---------- */
 
 /*
  * Accept values or {value, label, title} entries. data-value preserves the catalog
- * value when the display label differs.
+ * value when the display label differs. As a radio group, the arrow keys select
+ * the next choice that is not disabled, and Tab stops at the checked one.
  */
 export function buildSegmented(node, entries, onSelect) {
+  node.onkeydown = (event) => {
+    const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[event.key];
+    if (!step) return;
+    event.preventDefault();
+    const choices = [...node.children].filter((button) => !button.disabled);
+    const at = choices.indexOf(document.activeElement);
+    const next = choices[(at + step + choices.length) % choices.length];
+    next.click();
+    next.focus();
+  };
   node.replaceChildren(
     ...entries.map((entry) => {
       const pair = entry !== null && typeof entry === "object";
@@ -89,6 +129,16 @@ export function buildSegmented(node, entries, onSelect) {
       });
     }),
   );
+  rove(node);
+}
+
+/** Make the checked choice, or else the first enabled one, the group's tab stop. */
+export function rove(node) {
+  const buttons = [...node.children];
+  const stop =
+    buttons.find((button) => button.getAttribute("aria-checked") === "true") ??
+    buttons.find((button) => !button.disabled);
+  for (const button of buttons) button.tabIndex = button === stop ? 0 : -1;
 }
 
 /* ---------- popovers ---------- */
@@ -115,6 +165,8 @@ let popoverAnchor = null;
  */
 export function attachPopover(button, build, options = {}) {
   const { className = "", caretAt = 0.5 } = options;
+  button.setAttribute("aria-expanded", "false");
+  button.setAttribute("aria-controls", "popover");
   button.addEventListener("click", (event) => {
     event.preventDefault();
     if (popoverAnchor === button) hidePopover();
@@ -127,6 +179,7 @@ export function hidePopover({ refocus = false } = {}) {
   const anchor = popoverAnchor;
   const focusInside = popover?.contains(document.activeElement);
   anchor?.classList.remove("popover-open");
+  anchor?.setAttribute("aria-expanded", "false");
   popover?.remove();
   popover = null;
   popoverAnchor = null;
@@ -136,7 +189,17 @@ export function hidePopover({ refocus = false } = {}) {
 function showPopover(anchor, build, className, caretAt) {
   hidePopover();
 
-  const box = h("div", { class: `popover ${className}` }, build());
+  const box = h(
+    "div",
+    {
+      id: "popover",
+      class: `popover ${className}`,
+      role: "dialog",
+      "aria-label": anchor.getAttribute("aria-label"),
+      tabIndex: -1,
+    },
+    build(),
+  );
   document.body.append(box);
 
   // Measured after insertion: the height depends on how far the content wraps.
@@ -156,9 +219,11 @@ function showPopover(anchor, build, className, caretAt) {
   box.style.setProperty("--caret-x", `${markX - left}px`);
 
   anchor.classList.add("popover-open");
+  anchor.setAttribute("aria-expanded", "true");
   popover = box;
   popoverAnchor = anchor;
-  box.querySelector("[autofocus]")?.focus();
+  // Into the box, so Tab reaches its links and Escape returns.
+  (box.querySelector("[autofocus]") ?? box.querySelector("a[href]") ?? box).focus();
 }
 
 // A scroll or resize moves the mark out from under the box.
@@ -198,6 +263,7 @@ export function attachPicker(button, choices, onPick, { className = "", caretAt 
           style: choice.style,
           "aria-label": choice.label,
           "aria-pressed": String(choice.current),
+          dataset: { value: String(choice.value) },
           autofocus: choice.current,
           onclick: () => {
             hidePopover({ refocus: true });
@@ -219,14 +285,14 @@ INFO_ICON.innerHTML =
   'fill-rule="evenodd" aria-hidden="true"><path d="M4 10a6 6 0 1 0 12 0 6 6 0 1 0-12 0' +
   'm5-3a1 1 0 1 0 2 0 1 1 0 1 0-2 0m0 3a1 1 0 1 1 2 0v3a1 1 0 1 1-2 0"/></svg>';
 
-export function creditButton(title, credit) {
+export function creditButton(title, credit, about = "attribution and license") {
   const button = h(
     "button",
     {
       type: "button",
       class: "credit",
-      title: `${title} — attribution and license`,
-      "aria-label": `${title}: attribution and license`,
+      title: `${title} — ${about}`,
+      "aria-label": `${title}: ${about}`,
     },
     INFO_ICON.content.firstElementChild.cloneNode(true),
   );

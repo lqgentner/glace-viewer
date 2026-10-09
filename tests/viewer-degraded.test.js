@@ -23,7 +23,7 @@ test("a missing catalog costs only the rasters", async () => {
   await settle();
 
   assert.equal(el("raster-controls").hidden, true, "dead sliders are hidden, not left behind");
-  assert.match(el("status").textContent, /No GLACE layers/);
+  assert.match(el("status").textContent, /Error loading the GLACE layers/);
   assert.match(el("status").textContent, /still work/);
 
   // Everything with no bearing on the rasters is untouched.

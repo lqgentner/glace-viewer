@@ -197,7 +197,13 @@ html, body {
 /* The outlined wordmark has an ink-cropped viewBox, so height sets its cap height. */
 #panel h1 { margin: 0; }
 #panel h1 img { display: block; height: 20px; width: auto; }
-#panel #subtitle { margin: 6px 0 0; font-size: calc(12px * var(--text-scale)); color: var(--muted); }
+#panel :is(#subtitle, #selection-summary) {
+  margin: 6px 0 0;
+  font-size: calc(12px * var(--text-scale));
+  color: var(--muted);
+}
+#panel #selection-summary { color: var(--text); font-variant-numeric: tabular-nums; }
+#panel:not(.collapsed) #selection-summary { display: none; }
 
 /*
  * The panel's collapse button and the scale editor's close button: boxed, in
@@ -395,6 +401,15 @@ details:not([open]) > summary .chevron { transform: rotate(180deg); }
  */
 [hidden] { display: none !important; }
 
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 #legend-bar {
   height: 10px;
   border-radius: 3px;
@@ -424,7 +439,7 @@ details:not([open]) > summary .chevron { transform: rotate(180deg); }
 
 #legend-channels {
   display: grid;
-  grid-template-columns: auto auto 1fr;
+  grid-template-columns: auto auto auto 1fr;
   gap: 2px 7px;
   align-items: center;
   font-size: calc(11px * var(--text-scale));
@@ -440,6 +455,8 @@ details:not([open]) > summary .chevron { transform: rotate(180deg); }
 #legend-channels .band {
   color: var(--text);
 }
+#legend-channels .channel { font-weight: 600; }
+#legend-channels .range { text-align: right; }
 
 /* Tabular dates prevent jitter when switching years. */
 #layer-info {
@@ -451,18 +468,45 @@ details:not([open]) > summary .chevron { transform: rotate(180deg); }
 }
 #layer-info:empty { margin: 0; }
 
-#status {
+/* Centered between the panel (12px margin, 292px, 12px gap) and the map controls. */
+#notices {
   position: absolute;
   top: 12px;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 316px;
+  right: 62px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  /* The map stays draggable around the messages. */
+  pointer-events: none;
+  /* Above the scale editor, which can open beneath it. */
+  z-index: 4;
+}
+#notices > * { pointer-events: auto; }
+#status {
   padding: 8px 14px;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--panel);
   font-size: calc(13px * var(--text-scale));
-  /* Above the scale editor, which can open beneath it. */
-  z-index: 4;
+}
+#home {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  font: inherit;
+  font-size: calc(14px * var(--text-scale));
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 999px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+}
+@media (hover: hover) {
+  #home:hover { border-color: #fff; }
 }
 
 .popover,
@@ -475,6 +519,7 @@ details:not([open]) > summary .chevron { transform: rotate(180deg); }
 }
 .maplibregl-popup-content {
   font-size: calc(12px * var(--text-scale));
+  overflow-wrap: anywhere;
   /* Leave room for the close button in the right inset. */
   padding: 9px 12px 10px;
 }
@@ -490,10 +535,11 @@ details:not([open]) > summary .chevron { transform: rotate(180deg); }
 }
 /* Include the map ID to override MapLibre's per-anchor tip colors. */
 #map .maplibregl-popup-tip { border-width: 6px; }
-#map [class*="maplibregl-popup-anchor-top"] .maplibregl-popup-tip { border-bottom-color: var(--border); }
-#map [class*="maplibregl-popup-anchor-bottom"] .maplibregl-popup-tip { border-top-color: var(--border); }
-#map .maplibregl-popup-anchor-left .maplibregl-popup-tip { border-right-color: var(--border); }
-#map .maplibregl-popup-anchor-right .maplibregl-popup-tip { border-left-color: var(--border); }
+/* White, so the tip shows where the value was read. */
+#map [class*="maplibregl-popup-anchor-top"] .maplibregl-popup-tip { border-bottom-color: #fff; }
+#map [class*="maplibregl-popup-anchor-bottom"] .maplibregl-popup-tip { border-top-color: #fff; }
+#map .maplibregl-popup-anchor-left .maplibregl-popup-tip { border-right-color: #fff; }
+#map .maplibregl-popup-anchor-right .maplibregl-popup-tip { border-left-color: #fff; }
 
 @media (max-width: 640px) {
   #panel-shell {
@@ -506,26 +552,26 @@ details:not([open]) > summary .chevron { transform: rotate(180deg); }
   #panel:not(.expanded) #panel-body { display: none; }
 
   /* Above the scale bar and attribution, clear of the panel toggle. */
-  #status {
+  #notices {
     top: auto;
     bottom: 64px;
     left: 12px;
     right: 12px;
-    transform: none;
-    text-align: center;
   }
+  #status { align-self: stretch; text-align: center; }
 }
 
 /* Inventory controls. */
 .inventory {
+  /* The label's line height, on whose first line the boxes and the info icon center. */
+  --line: calc(13px * var(--text-scale) * 1.3);
   display: flex;
   align-items: flex-start;
   gap: 8px;
   margin-bottom: 8px;
 }
 
-/* Center the boxes on the label's first line. */
-.inventory :is(input[type="checkbox"], .swatch) { margin-top: 2px; }
+.inventory :is(input[type="checkbox"], .swatch) { margin-top: calc((var(--line) - var(--box)) / 2); }
 .inventory label {
   flex: 1;
   font-size: calc(13px * var(--text-scale));
@@ -601,7 +647,7 @@ details:not([open]) > summary .chevron { transform: rotate(180deg); }
   border-color: rgba(255, 255, 255, 0.3);
 }
 .inventory .swatch.popover-open { border-color: rgba(255, 255, 255, 0.6); }
-.inventory .credit { margin-top: 2px; }
+.inventory .credit { margin-top: calc((var(--line) - 18px) / 2); }
 
 /* Position outside the scrolling panel; see ui.js. */
 .popover {
@@ -864,6 +910,11 @@ details[open] > :is(#inventories-toggle, #extras-toggle) { margin-bottom: 8px; }
 }
 #scale-editor .field:focus-within { border-color: #fff; }
 #scale-editor .field:has([aria-invalid="true"]) { border-color: #e0524f; }
+#scale-editor .field .caption {
+  flex: none;
+  font-size: calc(11px * var(--text-scale));
+  color: var(--muted);
+}
 #scale-editor .field .unit {
   flex: none;
   font-size: calc(12px * var(--text-scale));
@@ -890,7 +941,7 @@ details[open] > :is(#inventories-toggle, #extras-toggle) { margin-bottom: 8px; }
   color: #f08a87;
 }
 
-/* The presets and, at the end, Reset as a square of their height: all act on every band. */
+/* The presets and, at the end, Reset: all act on every band. */
 #scale-editor .presets { display: flex; gap: 6px; margin-top: 12px; }
 /* Farther from false color's last band than the bands are apart: they act on all three. */
 #bands.channels + .presets { margin-top: 26px; }
@@ -906,13 +957,11 @@ details[open] > :is(#inventories-toggle, #extras-toggle) { margin-bottom: 8px; }
   cursor: pointer;
 }
 #range-reset {
-  display: grid;
-  place-items: center;
-  /* Square: the presets' line, padding and border. */
-  width: calc(11px * var(--text-scale) * 1.6 + 6px);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   margin-left: auto;
 }
-#scale-editor .presets #range-reset { padding: 0; }
 #scale-editor .presets button[aria-disabled="true"] {
   opacity: 0.35;
   cursor: default;
@@ -1001,7 +1050,7 @@ details[open] > :is(#inventories-toggle, #extras-toggle) { margin-bottom: 8px; }
   input[type="checkbox"]:checked { background-size: 16px; }
   /* Wider spacing keeps the swatch's tap area off the checkbox and the next row. */
   .inventory { gap: 12px; margin-bottom: 14px; }
-  .inventory :is(input[type="checkbox"], .swatch) { margin-top: 0; }
+  .inventory .credit { margin-top: calc((var(--line) - 24px) / 2); }
   /* Rows tile without overlapping: 19px label + 14px row margin. */
   .control.checkbox > label { padding-block: 7px; margin-block: -7px; }
 

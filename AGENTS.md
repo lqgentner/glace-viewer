@@ -67,10 +67,10 @@ A gitignored `tiles` symlink to the catalog root also works. The root is above
 | `js/composite.js` | False color composed from VV and VH archives via `glace-rgb://` |
 | `js/archive.js` | Shared PMTiles readers, their byte cache, the `pmtiles://` protocol |
 | `js/values.js` | Tile decoding for false-color composites and histograms |
-| `js/histogram.js` | Archive codes or composite channels counted over the view, drawn as the scale editor's bars |
-| `js/overlays.js` | Inventory controls, overlay lifecycle, grid layers, feature popups |
+| `js/histogram.js` | Archive codes or composite channels counted over the view, drawn as the scale editor's bars; the pixel under a click |
+| `js/overlays.js` | Inventory controls, overlay lifecycle, grid layers, popups with the raster's value |
 | `js/tile-grid.js` | GeoParquet index to deduplicated tile footprints |
-| `js/ui.js` | DOM helpers, status messages, segmented controls, popovers, pickers |
+| `js/ui.js` | DOM helpers, status messages, choices in the URL, segmented controls, popovers, pickers |
 | `js/sky.js` | Globe silhouette measurements for CSS |
 | `sw.js` | Service worker: stale-while-revalidate for JSON reads |
 | `scripts/serve.py` | Development HTTP server and local catalog mount |
@@ -174,6 +174,10 @@ because it has no TileJSON.
 - The 3D button names its next action and changes both terrain and pitch.
   Restore terrain for an incoming pitched URL hash without moving the camera.
   The initial view is used only without a hash; do not fit to catalog bounds.
+- The "Back to the Alps" button flies to the `overview` setting, whose label it
+  shows. It appears over the map, with the status line in `#notices`, only while
+  the view misses the collection's spatial extent or is zoomed out below the
+  rasters.
 - Adjust label colors through the Protomaps flavor before generating layers.
   Labels have their own visibility toggle, including over World Imagery.
 - Keep the renderer credit on the attribution control. Source attribution
@@ -206,7 +210,25 @@ Construct catalog text, inventory metadata, and vector-tile properties with
 `h()`, DOM nodes, or `textContent`, never HTML interpolation. Citation URLs go
 through the scheme check in `js/ui.js`. Status entries are keyed by component;
 clear only the reporting component's entry so one success cannot hide another
-component's failure.
+component's failure. Write status text for readers, not developers: say what
+failed and what still works or how to retry, and send the error's detail to the
+console. `#status-live` announces the status line except progress.
+
+Segmented rows are radio groups: arrow keys select the next choice that is not
+`disabled`, and `rove()` makes the checked one the tab stop. Call it after
+changing `aria-checked`. The year slider's `aria-valuetext` names the year.
+
+The query string holds the panel's choices (`year`, `product`, `pol`, `layer`,
+`opacity`, `cmap`, `range`, `base`) beside the deployment's `tiles`, `basemap`
+and `flavor`; MapLibre keeps the camera in the hash. Writes are batched, because
+browsers limit `history.replaceState`. A link is read once at startup and
+honored only where the catalog has the layer and the limits pass the editor's
+checks; otherwise the defaults stand.
+
+A click, or Enter on the focused map for its center, opens one popup: the
+selected layer's value on top, from the pixel MapLibre draws at that zoom (VV
+and VH for false color), then the overlays under the pointer. A newer click wins
+over a slower read. The archives are lossy, so the value is a guide, not data.
 
 The panel's 640 px breakpoint must agree in `js/app.js` and `style.css`. CSS
 provides the collapsed mobile state before scripts run. Preserve the panel's
@@ -294,7 +316,8 @@ Use the relevant suites when changing behavior:
 | --- | --- |
 | Settings, catalog joins, selection and legends | `config`, `store`, `layers`, `store-catalog`, `store-local`, `legend`, `viewer`, `stale-state` |
 | False color, tile decoding and caching | `composite`, `encoded`, `archive`, `histogram` |
-| Overlay loading, retries, popups | `viewer`, `tile-grid`, `ui`, `stale-state` |
+| Overlay loading, retries, popups, the value under a click | `viewer`, `tile-grid`, `ui`, `stale-state`, `readout` |
+| Choices in the URL | `url-state`, `url-state-invalid` |
 | Startup failures, viewport, camera, labels | `viewer-degraded`, `viewer-no-webgl`, `viewer-narrow`, `viewer-3d-restore`, `viewer-light-flavor` |
 | Globe calculations | `sky` |
 | Static assets, dependency pins, CSP, integrity, preloads | `page-assets` |

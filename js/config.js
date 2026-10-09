@@ -43,6 +43,9 @@ const DEFAULTS = {
    * the globe can appear; maxZoom keeps a pitched camera clear of the terrain.
    */
   initialView: { center: [8.03, 46.51], zoom: 10, minZoom: 1, maxZoom: 13 },
+
+  /* Where the map's home button flies, shown while the catalog is out of view. */
+  overview: { center: [9.548, 46.01], zoom: 6.64, label: "Back to the Alps" },
 };
 
 /* Only viewing endpoints and flavor are query-configurable. */
@@ -62,6 +65,7 @@ const settings = {
   ...site,
   // Merged a key deeper, so naming one field of either does not drop the rest.
   initialView: { ...DEFAULTS.initialView, ...site.initialView },
+  overview: { ...DEFAULTS.overview, ...site.overview },
   terrainCredit: { ...DEFAULTS.terrainCredit, ...site.terrainCredit },
 };
 
@@ -90,3 +94,4 @@ export const TERRAIN_TILEJSON = settings.terrainTilejson;
 export const TERRAIN_CREDIT = settings.terrainCredit;
 
 export const INITIAL_VIEW = settings.initialView;
+export const OVERVIEW = settings.overview;

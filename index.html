@@ -84,6 +84,8 @@
               <img src="assets/glace-wordmark.svg" alt="GLACE" width="2074" height="419" />
             </h1>
             <p id="subtitle">Sentinel-1 annual summer composites of the European Alps</p>
+            <!-- Below the subtitle while the panel is collapsed. -->
+            <p id="selection-summary"></p>
           </div>
 
           <button type="button" id="panel-toggle" aria-expanded="true" aria-controls="panel-body">
@@ -100,14 +102,14 @@
           <!-- Hide raster controls together when the catalog is unavailable. -->
           <div id="raster-controls">
             <section class="control">
-              <label for="product">Product</label>
-              <div id="product" class="segmented" role="radiogroup" aria-label="Product"></div>
+              <label for="year">Year <output id="year-value"></output></label>
+              <input type="range" id="year" step="1" />
+              <div id="year-ticks" class="ticks"></div>
             </section>
 
-            <!-- Hide the Layer row when the catalog offers only one quantity. -->
-            <section class="control" id="quantity-row" hidden>
-              <label for="quantity">Layer</label>
-              <div id="quantity" class="segmented" role="radiogroup" aria-label="Layer"></div>
+            <section class="control">
+              <label for="product">Product</label>
+              <div id="product" class="segmented" role="radiogroup" aria-label="Product"></div>
             </section>
 
             <section class="control">
@@ -115,10 +117,10 @@
               <div id="pol" class="segmented" role="radiogroup" aria-label="Polarization"></div>
             </section>
 
-            <section class="control">
-              <label for="year">Year <output id="year-value"></output></label>
-              <input type="range" id="year" step="1" />
-              <div id="year-ticks" class="ticks"></div>
+            <!-- Hide the Layer row when the catalog offers only one quantity. -->
+            <section class="control" id="quantity-row" hidden>
+              <label for="quantity">Layer</label>
+              <div id="quantity" class="segmented" role="radiogroup" aria-label="Layer"></div>
             </section>
 
             <section class="control">
@@ -136,8 +138,10 @@
               </div>
               <div id="legend-bar"></div>
               <div id="legend-labels">
-                <span class="limit"><span id="legend-min"></span><span class="unit"></span></span>
-                <span class="limit"><span id="legend-max"></span><span class="unit"></span></span>
+                <span class="limit"><span id="legend-min"></span><span class="unit"></span
+                  ><span class="visually-hidden" hidden> (custom)</span></span>
+                <span class="limit"><span id="legend-max"></span><span class="unit"></span
+                  ><span class="visually-hidden" hidden> (custom)</span></span>
               </div>
               <!-- False-color channel legend, shown in place of the color ramp. -->
               <div id="legend-channels" hidden></div>
@@ -175,25 +179,25 @@
                 <div id="basemap-style" class="segmented" role="radiogroup" aria-label="Basemap"></div>
               </section>
 
+              <section class="control checkbox">
+                <input type="checkbox" id="basemap" checked />
+                <label for="basemap">Basemap labels</label>
+              </section>
+
               <section class="control checkbox" id="hillshade-row">
                 <input type="checkbox" id="hillshade" />
-                <label for="hillshade">Hillshade</label>
+                <label for="hillshade">Terrain shading</label>
               </section>
               <section class="control" id="hillshade-strength-row" hidden>
                 <label for="hillshade-strength">
-                  Hillshade strength <output id="hillshade-strength-value">55%</output>
+                  Shading strength <output id="hillshade-strength-value">55%</output>
                 </label>
                 <input type="range" id="hillshade-strength" min="0" max="100" value="55" step="1" />
               </section>
 
-              <section class="control checkbox">
+              <section class="control checkbox" id="grid-row">
                 <input type="checkbox" id="grid" />
                 <label for="grid">Catalog tile grid</label>
-              </section>
-
-              <section class="control checkbox">
-                <input type="checkbox" id="basemap" checked />
-                <label for="basemap">Basemap labels</label>
               </section>
             </div>
           </details>
@@ -201,7 +205,18 @@
       </aside>
     </div>
 
-    <div id="status" hidden></div>
+    <!-- Messages and the way back, over the map: at the top beside the panel, at
+         the bottom on narrow screens. -->
+    <div id="notices">
+      <div id="status" hidden></div>
+      <button type="button" id="home" hidden
+        ><svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor"
+              stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"
+          ><path d="M2 16 7.5 6l3 5 2-3L18 16Z" /></svg
+        ><span></span></button>
+    </div>
+    <!-- Announces what the status line shows, except progress. -->
+    <div id="status-live" class="visually-hidden" role="status"></div>
 
     <!-- The scale editor: changes apply to the map as they are made. Beside the panel
          on wide screens; on narrow ones it takes the panel's place. -->
@@ -227,13 +242,13 @@
                   title="Limits at the 2nd and 98th percentiles of the values in view">2–98%</button>
           <button type="button" id="range-extent"
                   title="Limits at the lowest and highest values in view">Min/Max</button>
-          <button type="button" id="range-reset" title="Reset to the default limits"
-                  aria-label="Reset to the default limits"
+          <button type="button" id="range-reset"
+                  title="Reset to the default limits; the color map stays"
             ><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor"
                   stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"
                   aria-hidden="true"
               ><path d="M3.5 8a4.5 4.5 0 1 0 1.3-3.2" /><path d="M4.5 2.3v2.8h2.8" /></svg
-          ></button>
+            >Reset</button>
         </div>
         <!-- Shown only while a typed limit is refused, to say why. -->
         <p id="limits-hint" role="status"></p>
@@ -261,13 +276,14 @@
           <div class="handle high" aria-hidden="true"></div>
         </div>
         <div class="band-bar"></div>
-        <!-- Min left, Max right: the fields' places name them; the inputs' labels are set
-             with the band. -->
+        <!-- The inputs' accessible names, with band and unit, are set with the band. -->
         <div class="limits">
-          <label class="field"><input class="vmin" autocomplete="off" spellcheck="false"
-            aria-describedby="limits-hint" /><span class="unit"></span></label>
-          <label class="field"><input class="vmax" autocomplete="off" spellcheck="false"
-            aria-describedby="limits-hint" /><span class="unit"></span></label>
+          <label class="field"><span class="caption">Min</span><input class="vmin"
+            autocomplete="off" spellcheck="false" aria-describedby="limits-hint"
+            /><span class="unit"></span></label>
+          <label class="field"><span class="caption">Max</span><input class="vmax"
+            autocomplete="off" spellcheck="false" aria-describedby="limits-hint"
+            /><span class="unit"></span></label>
         </div>
       </section>
     </template>

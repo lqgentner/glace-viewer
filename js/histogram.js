@@ -1,8 +1,8 @@
 /*
  * The scale editor's histograms: the codes of a value-encoded archive, or a
- * false-color composite's channels, counted over the current view. Tiles are
- * those MapLibre draws at this zoom, so most come from the shared readers'
- * cache in js/archive.js.
+ * false-color composite's channels, counted over the current view; and the
+ * pixel under a click. Tiles are those MapLibre draws at this zoom, so most
+ * come from the shared readers' cache in js/archive.js.
  */
 
 import { archive, unlessAborted } from "./archive.js";
@@ -21,6 +21,9 @@ function tileY(lat, z) {
   const phi = (clamp(lat, -MAX_LAT, MAX_LAT) * Math.PI) / 180;
   return ((1 - Math.log(Math.tan(phi) + 1 / Math.cos(phi)) / Math.PI) / 2) * 2 ** z;
 }
+
+/* MapLibre draws 256 px raster tiles one zoom above the map's, rounded. */
+const drawnZoom = (zoom) => Math.round(zoom + 1);
 
 /** The fractional tile extent of [west, south, east, north] at zoom z. */
 function extent([west, south, east, north], z) {
@@ -71,8 +74,7 @@ async function tilesInView(url, minZoom, maxZoom, bounds, zoom, signal, maxTiles
   ];
   if (area[0] >= area[2] || area[1] >= area[3]) return { z: minZoom, view: null, tiles: [] };
 
-  // MapLibre draws 256 px raster-dem tiles one zoom above the map's, rounded.
-  let z = clamp(Math.round(zoom + 1), minZoom, maxZoom);
+  let z = clamp(drawnZoom(zoom), minZoom, maxZoom);
   let view = extent(area, z);
   const count = (v) => (Math.floor(v.x1) - Math.floor(v.x0) + 1) * (Math.floor(v.y1) - Math.floor(v.y0) + 1);
   while (z > minZoom && count(view) > maxTiles) view = extent(area, --z);
@@ -203,4 +205,24 @@ export function codeRange(counts) {
     high = code;
   }
   return low === null ? null : [low, high];
+}
+
+/**
+ * The RGBA of the pixel under [lng, lat] in the archive's tile MapLibre draws
+ * at `zoom`. Null where nothing is drawn: below the archive's zooms, or where
+ * it has no tile.
+ */
+export async function pixelAt(url, minZoom, maxZoom, [lng, lat], zoom) {
+  const wanted = drawnZoom(zoom);
+  if (wanted < minZoom) return null;
+  const z = Math.min(wanted, maxZoom);
+  const fx = tileX(lng - 360 * Math.floor((lng + 180) / 360), z);
+  const fy = tileY(lat, z);
+  const x = Math.min(Math.floor(fx), 2 ** z - 1);
+  const y = Math.min(Math.floor(fy), 2 ** z - 1);
+  const tile = await tilePixels(url, z, x, y);
+  if (!tile) return null;
+  const pixel = (fraction) => Math.min(tile.size - 1, Math.floor(fraction * tile.size));
+  const at = (pixel(fy - y) * tile.size + pixel(fx - x)) * 4;
+  return tile.data.slice(at, at + 4);
 }

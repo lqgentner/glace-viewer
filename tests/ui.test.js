@@ -190,3 +190,62 @@ test("pickers: the current choice is pressed and focused; picking closes and ref
   assert.equal(document.activeElement, button, "focus goes back to the button");
   assert.equal(button.classList.contains("popover-open"), false);
 });
+
+test("status: failures and notes are announced, progress is not", async () => {
+  const { page, ui } = await loadUi();
+  const live = page.el("status-live");
+  assert.equal(live.getAttribute("role"), "status");
+  ui.setStatus("rasters", "Loading layers…");
+  assert.equal(live.textContent, "", "progress is shown but not spoken");
+  ui.setStatus("grid", "Error loading the tile grid.", "error");
+  assert.equal(live.textContent, "Error loading the tile grid.");
+  ui.clearStatus("grid");
+  ui.clearStatus("rasters");
+  assert.equal(live.textContent, "");
+});
+
+test("segmented: arrow keys select the next choice, and Tab stops at the checked one", async () => {
+  const { page, ui } = await loadUi();
+  const { document, KeyboardEvent } = page.window;
+  const group = document.createElement("div");
+  document.body.append(group);
+  const chosen = [];
+  const select = (value) => {
+    chosen.push(value);
+    for (const button of group.children) button.setAttribute("aria-checked", String(button.dataset.value === value));
+    ui.rove(group);
+  };
+  ui.buildSegmented(group, ["A", "B", "C"], select);
+  select("A");
+  group.children[1].disabled = true;
+  const stops = () => [...group.children].map((button) => button.tabIndex);
+  assert.deepEqual(stops(), [0, -1, -1]);
+
+  const press = (key) => document.activeElement.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
+  group.children[0].focus();
+  press("ArrowRight");
+  assert.deepEqual(chosen.at(-1), "C", "past the disabled choice");
+  assert.equal(document.activeElement, group.children[2]);
+  assert.deepEqual(stops(), [-1, -1, 0]);
+  press("ArrowRight");
+  assert.equal(chosen.at(-1), "A", "and round");
+  press("ArrowUp");
+  assert.equal(chosen.at(-1), "C");
+});
+
+test("popovers: the button says whether its popover is open, and focus moves in", async () => {
+  const { page, ui } = await loadUi();
+  const { document } = page.window;
+  const button = ui.creditButton("T", { title: "T", links: [{ label: "D", url: "https://example.org" }] });
+  document.body.append(button);
+  assert.equal(button.getAttribute("aria-expanded"), "false");
+  button.click();
+  const box = document.getElementById(button.getAttribute("aria-controls"));
+  assert.ok(box.classList.contains("credit-popover"));
+  assert.equal(button.getAttribute("aria-expanded"), "true");
+  assert.equal(box.getAttribute("role"), "dialog");
+  assert.equal(box.getAttribute("aria-label"), "T: attribution and license");
+  assert.equal(document.activeElement, box.querySelector("a"), "to its first link");
+  button.click();
+  assert.equal(button.getAttribute("aria-expanded"), "false");
+});

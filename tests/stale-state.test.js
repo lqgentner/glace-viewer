@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import test from "node:test";
 
-import { installBrowser, load, REPO, settle } from "./helpers/browser.js";
+import { captureWarnings, installBrowser, load, REPO, settle } from "./helpers/browser.js";
 
 /* A hyparquet stand-in whose read waits for the test to release it. */
 const gate = [];
@@ -52,12 +52,13 @@ const pick = async (row, value) => {
 };
 
 test("a raster failure stays reported when the opacity changes", async () => {
-  map.fire("error", { sourceId: ID, error: new Error("HTTP 403") });
-  assert.match(el("status").textContent, /could not be drawn — HTTP 403/);
+  const warnings = await captureWarnings(() => map.fire("error", { sourceId: ID, error: new Error("HTTP 403") }));
+  assert.equal(el("status").textContent, "Error loading this layer's tiles. Try again later.");
+  assert.ok(warnings.some((line) => line.includes("HTTP 403")), "the detail goes to the console");
 
   input(el("opacity"), "80");
   await settle();
-  assert.match(el("status").textContent, /HTTP 403/, "nothing has recovered");
+  assert.match(el("status").textContent, /Error loading this layer/, "nothing has recovered");
 
   map.fire("error", { sourceId: ID, error: new Error("HTTP 403") });
   input(el("opacity"), "100");
@@ -66,7 +67,7 @@ test("a raster failure stays reported when the opacity changes", async () => {
   await pick("pol", "VH");
   assert.equal(el("status").hidden, true, "another layer has no failure to report");
   await pick("pol", "VV");
-  assert.match(el("status").textContent, /HTTP 403/, "the failed one still does");
+  assert.match(el("status").textContent, /Error loading this layer/, "the failed one still does");
 });
 
 test("presets wait for the recount after the map moves", async () => {
@@ -158,5 +159,5 @@ test("ticking the grid off and on while it loads leaves it on", async () => {
   await settle();
   assert.equal(el("grid").checked, true, `the box stays ticked; status: ${el("status").textContent}`);
   assert.equal(map.getLayer("grid-fill")?.layout?.visibility, "visible", "and the grid is drawn");
-  assert.doesNotMatch(el("status").textContent, /Tile grid unavailable/);
+  assert.doesNotMatch(el("status").textContent, /Error loading the tile grid/);
 });

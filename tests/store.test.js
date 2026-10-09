@@ -8,7 +8,7 @@ import test from "node:test";
 import { captureWarnings, installBrowser, load, REPO } from "./helpers/browser.js";
 
 installBrowser();
-const { readStore, storeLayers, stretches, styleHrefs } = await load("js/store.js");
+const { catalogBounds, readStore, storeLayers, stretches, styleHrefs } = await load("js/store.js");
 
 const read = (...where) =>
   JSON.parse(fs.readFileSync(path.join(REPO, "tests", "fixtures", ...where), "utf8"));
@@ -235,8 +235,10 @@ test("the three documents are read end to end", async () => {
     },
   });
 
-  const found = byId(await readStore());
+  const { layers, bounds } = await readStore();
+  const found = byId(layers);
   assert.equal(found.size, YEARS.length * 12, "twelve archives a year");
+  assert.deepEqual(bounds, [4.7461, 43.3891, 16.6113, 48.4], "the collection's extent");
   const layer = found.get("glace-rtc_vv-2025");
   assert.deepEqual([layer.units, layer.vmin, layer.vmax], ["dB", -14.5, -4.5]);
   assert.equal(layer.url, "http://localhost/tiles/mosaics/2025/rtc_vv_viz.pmtiles");
@@ -264,7 +266,7 @@ test("a year whose item cannot be read loses its archives, with a warning", asyn
   });
   let found;
   const warnings = await captureWarnings(async () => {
-    found = await readStore();
+    ({ layers: found } = await readStore());
   });
   assert.deepEqual(new Set(found.map((layer) => layer.year)), new Set([2025]));
   assert.equal(warnings.length, YEARS.length - 1);
@@ -335,7 +337,7 @@ test("a year with its own style is drawn from that style, not from the default",
   fs.writeFileSync(at("tmp-style-2023.json"), JSON.stringify(older));
   try {
     installBrowser({ files });
-    const found = byId(await readStore());
+    const found = byId((await readStore()).layers);
     assert.equal(found.size, 24, "both years of every archive reach the map");
     assert.equal(found.get("glace-coh12_vv-2023").maxZoom, 12, "from its own year's style");
     assert.equal(found.get("glace-coh12_vv-2025").maxZoom, 13);
@@ -343,4 +345,14 @@ test("a year with its own style is drawn from that style, not from the default",
     fs.rmSync(at("collection-per-year.json"));
     fs.rmSync(at("tmp-style-2023.json"));
   }
+});
+
+test("an extent the page cannot use is no extent", () => {
+  const extent = (bbox) => ({ extent: { spatial: { bbox: [bbox] } } });
+  assert.deepEqual(catalogBounds(extent([5, 44, 12, 48])), [5, 44, 12, 48]);
+  assert.equal(catalogBounds(extent([12, 44, 5, 48])), null, "west past east");
+  assert.equal(catalogBounds(extent([5, 44, 12])), null);
+  assert.equal(catalogBounds(extent([5, "44", 12, 48])), null);
+  assert.equal(catalogBounds({}), null);
+  assert.equal(catalogBounds(null), null);
 });

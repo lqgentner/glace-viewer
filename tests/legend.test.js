@@ -75,7 +75,8 @@ test("the edit button opens the editor on the layer's limits and color map", asy
   assert.equal(el("vmin-0").value, "0.10");
   assert.equal(el("vmax-0").value, "0.75");
   assert.equal(el("limits-hint").textContent, "", "no reason to show until a limit is refused");
-  assert.equal(el("vmin-0").getAttribute("aria-label"), "Min", "named for screen readers, not by a caption");
+  assert.equal(el("vmin-0").getAttribute("aria-label"), "Min", "named with its caption");
+  assert.equal(el("vmin-0").closest(".field").querySelector(".caption").textContent, "Min");
   assert.equal(off("range-reset"), true, "nothing to reset yet");
   assert.equal(el("cmap-options").children.length, 12);
   assert.deepEqual(
@@ -263,6 +264,7 @@ test("2–98% and Min/Max set both limits from the values in view", async () => 
     await settle();
     assert.equal(note(), "");
     assert.match(chart().querySelector(".bars").getAttribute("d"), /^M99 64h3V0\.00h-3Z/, "the first bar holds codes 100-102");
+    assert.equal(chart().getAttribute("aria-label"), "Histogram of the values in view: from 0.39 to 0.78", "spoken as a range");
     assert.equal(off("range-percentile"), false);
 
     // Code c is (c - 1) / 254: 2% falls at 102.5, 98% at 198.5.
@@ -394,7 +396,7 @@ test("false color edits its three channels, and the presets fit all three", asyn
   await type(el("vmax-2"), "2");
   assert.equal(reloads(), before + 1);
   const cells = [...el("legend-channels").children].map((node) => node.textContent);
-  assert.equal(cells[8], "0.80 to 2.00", "the legend shows the new limit");
+  assert.equal(cells[11], "0.80 to 2.00 (custom)", "the legend shows the new limit, and says it is changed");
   assert.ok(el("legend-channels").querySelector(".modified"), "marked as changed");
   assert.equal(off("range-reset"), false);
 
