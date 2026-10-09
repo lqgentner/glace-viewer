@@ -22,13 +22,15 @@ async function decodeTile(bytes) {
 
 /**
  * The decoded RGBA of one archive tile. Bytes come from the shared reader's
- * cache; a failed read rejects.
+ * cache; a failed read, or an aborted `signal`, rejects.
  *
  * @returns {Promise<{size: number, data: Uint8ClampedArray}|null>}  null where
  *   the archive has no tile
  */
-export async function tilePixels(url, z, x, y) {
+export async function tilePixels(url, z, x, y, signal) {
+  // The signal stays out of the shared read; an aborted caller only skips the decode.
   const response = await archive(url).getZxy(z, x, y);
+  signal?.throwIfAborted();
   return response?.data ? decodeTile(response.data) : null;
 }
 

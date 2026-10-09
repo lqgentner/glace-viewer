@@ -143,7 +143,7 @@ test("a QA raster brings its own color map and stretch", async () => {
   // satellites, and one ceiling for every year and both products is what keeps
   // the difference legible.
   const units = () => [...el("legend-labels").querySelectorAll(".unit")].map((u) => u.textContent);
-  assert.deepEqual([el("vmin").value, el("vmax").value], ["0.0", "80.0"]);
+  assert.deepEqual([el("legend-min").textContent, el("legend-max").textContent], ["0.0", "80.0"]);
   assert.deepEqual(units(), ["", ""]);
   assert.equal(el("cmap").textContent, "glasgow", "the QA layer's own map");
   assert.deepEqual(
@@ -154,7 +154,7 @@ test("a QA raster brings its own color map and stretch", async () => {
   await pick("quantity", "QA_CQM");
   // A sequential ramp over the measured one-sided range: CQM is a composite
   // quality indicator where higher is better, and 0 dB is not a meaningful middle.
-  assert.deepEqual([el("vmin").value, el("vmax").value], ["-2.5", "8.0"]);
+  assert.deepEqual([el("legend-min").textContent, el("legend-max").textContent], ["-2.5", "8.0"]);
   assert.deepEqual(units(), [" dB", " dB"]);
   assert.deepEqual(
     [...el("layer-info").children].map((line) => line.textContent),
@@ -239,7 +239,7 @@ test("going back to a single-band layer restores the ramp", async () => {
   await pick("pol", "VV");
   assert.equal(el("legend-bar").hidden, false);
   assert.equal(el("legend-channels").hidden, true);
-  assert.deepEqual([el("vmin").value, el("vmax").value], ["0.10", "0.75"]);
+  assert.deepEqual([el("legend-min").textContent, el("legend-max").textContent], ["0.10", "0.75"]);
 });
 
 test("every archive the store published is reachable", async () => {

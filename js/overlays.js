@@ -163,7 +163,7 @@ function colorPicker(entry) {
   const lineId = `inv-line-${entry.id}`;
   const swatch = h("button", {
     type: "button",
-    class: "swatch edit-box",
+    class: "swatch",
     "aria-label": `${entry.title}: outline color`,
     style: { backgroundColor: entry.color },
   });
@@ -216,7 +216,7 @@ export async function loadInventories() {
     node.append(
       h(
         "div",
-        { class: "inventory edit-group" },
+        { class: "inventory" },
         box,
         colorPicker(entry),
         label,

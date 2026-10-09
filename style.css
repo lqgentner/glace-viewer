@@ -10,6 +10,8 @@
   --accent-ink: #b8479f;
   /* Every font size is a multiple of this, so touch screens can enlarge them all. */
   --text-scale: 1;
+  /* Checkboxes and the inventory swatches beside them share this size. */
+  --box: 14px;
 }
 
 * { box-sizing: border-box; }
@@ -49,11 +51,11 @@ html, body {
 }
 
 /*
- * Frosted glass adapted from joshwcomeau.com/css/backdrop-filter. Saturation and
- * brightness compensate for the blur so bright rasters do not wash out panel
- * labels.
+ * Frosted glass for the panel and the scale editor, adapted from
+ * joshwcomeau.com/css/backdrop-filter. Saturation and brightness compensate for
+ * the blur so bright rasters do not wash out panel labels.
  */
-#panel-shell {
+:root {
   --glass-blur: 16px;
   --glass-saturate: 150%;
   --glass-brightness: 78%;
@@ -62,7 +64,9 @@ html, body {
   --glass-alpha: 0.62;
   /* Overhang by two blur radii to provide neighboring pixels at the panel edges. */
   --glass-reach: calc(var(--glass-blur) * 2);
+}
 
+#panel-shell {
   position: absolute;
   top: 12px;
   left: 12px;
@@ -84,7 +88,8 @@ html, body {
  * Blur an oversized pane, then clip it to the shell. Keep it a sibling of the
  * scrolling panel so it stays fixed behind the controls.
  */
-#panel-glass {
+#panel-glass,
+#scale-editor .glass {
   position: absolute;
   inset: calc(-1 * var(--glass-reach));
   pointer-events: none;
@@ -108,16 +113,28 @@ html, body {
   background: var(--panel);
 }
 
+/*
+ * The scale editor's sheet takes the panel's surface. Declared before the glass
+ * tint below, which overrides it.
+ */
+#scale-editor .sheet {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  /* Opaque fallback for browsers without backdrop-filter. */
+  background: var(--panel);
+}
+
 @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
-  #panel-glass {
+  #panel-glass,
+  #scale-editor .glass {
     -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
       brightness(var(--glass-brightness));
     backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
       brightness(var(--glass-brightness));
   }
-  #panel {
+  #panel,
+  #scale-editor .sheet {
     background: hsl(var(--glass-tint) / var(--glass-alpha));
-
     border-color: rgba(255, 255, 255, 0.14);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09);
   }
@@ -182,27 +199,46 @@ html, body {
 #panel h1 img { display: block; height: 20px; width: auto; }
 #panel #subtitle { margin: 6px 0 0; font-size: calc(12px * var(--text-scale)); color: var(--muted); }
 
-#panel-toggle {
+/*
+ * The panel's collapse button and the scale editor's close button: boxed, in
+ * each surface's top right corner 10px from its edges, so they read above the
+ * headings beside them. The panel's padding is 16px, the editor's 10px by 16px.
+ */
+#panel-toggle,
+#scale-editor .close {
   flex: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
-  margin: -2px -4px 0 0;
+  width: 26px;
+  height: 26px;
+  margin: -6px -6px 0 0;
   padding: 0;
-  color: var(--muted);
-  background: none;
-  border: 0;
+  color: var(--text);
+  background-color: rgba(255, 255, 255, 0.13);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
   cursor: pointer;
+  transition:
+    color 0.14s ease,
+    background-color 0.14s ease,
+    border-color 0.14s ease;
 }
+#scale-editor .close { margin-top: 0; }
+:is(#panel-toggle, #scale-editor .close) svg { width: 14px; height: 14px; }
 @media (hover: hover) {
-  #panel-toggle:hover { color: var(--text); }
+  #panel-toggle:hover,
+  #scale-editor .close:hover {
+    color: #fff;
+    background-color: rgba(255, 255, 255, 0.24);
+    border-color: rgba(255, 255, 255, 0.3);
+  }
 }
 
 .control { margin-bottom: 14px; }
 .control > label,
-.control-head > label {
+.control-head > label,
+.control-head > .label {
   display: block;
   margin-bottom: 6px;
   font-size: calc(11px * var(--text-scale));
@@ -220,7 +256,7 @@ html, body {
   margin-bottom: 6px;
 }
 
-.control-head > label { flex: 1; margin-bottom: 0; }
+.control-head > :is(label, .label) { flex: 1; margin-bottom: 0; }
 
 .control.checkbox { display: flex; align-items: center; gap: 8px; }
 .control.checkbox > label {
@@ -233,12 +269,14 @@ html, body {
 }
 
 /*
- * Segments and checkboxes share off, on, and hover colors. Use a translucent wash
+ * Segments, checkboxes and the Edit button share off and hover colors;
+ * segments and checkboxes also share on. Use a translucent wash
  * over the panel rather than another backdrop-filter.
  */
 .segmented button,
-input[type="checkbox"] {
-  background: rgba(255, 255, 255, 0.13);
+input[type="checkbox"],
+#legend-edit {
+  background-color: rgba(255, 255, 255, 0.13);
   border: 1px solid rgba(255, 255, 255, 0.15);
   cursor: pointer;
   transition:
@@ -253,7 +291,8 @@ input[type="checkbox"] {
  */
 @media (hover: hover) {
   .segmented button:hover:not(:disabled):not([aria-checked="true"]),
-  input[type="checkbox"]:hover:not(:checked) {
+  input[type="checkbox"]:hover:not(:checked),
+  #legend-edit:hover {
     background-color: rgba(255, 255, 255, 0.24);
     border-color: rgba(255, 255, 255, 0.3);
   }
@@ -287,9 +326,8 @@ input[type="checkbox"] {
   -webkit-appearance: none;
   appearance: none;
   flex: none;
-  width: 14px;
-  height: 14px;
-
+  width: var(--box);
+  height: var(--box);
   margin: 0;
   border-radius: 4px;
 }
@@ -304,7 +342,9 @@ input[type="checkbox"]:checked {
   background-size: 12px;
 }
 
-input[type="checkbox"]:focus-visible {
+input[type="checkbox"]:focus-visible,
+#legend-edit:focus-visible,
+.inventory .swatch:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
@@ -369,67 +409,17 @@ details:not([open]) > summary .chevron { transform: rotate(180deg); }
   font-variant-numeric: tabular-nums;
 }
 
-/* The scale's name sits right after its label; reset is pushed to the end. */
-#legend .control-head > label { flex: none; }
-#range-reset {
-  margin-left: auto;
-  padding: 0 2px;
-  font: inherit;
-  font-size: calc(13px * var(--text-scale));
-  line-height: 1;
-  color: var(--muted);
-  background: none;
-  border: 0;
-  cursor: pointer;
-}
-@media (hover: hover) {
-  #range-reset:hover { color: #fff; }
+/* The scale's name reads as a value after its label. */
+#cmap {
+  margin-left: 4px;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text);
 }
 #legend-labels .limit { display: inline-flex; align-items: baseline; }
-/* Clear of the box, so the unit sits the same distance from every value. */
 #legend-labels .unit { margin-left: 4px; }
-
-/* The legend's editable values read as plain text; see the edit boxes below. */
-#legend .edit-box {
-  margin: 0 -4px;
-  padding: 0 3px;
-  font: inherit;
-  color: inherit;
-  background: transparent;
-  cursor: pointer;
-}
-#legend .control-head .edit-box { font-size: calc(11px * var(--text-scale)); color: var(--text); }
-/* Size limits to their text; the size attribute is the fallback without field-sizing. */
-#legend input.edit-box {
-  min-width: 0;
-  margin-right: 0;
-  field-sizing: content;
-  cursor: text;
-  font-variant-numeric: tabular-nums;
-}
-#vmax { text-align: right; }
-/* A changed limit takes the accent; one being typed reads white. */
-#legend input.edit-box.modified { color: var(--accent-ink); }
-#legend input.edit-box:focus { color: #fff; }
-
-.cmap-popover { padding: 6px; }
-.cmap-popover .cmap-option {
-  display: grid;
-  grid-template-columns: 72px auto;
-  gap: 8px;
-  align-items: center;
-  width: 100%;
-  padding: 1px 6px;
-  font: inherit;
-  font-size: calc(12px * var(--text-scale));
-  color: var(--text);
-  text-align: left;
-  background: none;
-  border-radius: 4px;
-}
-/* A gap between options, so their outlines stand apart. */
-.cmap-popover .cmap-option + .cmap-option { margin-top: 4px; }
-.cmap-popover .ramp { height: 10px; border-radius: 3px; border: 1px solid var(--border); }
+/* A changed limit takes the accent. */
+#legend-labels .modified { color: var(--accent); }
 
 #legend-channels {
   display: grid;
@@ -470,7 +460,8 @@ details:not([open]) > summary .chevron { transform: rotate(180deg); }
   border-radius: 6px;
   background: var(--panel);
   font-size: calc(13px * var(--text-scale));
-  z-index: 3;
+  /* Above the scale editor, which can open beneath it. */
+  z-index: 4;
 }
 
 .popover,
@@ -532,7 +523,8 @@ details:not([open]) > summary .chevron { transform: rotate(180deg); }
   margin-bottom: 8px;
 }
 
-.inventory input[type="checkbox"] { margin-top: 2px; }
+/* Center the boxes on the label's first line. */
+.inventory :is(input[type="checkbox"], .swatch) { margin-top: 2px; }
 .inventory label {
   flex: 1;
   font-size: calc(13px * var(--text-scale));
@@ -540,36 +532,23 @@ details:not([open]) > summary .chevron { transform: rotate(180deg); }
   color: var(--text);
   cursor: pointer;
 }
-/* Padding enlarges the hit target around the color bar; the border is the edit box. */
-.inventory .swatch {
-  width: 20px;
-  height: 19px;
-  padding: 7px 2px;
-  background-clip: content-box;
-  flex: none;
-  cursor: pointer;
-}
-
 /*
- * Edit boxes, in the legend and on inventory swatches: no outline until their
- * group is hovered, then a quiet one; a white one under the pointer, while the
- * box's picker is open, or while it is typed in. Focus alone leaves the
- * browser's ring, so closing a picker by a choice or Escape clears the box.
- * Without hover (touch) the quiet outline stays.
+ * The outline color, filling a box the checkbox's size. It shows only while its
+ * inventory is ticked; hidden, it keeps its place so labels stay aligned.
  */
-.edit-box {
-  border: 1px solid transparent;
+.inventory .swatch {
+  flex: none;
+  width: var(--box);
+  height: var(--box);
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 4px;
+  cursor: pointer;
   transition: border-color 0.14s ease;
 }
+.inventory:has(input[type="checkbox"]:not(:checked)) .swatch { visibility: hidden; }
 @media (hover: hover) {
-  .edit-group:hover .edit-box { border-color: rgba(255, 255, 255, 0.3); }
-  .edit-group .edit-box:hover { border-color: #fff; }
-}
-.edit-group .edit-box.popover-open,
-.edit-group input.edit-box:focus { border-color: #fff; outline: none; }
-@media (hover: none) {
-  .edit-box { border-color: rgba(255, 255, 255, 0.3); }
+  .inventory .swatch:hover { border-color: rgba(255, 255, 255, 0.6); }
 }
 
 .inventory .span {
@@ -595,6 +574,32 @@ details:not([open]) > summary .chevron { transform: rotate(180deg); }
 @media (hover: hover) {
   .credit:hover { color: var(--accent); }
 }
+
+/*
+ * The scale's edit button. Its ::after covers the whole legend, so a click
+ * anywhere on it opens the editor, and hovering the legend hovers the button.
+ */
+#legend { position: relative; }
+#legend-edit {
+  flex: none;
+  padding: 0 7px;
+  font: inherit;
+  font-size: calc(11px * var(--text-scale));
+  line-height: 1.5;
+  color: #fff;
+  border-radius: 4px;
+}
+#legend-edit::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+}
+/* While the editor or the color picker is open, its button keeps its hover look. */
+#legend-edit[aria-expanded="true"] {
+  background-color: rgba(255, 255, 255, 0.24);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+.inventory .swatch.popover-open { border-color: rgba(255, 255, 255, 0.6); }
 .inventory .credit { margin-top: 2px; }
 
 /* Position outside the scrolling panel; see ui.js. */
@@ -661,7 +666,7 @@ details:not([open]) > summary .chevron { transform: rotate(180deg); }
   grid-template-columns: repeat(3, 22px);
   gap: 6px;
 }
-/* Padding keeps the outline clear of the color, as on the swatch. */
+/* Padding keeps the outline clear of the color. */
 .palette-popover .chip {
   width: 22px;
   height: 22px;
@@ -725,22 +730,249 @@ details[open] > :is(#inventories-toggle, #extras-toggle) { margin-bottom: 8px; }
 .maplibregl-popup-content .pop-head:first-child { padding-right: 16px; }
 
 /*
+ * The scale editor, a non-modal dialog: beside the panel on wide screens, in
+ * its place on narrow ones. The map stays live around it.
+ */
+#scale-editor {
+  position: fixed;
+  z-index: 3;
+  width: 300px;
+  /* Clear of the map controls: its 316px offset and their 62px column. */
+  max-width: calc(100vw - 316px - 62px);
+  max-height: calc(100dvh - 24px);
+  /* Right of the panel: its 12px margin, 292px width and a 12px gap. */
+  inset: 12px auto auto 316px;
+  margin: 0;
+  padding: 0;
+  /* Built like the panel: this shell clips the glass, the sheet scrolls over it. */
+  overflow: hidden;
+  color: var(--text);
+  background: none;
+  border: 0;
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+}
+#scale-editor[open] { display: flex; flex-direction: column; }
+#scale-editor .sheet {
+  position: relative;
+  min-height: 0;
+  /* Hidden across, so the close button's touch area cannot add a scrollbar. */
+  overflow: hidden auto;
+  padding: 10px 16px 16px;
+}
+#scale-editor header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+#scale-editor h2,
+#scale-editor h3,
+#scale-editor .limit > label:first-child {
+  margin: 0;
+  font-size: calc(11px * var(--text-scale));
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+#scale-editor h3 { margin: 18px 0 8px; }
+/* What the values cover, quieter than the heading it follows. */
+#scale-editor h2 .context {
+  margin-left: 6px;
+  text-transform: none;
+  letter-spacing: 0;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+/*
+ * The histogram's handles and shading read --low and --high, the limits'
+ * positions on its axis. The whole chart is the drag target.
+ */
+#histogram {
+  position: relative;
+  height: 64px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 4px 4px 0 0;
+  cursor: crosshair;
+  touch-action: none;
+  user-select: none;
+}
+#histogram.dragging { cursor: grabbing; }
+#histogram svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+#histogram-bars { fill: rgba(255, 255, 255, 0.5); shape-rendering: crispEdges; }
+#histogram .shade {
+  position: absolute;
+  inset-block: 0;
+  background: rgba(0, 0, 0, 0.45);
+}
+#histogram .shade.low { left: 0; width: var(--low); }
+#histogram .shade.high { left: var(--high); right: 0; }
+#histogram .handle {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  transform: translate(-50%, -50%);
+}
+#histogram .handle.low { left: var(--low); }
+#histogram .handle.high { left: var(--high); }
+#histogram-note {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: calc(11px * var(--text-scale));
+  color: var(--muted);
+  pointer-events: none;
+}
+/* The ramp as drawn: the end colors hold beyond the limits. */
+#editor-bar {
+  height: 8px;
+  border: 1px solid var(--border);
+  border-radius: 0 0 3px 3px;
+}
+
+/* Min, Max, and Reset as a square of the fields' height at the end. */
+#scale-editor .limits {
+  --field-height: calc(32px * var(--text-scale));
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  align-items: end;
+  gap: 8px;
+  margin-top: 12px;
+}
+#scale-editor .limit { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+/* The field draws the box; the unit inside it is not typed but focuses the field. */
+#scale-editor .field {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  height: var(--field-height);
+  padding: 0 9px 0 8px;
+  line-height: calc(var(--field-height) - 2px);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  cursor: text;
+}
+#scale-editor .field:focus-within { border-color: #fff; }
+#scale-editor .field:has([aria-invalid="true"]) { border-color: #e0524f; }
+#scale-editor .field .unit {
+  flex: none;
+  font-size: calc(13px * var(--text-scale));
+  color: var(--muted);
+}
+/* 14px scales to 16px on touch screens, below which iOS zooms into a field. */
+#scale-editor input {
+  flex: 1;
+  width: 0;
+  min-width: 0;
+  padding: 0;
+  font: inherit;
+  font-size: calc(14px * var(--text-scale));
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  background: none;
+  border: 0;
+  outline: none;
+}
+/* Why a typed limit was refused, in the invalid field's red, lightened for text. */
+#limits-hint {
+  margin: 8px 0 0;
+  font-size: calc(11px * var(--text-scale));
+  color: #f08a87;
+}
+
+#scale-editor .presets { display: flex; gap: 6px; margin-top: 10px; }
+#scale-editor .presets button,
+#range-reset {
+  padding: 2px 9px;
+  font: inherit;
+  font-size: calc(11px * var(--text-scale));
+  color: #fff;
+  background: rgba(255, 255, 255, 0.13);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  cursor: pointer;
+}
+#range-reset {
+  display: grid;
+  place-items: center;
+  width: var(--field-height);
+  height: var(--field-height);
+  padding: 0;
+}
+:is(#scale-editor .presets button, #range-reset)[aria-disabled="true"] {
+  opacity: 0.35;
+  cursor: default;
+}
+/* Empty while every limit is accepted. */
+#limits-hint:empty { margin: 0; }
+@media (hover: hover) {
+  :is(#scale-editor .presets button, #range-reset):hover:not([aria-disabled="true"]) {
+    background: rgba(255, 255, 255, 0.24);
+  }
+}
+
+#cmap-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 8px;
+}
+.cmap-option {
+  display: grid;
+  grid-template-columns: 48px auto;
+  gap: 8px;
+  align-items: center;
+  padding: 4px 6px;
+  font: inherit;
+  font-size: calc(12px * var(--text-scale));
+  color: var(--text);
+  text-align: left;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.cmap-option .ramp { height: 10px; border-radius: 3px; border: 1px solid var(--border); }
+.cmap-option[aria-pressed="true"] { border-color: #fff; }
+@media (hover: hover) {
+  .cmap-option:hover:not([aria-pressed="true"]) { border-color: rgba(255, 255, 255, 0.3); }
+}
+
+@media (max-width: 640px) {
+  /* The panel's place, clear of the map controls; the panel returns on close. */
+  #scale-editor {
+    inset: 12px 62px auto 12px;
+    width: auto;
+    max-width: none;
+    max-height: 60dvh;
+  }
+  body:has(#scale-editor[open]) #panel-shell { display: none; }
+  /* Three columns keep the editor low, so more of the map shows below it. */
+  #cmap-options { grid-template-columns: repeat(3, 1fr); }
+  .cmap-option { grid-template-columns: 36px auto; gap: 6px; }
+}
+
+/*
  * Touch: larger targets for a fingertip, about 40px or more. Invisible ::after
  * areas enlarge small buttons without moving the layout; the rest grow in place.
  */
 @media (pointer: coarse) {
-  :root { --text-scale: 1.15; }
+  :root { --text-scale: 1.15; --box: 20px; }
 
   #panel-toggle,
-  #range-reset,
-  #cmap,
+  #scale-editor .close,
   .credit,
   .inventory .swatch,
   #inventories-toggle,
   #extras-toggle { position: relative; }
   #panel-toggle::after,
-  #range-reset::after,
-  #cmap::after,
+  #scale-editor .close::after,
   .credit::after,
   .inventory .swatch::after,
   #inventories-toggle::after,
@@ -753,23 +985,32 @@ details[open] > :is(#inventories-toggle, #extras-toggle) { margin-bottom: 8px; }
   .credit svg { width: 18px; height: 18px; }
   .credit::after { inset: -10px; }
   .inventory .swatch::after { inset: -8px; }
-  #cmap::after { inset: -12px -6px; }
   /* Stop short of the first control below the open summary's 8px margin. */
   #inventories-toggle::after,
   #extras-toggle::after { inset: -12px 0 -8px; }
 
   .segmented button { padding-block: 10px; }
 
-  input[type="checkbox"] { width: 20px; height: 20px; }
   input[type="checkbox"]:checked { background-size: 16px; }
-  .inventory input[type="checkbox"] { margin-top: 0; }
+  /* Wider spacing keeps the swatch's tap area off the checkbox and the next row. */
+  .inventory { gap: 12px; margin-bottom: 14px; }
+  .inventory :is(input[type="checkbox"], .swatch) { margin-top: 0; }
   /* Rows tile without overlapping: 19px label + 14px row margin. */
   .control.checkbox > label { padding-block: 7px; margin-block: -7px; }
 
   /* A taller input is a taller grip; the negative margin keeps the spacing. */
   input[type="range"] { height: 32px; margin-block: -8px; }
 
-  .cmap-popover .cmap-option { padding-block: 10px; }
+  .cmap-option { padding-block: 10px; }
+  #histogram { height: 80px; }
+  /* Taller tap areas for the low buttons; their row has room above and below. */
+  #scale-editor .presets button { position: relative; }
+  #scale-editor .presets button::after {
+    content: "";
+    position: absolute;
+    inset: -8px -3px;
+  }
+  #histogram .handle { width: 20px; height: 20px; }
   .palette-popover { grid-template-columns: repeat(3, 36px); }
   .palette-popover .chip { width: 36px; height: 36px; padding: 3px; }
   .credit-popover { line-height: 1.7; }

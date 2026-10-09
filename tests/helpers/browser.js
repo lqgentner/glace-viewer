@@ -128,6 +128,18 @@ class FakeMap {
     return this.zoom;
   }
 
+  /* A square view about the center, half a tile of 512 px either way. */
+  getBounds() {
+    const half = 180 / 2 ** this.zoom;
+    const { lng, lat } = this.center;
+    return {
+      getWest: () => lng - half,
+      getEast: () => lng + half,
+      getSouth: () => Math.max(-85, lat - half / 2),
+      getNorth: () => Math.min(85, lat + half / 2),
+    };
+  }
+
   getContainer() {
     return window.document.getElementById(this.options.container);
   }
@@ -283,6 +295,21 @@ export function installBrowser({
   if (site === undefined) delete globalThis.GLACE_CONFIG;
   else globalThis.GLACE_CONFIG = site;
 
+  /* jsdom's dialogs lack the focusing steps. The page needs only the open
+   * state, the autofocus that show() gives, and close() with its event. */
+  Object.assign(window.HTMLDialogElement.prototype, {
+    show() {
+      if (this.open) return;
+      this.setAttribute("open", "");
+      this.querySelector("[autofocus]")?.focus();
+    },
+    close() {
+      if (!this.open) return;
+      this.removeAttribute("open");
+      this.dispatchEvent(new window.Event("close"));
+    },
+  });
+
   /* jsdom has no matchMedia, and the page asks for one at boot to decide
    * whether the panel starts collapsed. The page only ever asks the one
    * question — is this viewport narrow — so the stub answers every query the
@@ -349,6 +376,7 @@ export function installBrowser({
     },
     PMTiles: class {
       constructor(source) { this.source = source; }
+      async getHeader() { return { minLon: -180, minLat: -85, maxLon: 180, maxLat: 85 }; }
       async getZxy() { return undefined; }
     },
     EtagMismatch: class extends Error {},

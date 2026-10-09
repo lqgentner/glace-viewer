@@ -67,6 +67,7 @@ A gitignored `tiles` symlink to the catalog root also works. The root is above
 | `js/composite.js` | False color composed from VV and VH archives via `glace-rgb://` |
 | `js/archive.js` | Shared PMTiles readers, their byte cache, the `pmtiles://` protocol |
 | `js/values.js` | Tile decoding for false-color composites |
+| `js/histogram.js` | Archive codes counted over the view, drawn as the scale editor's bars |
 | `js/overlays.js` | Inventory controls, overlay lifecycle, grid layers, feature popups |
 | `js/tile-grid.js` | GeoParquet index to deduplicated tile footprints |
 | `js/ui.js` | DOM helpers, status messages, segmented controls, popovers, pickers |
@@ -221,11 +222,24 @@ Below 640 px the status message sits above the scale bar, clear of the panel
 toggle. The expanded attribution may cover the scale bar until MapLibre
 collapses it on the first drag, which the OSMF attribution guidelines allow.
 
-The legend edits value-encoded layers in place: the color-map button opens a
-popover, the limits are inputs that render never overwrites while focused, and
-choices are kept per layer stem. Reset restores the default limits only. Limits outside the archive's codes 1-255 are
-refused: below, the ramp falls into the nodata stop; above, MapLibre's packed
-ramp wraps around. False color is not editable.
+The legend only displays. Its Edit button's `::after` covers the whole legend,
+so a click anywhere on it toggles `#scale-editor`, a non-modal `<dialog>`:
+beside the panel, or in the panel's place below 640 px. The map stays live, and
+the close button or Escape closes it. Its histogram counts the archive's codes
+in the view at the zoom MapLibre draws, coarser past a tile budget sized to the
+viewport, again after each `moveend`; a recount keeps the old bars until it is
+ready. The open editor follows the selection and closes on a layer it cannot
+edit. The axis spans codes 1-255, and the limits are handles on it: a press
+moves the nearer one. 2–98% and Min/Max fit both limits to those counts. Limits
+apply as they are typed or dragged, and render never overwrites the field being
+typed in. A refused value flags its field and shows why below the presets.
+Leaving a field shows what is drawn, which discards invalid text and the
+reason. A color map applies on click and the dialog stays open. Choices are
+kept per layer stem, and Reset restores the default limits only. Limits outside
+the archive's codes 1-255 are refused: below, the ramp falls into the nodata
+stop; above, MapLibre's packed ramp wraps around. Keep the dialog's fields at
+16 px or more on touch screens, or iOS zooms into them. False color is not
+editable.
 
 ## Inventories and the tile grid
 
@@ -254,8 +268,11 @@ SNAPPY; a ZSTD index would require additional decompressor support.
 
 The JavaScript suites use jsdom and the strict fake MapLibre in
 `tests/helpers/browser.js`. Duplicate layers, missing sources, and writes to
-unadded layers throw. These tests check application behavior, not actual WebGL
-rendering or CDN availability; inspect visual changes in a real browser too.
+unadded layers throw. jsdom's dialogs skip the focusing steps, so the helper's
+`show()` opens the dialog and focuses its `autofocus` element, and its `close()`
+fires `close` at once where browsers queue it. These tests check
+application behavior, not actual WebGL rendering or CDN availability; inspect
+visual changes in a real browser too.
 
 Modules hold state and the map is a singleton. Put scenarios needing a fresh
 catalog, viewport, or initial camera in separate test files so `node --test`
@@ -268,7 +285,7 @@ Use the relevant suites when changing behavior:
 | Change | Tests |
 | --- | --- |
 | Settings, catalog joins, selection and legends | `config`, `store`, `layers`, `store-catalog`, `store-local`, `legend`, `viewer` |
-| False color, tile decoding and caching | `composite`, `encoded`, `archive` |
+| False color, tile decoding and caching | `composite`, `encoded`, `archive`, `histogram` |
 | Overlay loading, retries, popups | `viewer`, `tile-grid`, `ui` |
 | Startup failures, viewport, camera, labels | `viewer-degraded`, `viewer-no-webgl`, `viewer-narrow`, `viewer-3d-restore`, `viewer-light-flavor` |
 | Globe calculations | `sky` |
