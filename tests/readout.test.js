@@ -50,7 +50,11 @@ function inside(z, x, y, fx, fy) {
   const lat = (Math.atan(Math.sinh(Math.PI * (1 - (2 * (y + fy)) / n))) * 180) / Math.PI;
   return { lng, lat };
 }
+const escape = () =>
+  page.window.document.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+/* A click with no popup open, which a click with one open would only close. */
 async function click(lngLat) {
+  escape();
   popups.length = 0;
   map.fire("click", { point: { x: 10, y: 10 }, lngLat });
   await settle();
@@ -119,4 +123,32 @@ test("Enter on the focused map inspects its center", async () => {
   el("map").dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter" }));
   await settle();
   assert.deepEqual(shown(), ["Coherence 2023VV: 0.39"]);
+});
+
+test("a click elsewhere, a drag, a zoom, a tilt or Escape closes the popup", async () => {
+  tileFor = () => tile(101, 101, 101, 101);
+  await click(inside(...AT, 0.25, 0.25));
+  const [first] = popups;
+  assert.equal(first.options.closeButton, false, "there is no close button");
+
+  map.fire("click", { point: { x: 10, y: 10 }, lngLat: inside(...AT, 0.75, 0.75) });
+  await settle();
+  assert.equal(first.removed, true, "a click elsewhere closes it");
+  assert.equal(popups.length, 1, "and opens no other");
+
+  map.fire("click", { point: { x: 10, y: 10 }, lngLat: inside(...AT, 0.75, 0.75) });
+  await settle();
+  assert.equal(popups.length, 2, "the next click opens one again");
+  map.fire("dragstart");
+  assert.equal(popups[1].removed, true, "a drag closes it");
+
+  for (const event of ["zoomstart", "pitchstart"]) {
+    await click(inside(...AT, 0.25, 0.25));
+    map.fire(event);
+    assert.equal(popups[0].removed, true, `and so does ${event}`);
+  }
+
+  await click(inside(...AT, 0.25, 0.25));
+  escape();
+  assert.equal(popups[0].removed, true, "and so does Escape");
 });

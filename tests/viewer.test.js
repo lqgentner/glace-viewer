@@ -494,6 +494,8 @@ test("the viewer", async (t) => {
       { layer: { id: "inv-line-sgi2023" }, properties: { name: "Aletschgletscher", year: 2023 } },
       { layer: { id: "grid-fill" }, properties: { tile: "32TMS", glacier_fraction: 0.42 } },
     ];
+    // Escape closes the last popup, which this click would otherwise only close.
+    page.window.document.dispatchEvent(new page.window.KeyboardEvent("keydown", { key: "Escape" }));
     map.fire("click", { point: { x: 10, y: 10 }, lngLat: { lng: 8, lat: 46 } });
     await settle();
 
@@ -512,6 +514,8 @@ test("the viewer", async (t) => {
         properties: { name: '<img src=x onerror="fail()">', year: 2023 },
       },
     ];
+    // Escape closes the last popup, which this click would otherwise only close.
+    page.window.document.dispatchEvent(new page.window.KeyboardEvent("keydown", { key: "Escape" }));
     map.fire("click", { point: { x: 10, y: 10 }, lngLat: { lng: 8, lat: 46 } });
     await settle();
 
@@ -579,6 +583,8 @@ test("the viewer", async (t) => {
       },
       { layer: { id: "inv-line-pauletal2020" }, properties: { glacier_nr: 1234, year: 2015 } },
     ];
+    // Escape closes the last popup, which this click would otherwise only close.
+    page.window.document.dispatchEvent(new page.window.KeyboardEvent("keydown", { key: "Escape" }));
     map.fire("click", { point: { x: 10, y: 10 }, lngLat: { lng: 8, lat: 46 } });
     await settle();
 

@@ -373,6 +373,7 @@ function featureSections({ x, y }) {
 
 /* The latest inspection, so a slow read cannot open a popup over a newer one. */
 let inspections = 0;
+let popup = null;
 
 /* One popup: the raster's values on top, then the overlays under the point. */
 async function inspect(point, lngLat) {
@@ -388,10 +389,29 @@ async function inspect(point, lngLat) {
     if (i > 0) content.append(document.createElement("hr"));
     content.append(...section);
   });
-  new maplibregl.Popup().setLngLat(lngLat).setDOMContent(content).addTo(map);
+  closePopup();
+  popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false })
+    .setLngLat(lngLat)
+    .setDOMContent(content)
+    .addTo(map);
 }
 
-map.on("click", (event) => inspect(event.point, event.lngLat));
+/* No close button: a click elsewhere, a drag, a zoom, a tilt or Escape closes the popup. */
+function closePopup() {
+  if (!popup) return false;
+  popup.remove();
+  popup = null;
+  return true;
+}
+
+map.on("click", (event) => {
+  if (!closePopup()) inspect(event.point, event.lngLat);
+});
+// Tilting covers the 3D button, which eases the pitch.
+for (const event of ["dragstart", "zoomstart", "pitchstart"]) map.on(event, closePopup);
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") closePopup();
+});
 
 /* Enter on the focused map inspects its center, for keyboards. */
 map.getCanvasContainer().addEventListener("keydown", (event) => {

@@ -520,19 +520,12 @@ details:not([open]) > summary .chevron { transform: rotate(180deg); }
 .maplibregl-popup-content {
   font-size: calc(12px * var(--text-scale));
   overflow-wrap: anywhere;
-  /* Leave room for the close button in the right inset. */
   padding: 9px 12px 10px;
 }
 
-.maplibregl-popup-close-button {
-  top: 1px;
-  right: 3px;
-  color: var(--muted);
-  font-size: calc(15px * var(--text-scale));
-}
-@media (hover: hover) {
-  .maplibregl-popup-close-button:hover { color: var(--text); background: transparent; }
-}
+/* An arrow over the map, as in Google Maps, and the move cursor while dragging. */
+#map .maplibregl-canvas-container.maplibregl-interactive { cursor: default; }
+#map .maplibregl-canvas-container.maplibregl-interactive:active { cursor: move; }
 /* Include the map ID to override MapLibre's per-anchor tip colors. */
 #map .maplibregl-popup-tip { border-width: 6px; }
 /* White, so the tip shows where the value was read. */
@@ -773,8 +766,6 @@ details[open] > :is(#inventories-toggle, #extras-toggle) { margin-bottom: 8px; }
 }
 .maplibregl-popup-content .pk { color: var(--text); }
 .maplibregl-popup-content > div + .pop-head { margin-top: 7px; }
-/* Reserve close-button space on the first heading only. */
-.maplibregl-popup-content .pop-head:first-child { padding-right: 16px; }
 
 /*
  * The scale editor, a non-modal dialog: beside the panel on wide screens, in
@@ -1074,6 +1065,4 @@ details[open] > :is(#inventories-toggle, #extras-toggle) { margin-bottom: 8px; }
   .credit-popover { line-height: 1.7; }
 
   .maplibregl-ctrl-group button { width: 40px; height: 40px; }
-  .maplibregl-popup-close-button { padding: 4px 9px; }
-  .maplibregl-popup-content .pop-head:first-child { padding-right: 28px; }
 }

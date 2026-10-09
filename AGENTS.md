@@ -229,6 +229,9 @@ A click, or Enter on the focused map for its center, opens one popup: the
 selected layer's value on top, from the pixel MapLibre draws at that zoom (VV
 and VH for false color), then the overlays under the pointer. A newer click wins
 over a slower read. The archives are lossy, so the value is a guide, not data.
+The popup has no close button: a click while it is open, a drag, a zoom, a tilt
+or Escape closes it. The map shows the arrow cursor, and the move cursor while
+pressed.
 
 The panel's 640 px breakpoint must agree in `js/app.js` and `style.css`. CSS
 provides the collapsed mobile state before scripts run. Preserve the panel's

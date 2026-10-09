@@ -365,6 +365,13 @@ export function installBrowser({
       }
     },
     Popup: class {
+      constructor(options = {}) {
+        this.options = options;
+      }
+      remove() {
+        this.removed = true;
+        return this;
+      }
       setLngLat() {
         return this;
       }
