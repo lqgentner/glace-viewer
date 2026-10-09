@@ -44,8 +44,8 @@ function setPanelOpen(open) {
   const action = open ? "Hide the controls" : "Show the controls";
   toggle.title = action;
   toggle.setAttribute("aria-label", action);
-  // `up` marks the collapsed state.
-  toggle.querySelector(".chevron").classList.toggle("up", !open);
+  // The chevron points up while the panel is open.
+  toggle.querySelector(".chevron").classList.toggle("up", open);
 }
 
 /*

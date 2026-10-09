@@ -60,11 +60,12 @@ test("the viewer", async (t) => {
     assert.equal(collapsed(), true, "and can still be collapsed by hand");
     assert.equal(el("panel").classList.contains("expanded"), false);
     assert.equal(el("panel-toggle").getAttribute("aria-expanded"), "false");
-    // `up` marks the collapsed state.
-    assert.ok(el("panel-toggle").querySelector(".chevron").classList.contains("up"));
+    const up = () => el("panel-toggle").querySelector(".chevron").classList.contains("up");
+    assert.equal(up(), false, "the chevron points down to the hidden controls");
 
     el("panel-toggle").click();
     assert.equal(collapsed(), false);
+    assert.equal(up(), true);
   });
 
   await t.test("rotating onto a narrow screen collapses it again", async () => {
