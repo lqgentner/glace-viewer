@@ -146,14 +146,19 @@ html, body {
   }
 }
 
-/* Put bottom spacing in the collapsible body so the closed panel fits its title. */
+/*
+ * The wordmark and the header buttons share the first row; the subtitle below
+ * spans the panel's full width. .header-text only groups them in the markup.
+ * Bottom spacing is in the collapsible body, so the closed panel fits its title.
+ */
 #panel header {
   flex: none;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  column-gap: 8px;
 }
+#panel .header-text { display: contents; }
 /*
  * Extend the body to place the native scrollbar inside the panel padding. A stable
  * gutter prevents reflow; left padding preserves focus rings. Firefox uses the
@@ -201,9 +206,10 @@ html, body {
  */
 #panel.collapsed #panel-body { display: none; }
 /* The outlined wordmark has an ink-cropped viewBox, so height sets its cap height. */
-#panel h1 { margin: 0; }
+#panel h1 { margin: 0; grid-area: 1 / 1; }
 #panel h1 img { display: block; height: 20px; width: auto; }
 #panel :is(#subtitle, #selection-summary) {
+  grid-column: 1 / -1;
   margin: 6px 0 0;
   font-size: calc(12px * var(--text-scale));
   color: var(--muted);
@@ -217,7 +223,7 @@ html, body {
  * headings beside them. The panel's padding is 16px, the dialogs' 10px by 16px.
  */
 .header-actions {
-  flex: none;
+  grid-area: 1 / 2;
   display: flex;
   gap: 6px;
   margin: -6px -6px 0 0;
