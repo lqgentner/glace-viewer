@@ -218,6 +218,7 @@ export async function loadInventories() {
     index = validateInventoryIndex(await response.json());
   } catch {
     // Overlays are optional; the page works without them.
+    el("inventories-section").hidden = true;
     return;
   }
 

@@ -127,8 +127,12 @@ presentation, not data. Stretches are fixed per layer so years stay comparable.
 
 Incomplete layers are skipped with a warning. A failed collection or nominated
 style prevents raster startup; an unreadable item removes that year's layers.
-If there are no drawable rasters, the raster controls hide and report the
-problem. Inventories and basemap controls initialize independently.
+While the catalog loads, `#raster-controls` is `aria-busy`: its markup holds
+invisible placeholders the size of the default layer's controls under a loading
+line, and the collapsed panel's summary reads "Loading layers…", so the panel
+does not resize when the catalog arrives. Keep the placeholders matched to the
+loaded controls. With no drawable rasters, the controls and the summary hide
+and the status line reports the problem. Inventories and basemap controls initialize independently.
 
 PMTiles metadata supplies bounds and attribution through
 `pmtiles.Protocol({ metadata: true })`. Do not override those on raster sources.

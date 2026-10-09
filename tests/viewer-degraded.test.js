@@ -22,7 +22,8 @@ test("a missing catalog costs only the rasters", async () => {
   page.map.fire("style.load");
   await settle();
 
-  assert.equal(el("raster-controls").hidden, true, "dead sliders are hidden, not left behind");
+  assert.equal(el("raster-controls").hidden, true, "the placeholders go with the catalog");
+  assert.equal(el("selection-summary").hidden, true, "and so does the loading summary");
   assert.match(el("status").textContent, /Error loading the GLACE layers/);
   assert.match(el("status").textContent, /still work/);
 

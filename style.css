@@ -402,7 +402,23 @@ details:not([open]) > summary .chevron { transform: rotate(180deg); }
   border-top: 1px solid var(--border);
   border-top-color: color-mix(in srgb, var(--muted) 45%, transparent);
 }
-/* Hide the separator with empty inventories to avoid adjacent rules. */
+/*
+ * While the catalog loads, the raster controls are invisible placeholders that keep
+ * the panel's size, under a loading line.
+ */
+#raster-controls { position: relative; }
+#raster-controls[aria-busy="true"] > :not(#raster-loading) { visibility: hidden; }
+#raster-controls:not([aria-busy="true"]) #raster-loading { display: none; }
+#raster-loading { position: absolute; inset: 0 0 auto; margin: 0; }
+#raster-loading,
+#inventories .loading {
+  font-size: calc(13px * var(--text-scale));
+  color: var(--muted);
+}
+#inventories .loading { margin: 0; }
+
+/* Hide the separators under hidden sections to avoid leading or adjacent rules. */
+#raster-controls[hidden] + hr,
 #inventories-section[hidden] + #inventories-rule { display: none; }
 
 #hillshade-strength-row { margin-top: -6px; padding-left: 22px; }
@@ -568,8 +584,12 @@ details:not([open]) > summary .chevron { transform: rotate(180deg); }
     width: auto;
     max-height: 46%;
   }
-  /* Collapse before scripts run; expanded overrides this default. */
+  /*
+   * Collapse before scripts run; expanded overrides this default. The summary line
+   * shows with it, or the header grows when the scripts run.
+   */
   #panel:not(.expanded) #panel-body { display: none; }
+  #panel:not(.expanded) #selection-summary { display: block; }
 
   /* Above the scale bar and attribution, clear of the panel toggle. */
   #notices {

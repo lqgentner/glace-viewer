@@ -1069,12 +1069,12 @@ function initControls(axes) {
 /* ---------- boot ---------- */
 
 /*
- * Hide unavailable raster controls while keeping the independent map and overlays
- * usable.
+ * Hide the raster controls and their placeholders while keeping the independent
+ * map and overlays usable.
  */
 function noRasters(reason) {
   el("raster-controls").hidden = true;
-  el("layer-info").replaceChildren();
+  el("selection-summary").hidden = true;
   console.warn("rasters:", reason);
   setStatus(
     STATUS_KEY,
@@ -1084,7 +1084,6 @@ function noRasters(reason) {
 }
 
 export async function loadRasters() {
-  setStatus(STATUS_KEY, "Loading layers…");
   let axes;
   try {
     const { layers, bounds } = await readStore();
@@ -1122,5 +1121,6 @@ export async function loadRasters() {
   initControls(axes);
   initLegend();
   render();
+  el("raster-controls").removeAttribute("aria-busy");
   return axes;
 }

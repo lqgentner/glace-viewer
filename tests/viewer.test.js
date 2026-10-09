@@ -37,7 +37,18 @@ test("the viewer", async (t) => {
 
   await load("js/app.js");
   const { map } = page;
+  // While the catalog loads, the panel says so in place of its controls, whose
+  // placeholders keep it at its loaded size; the collapsed panel's summary says
+  // so too. Nothing over the map repeats it.
+  const busy = () => el("raster-controls").getAttribute("aria-busy") === "true";
+  assert.equal(busy(), true, "loading before the catalog");
+  assert.equal(el("raster-controls").hidden, false, "the placeholders hold the space");
+  assert.equal(el("raster-loading").textContent, "Loading layers…");
+  assert.equal(el("selection-summary").textContent, "Loading layers…");
+  assert.equal(el("status").hidden, true);
+  assert.equal(el("quantity-row").hidden, false, "QA rows are expected until known absent");
   await settle();
+  assert.equal(busy(), false, "the controls once it has loaded");
 
   await t.test("a wide viewport opens with the panel expanded", async () => {
     const collapsed = () => el("panel").classList.contains("collapsed");
