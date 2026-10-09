@@ -205,6 +205,8 @@ html, body {
  * flash of the full panel.
  */
 #panel.collapsed #panel-body { display: none; }
+/* js/app.js opens the panel on a click anywhere on its collapsed header. */
+#panel.collapsed header { cursor: pointer; }
 /* The outlined wordmark has an ink-cropped viewBox, so height sets its cap height. */
 #panel h1 { margin: 0; grid-area: 1 / 1; }
 #panel h1 img { display: block; height: 20px; width: auto; }

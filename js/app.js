@@ -81,6 +81,11 @@ function initControls() {
   el("panel-toggle").addEventListener("click", (event) => {
     setPanelOpen(event.currentTarget.getAttribute("aria-expanded") !== "true");
   });
+  // A tap anywhere on the collapsed header opens the panel; its buttons keep their own.
+  el("panel").querySelector("header").addEventListener("click", (event) => {
+    if (event.target.closest("button")) return;
+    if (el("panel").classList.contains("collapsed")) setPanelOpen(true);
+  });
   NARROW_VIEWPORT.addEventListener("change", (event) => setPanelOpen(!event.matches));
   setPanelOpen(!NARROW_VIEWPORT.matches);
 

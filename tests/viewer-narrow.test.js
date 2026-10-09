@@ -67,4 +67,17 @@ test("a narrow viewport opens with the panel collapsed", async () => {
   el("panel-toggle").click();
   assert.ok(el("panel").classList.contains("expanded"), "and a tap brings them back");
   assert.match(el("panel-toggle").getAttribute("aria-label"), /hide/i);
+
+  // The collapsed header is one large target; open, it leaves the text alone.
+  el("panel-toggle").click();
+  el("selection-summary").click();
+  assert.ok(el("panel").classList.contains("expanded"), "a tap on the summary opens it");
+  assert.equal(el("panel-toggle").getAttribute("aria-expanded"), "true");
+  el("subtitle").click();
+  assert.ok(el("panel").classList.contains("expanded"), "and does not close it again");
+
+  el("panel-toggle").click();
+  el("about-open").click();
+  assert.ok(el("panel").classList.contains("collapsed"), "About opens only its dialog");
+  assert.equal(el("about").open, true);
 });

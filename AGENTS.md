@@ -239,7 +239,8 @@ zooms without opening a popup. The map shows the arrow cursor, and the move curs
 pressed.
 
 The panel's 640 px breakpoint must agree in `js/app.js` and `style.css`. CSS
-provides the collapsed mobile state before scripts run. Preserve the panel's
+provides the collapsed mobile state before scripts run; once they have, a click
+anywhere on the collapsed header outside its buttons opens the panel. Preserve the panel's
 clearance for map controls and the scale bar. Initial opacity and hillshade
 strength in `index.html` must agree with their module defaults. Popovers live
 outside the scrolling panel.
