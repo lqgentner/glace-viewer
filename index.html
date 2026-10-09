@@ -129,8 +129,8 @@
             <section id="legend" class="control">
               <div class="control-head">
                 <span class="label">Scale <span id="cmap"></span></span>
-                <!-- Value-encoded layers open the scale editor below; a click anywhere
-                     on the legend presses this button. -->
+                <!-- Opens the scale editor below; a click anywhere on the legend
+                     presses this button. -->
                 <button type="button" id="legend-edit" aria-label="Edit the scale"
                         aria-controls="scale-editor" aria-expanded="false">Edit</button>
               </div>
@@ -205,11 +205,11 @@
 
     <!-- The scale editor: changes apply to the map as they are made. Beside the panel
          on wide screens; on narrow ones it takes the panel's place. -->
-    <dialog id="scale-editor" aria-label="Scale">
+    <dialog id="scale-editor" aria-labelledby="scale-editor-title">
       <div class="glass" aria-hidden="true"></div>
       <div class="sheet">
         <header>
-          <h2>Values <span class="context">current view</span></h2>
+          <h2 id="scale-editor-title">Edit scale</h2>
           <button type="button" class="close" aria-label="Close" title="Close" autofocus
             ><svg viewBox="0 0 12 12" width="12" height="12" fill="none" stroke="currentColor"
                   stroke-width="1.8" stroke-linecap="round" aria-hidden="true"
@@ -217,51 +217,60 @@
           ></button>
         </header>
 
-        <!-- The values in view over every code the archive can draw, with the limits
-             as handles. The fields below are the same limits for keyboards. -->
-        <div id="histogram" role="img" aria-label="Histogram of the values in view">
-          <svg viewBox="0 0 255 64" preserveAspectRatio="none" aria-hidden="true"
-            ><path id="histogram-bars" /></svg>
-          <div class="shade low"></div>
-          <div class="shade high"></div>
-          <div class="handle low" aria-hidden="true"></div>
-          <div class="handle high" aria-hidden="true"></div>
-          <span id="histogram-note"></span>
-        </div>
-        <div id="editor-bar"></div>
+        <!-- One block per band, from #band-template: a value-encoded layer has one,
+             false color three. -->
+        <div id="bands"></div>
 
-        <div class="limits">
-          <div class="limit">
-            <label for="vmin">Min</label>
-            <label class="field" for="vmin"><input id="vmin" autocomplete="off"
-              spellcheck="false" aria-describedby="limits-hint" /><span class="unit"></span></label>
-          </div>
-          <div class="limit">
-            <label for="vmax">Max</label>
-            <label class="field" for="vmax"><input id="vmax" autocomplete="off"
-              spellcheck="false" aria-describedby="limits-hint" /><span class="unit"></span></label>
-          </div>
-          <button type="button" id="range-reset" title="Reset to the default limits"
-                  aria-label="Reset to the default limits"
-            ><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor"
-                  stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"
-                  aria-hidden="true"
-              ><path d="M3.5 8a4.5 4.5 0 1 0 1.3-3.2" /><path d="M4.5 2.3v2.8h2.8" /></svg
-          ></button>
-        </div>
+        <!-- These act on every band at once. -->
         <div class="presets">
           <button type="button" id="range-percentile"
                   title="Limits at the 2nd and 98th percentiles of the values in view">2–98%</button>
           <button type="button" id="range-extent"
                   title="Limits at the lowest and highest values in view">Min/Max</button>
+          <button type="button" id="range-reset" title="Reset to the default limits"
+                  aria-label="Reset to the default limits"
+            ><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor"
+                  stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"
+                  aria-hidden="true"
+              ><path d="M3.5 8a4.5 4.5 0 1 0 1.3-3.2" /><path d="M4.5 2.3v2.8h2.8" /></svg
+          ></button>
         </div>
         <!-- Shown only while a typed limit is refused, to say why. -->
         <p id="limits-hint" role="status"></p>
 
-        <h3 id="cmap-options-title">Color map</h3>
-        <div id="cmap-options" role="group" aria-labelledby="cmap-options-title"></div>
+        <div id="cmap-section">
+          <h3 id="cmap-options-title">Color map</h3>
+          <div id="cmap-options" role="group" aria-labelledby="cmap-options-title"></div>
+        </div>
       </div>
     </dialog>
+    <!-- A band of the scale editor: the values in view over every code its archive
+         can draw (or a ratio's axis), with the limits as handles. The fields are the
+         same limits for keyboards. -->
+    <template id="band-template">
+      <section class="band">
+        <h3 class="band-name"><span class="channel"></span><span class="name"></span></h3>
+        <div class="histogram" role="img" aria-label="Histogram of the values in view">
+          <svg viewBox="0 0 255 64" preserveAspectRatio="none" aria-hidden="true"
+            ><path class="bars" /></svg>
+          <div class="shade low"></div>
+          <div class="shade high"></div>
+          <!-- Behind the handles, so they stay in reach while it shows. -->
+          <span class="note"></span>
+          <div class="handle low" aria-hidden="true"></div>
+          <div class="handle high" aria-hidden="true"></div>
+        </div>
+        <div class="band-bar"></div>
+        <!-- Min left, Max right: the fields' places name them; the inputs' labels are set
+             with the band. -->
+        <div class="limits">
+          <label class="field"><input class="vmin" autocomplete="off" spellcheck="false"
+            aria-describedby="limits-hint" /><span class="unit"></span></label>
+          <label class="field"><input class="vmax" autocomplete="off" spellcheck="false"
+            aria-describedby="limits-hint" /><span class="unit"></span></label>
+        </div>
+      </section>
+    </template>
     <!-- Expose library globals before app.js so tests can substitute fakes. -->
     <script type="module">
       import * as maplibregl from "maplibre-gl";

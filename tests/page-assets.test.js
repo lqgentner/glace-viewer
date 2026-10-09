@@ -135,3 +135,11 @@ test("the deploy stages the service worker app.js registers", () => {
   const workflow = fs.readFileSync(path.join(REPO, ".github", "workflows", "deploy.yml"), "utf8");
   assert.match(workflow, /cp [^\n]*\bsw\.js\b[^\n]* _site\//);
 });
+
+test("the scale editor's fields are 16px on touch screens, so iOS does not zoom", () => {
+  const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+  const coarse = css.slice(css.lastIndexOf("@media (pointer: coarse)"));
+  assert.match(coarse, /#scale-editor input \{ font-size: 16px; \}/);
+  // Nothing after the touch block may shrink them again.
+  assert.equal(coarse.match(/#scale-editor input/g).length, 1);
+});

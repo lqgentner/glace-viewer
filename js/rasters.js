@@ -1,17 +1,18 @@
 /*
  * Raster selection and legends for records from js/store.js. Sources are created on
  * first display and retained for reuse. Value-encoded archives are colored here,
- * with a color map and range set in the scale editor.
+ * with a color map and range set in the scale editor, which also sets false
+ * color's three channel ranges.
  */
 
 import { addStacked, map, styleReady } from "./map.js";
 import { archive } from "./archive.js";
-import { FALSE_COLOUR, compositeLayers, compositeTiles } from "./composite.js";
+import { FALSE_COLOUR, compositeLayers, compositeTiles, restretch } from "./composite.js";
 import { isNonEmptyString, readStore } from "./store.js";
 import { COLOR_MAPS } from "./colormaps.js";
 import { buildSegmented, clearStatus, el, h, setStatus } from "./ui.js";
 import { decodePixel, step } from "./values.js";
-import { codeAt, codeRange, histogramPath, viewCounts } from "./histogram.js";
+import { codeAt, codeRange, compositeCounts, histogramPath, viewCounts } from "./histogram.js";
 
 const STATUS_KEY = "rasters";
 
@@ -68,6 +69,8 @@ export function defaultCmap(layer) {
 }
 
 const CHANNEL_SWATCHES = ["#e0524f", "#4c9f4c", "#5b8def"];
+/* What each channel's limits stretch over, as the editor's bar under its histogram. */
+const CHANNEL_RAMPS = [["#000", "#f00"], ["#000", "#0f0"], ["#000", "#00f"]];
 
 const state = {
   axes: null,
@@ -78,29 +81,45 @@ const state = {
   opacity: 1,
   added: new Set(),
   activeKey: null,
-  /* Color-map and limit choices by layer stem, so a year change keeps them. */
+  /* Color-map and limit choices by layer stem, so a year change keeps them:
+     { cmap, limits: [{ vmin, vmax }] } with one limits entry per band. */
   custom: new Map(),
 };
 
 /* ---------- value-encoded layers ---------- */
 
 const encoded = (layer) => Boolean(layer?.encoding);
+/* The scale editor edits a value-encoded layer, or false color's channels. */
+const editable = (layer) => Boolean(layer?.encoding || layer?.composite);
+/* The bands with limits: each has its encoding, default limits and units. */
+const bandsOf = (layer) => layer.channels ?? [layer];
 const customOf = (layer) => state.custom.get(layer.stem) ?? {};
+const ownLimits = (layer, band) => customOf(layer).limits?.[band] ?? {};
 const cmapOf = (layer) => customOf(layer).cmap ?? defaultCmap(layer);
 const colorsOf = (layer) => COLOR_MAPS[cmapOf(layer)];
-const rangeOf = (layer) => ({
-  vmin: customOf(layer).vmin ?? layer.vmin,
-  vmax: customOf(layer).vmax ?? layer.vmax,
+const rangeOf = (layer, band = 0) => ({
+  vmin: ownLimits(layer, band).vmin ?? bandsOf(layer)[band].vmin,
+  vmax: ownLimits(layer, band).vmax ?? bandsOf(layer)[band].vmax,
 });
+const stretchOf = (layer) => bandsOf(layer).map((_, band) => rangeOf(layer, band));
 const shortName = (name) => name.replace(/^cmc\./, "");
 const gradient = (colors) => `linear-gradient(to right, ${colors.join(", ")})`;
 
-/* Record a choice, forgetting values equal to the defaults so reset means a change. */
-function customize(layer, change) {
-  const next = { ...customOf(layer), ...change };
-  if (next.cmap === defaultCmap(layer)) delete next.cmap;
-  if (next.vmin === layer.vmin) delete next.vmin;
-  if (next.vmax === layer.vmax) delete next.vmax;
+/*
+ * Record a color map, or limits by band index, forgetting values equal to the
+ * defaults so reset means a change.
+ */
+function customize(layer, { cmap, limits = {} }) {
+  const custom = customOf(layer);
+  const next = {};
+  const chosen = cmap ?? custom.cmap;
+  if (chosen !== undefined && chosen !== defaultCmap(layer)) next.cmap = chosen;
+  const own = bandsOf(layer).map((band, at) => {
+    const merged = { ...custom.limits?.[at], ...limits[at] };
+    for (const which of ["vmin", "vmax"]) if (merged[which] === band[which]) delete merged[which];
+    return merged;
+  });
+  if (own.some((limit) => Object.keys(limit).length)) next.limits = own;
   if (Object.keys(next).length) state.custom.set(layer.stem, next);
   else state.custom.delete(layer.stem);
   render();
@@ -125,8 +144,17 @@ export function reliefColor(encoding, colors, vmin, vmax) {
   return ["interpolate", ["linear"], ["elevation"], ...stops.flat()];
 }
 
+/* Redraw what changed: a composite's channel limits, or an archive's ramp. */
 function applyRamp(layer) {
-  if (!encoded(layer) || !state.added.has(layer.id)) return;
+  if (!state.added.has(layer.id)) return;
+  if (layer.composite) {
+    const stretch = stretchOf(layer);
+    if (JSON.stringify(stretch) !== JSON.stringify(layer.stretch)) {
+      restretch(layer, stretch, () => map.getSource(layer.id).setTiles([compositeTiles(layer.id)]));
+    }
+    return;
+  }
+  if (!encoded(layer)) return;
   const { vmin, vmax } = rangeOf(layer);
   map.setPaintProperty(
     layer.id,
@@ -223,6 +251,7 @@ function ensureLayer(layer) {
   if (state.added.has(id)) return;
   /* A composite has no archive of its own, so its source names the credit. */
   if (layer.composite) {
+    restretch(layer, stretchOf(layer));
     map.addSource(id, {
       type: "raster",
       tiles: [compositeTiles(id)],
@@ -335,36 +364,41 @@ function updateLegend(layer) {
   el("legend-labels").hidden = falseColour;
   el("legend-channels").hidden = !falseColour;
   el("cmap").hidden = falseColour;
-  el("legend-edit").hidden = falseColour;
+  el("legend-edit").hidden = !editable(layer);
 
   if (falseColour) {
     updateChannelLegend(layer);
   } else {
-    const custom = customOf(layer);
+    const own = ownLimits(layer, 0);
     const { vmin, vmax } = rangeOf(layer);
     const span = vmax - vmin;
     el("legend-bar").style.background = gradient(colorsOf(layer));
     el("cmap").textContent = shortName(cmapOf(layer));
     el("legend-min").textContent = round(vmin, span);
     el("legend-max").textContent = round(vmax, span);
-    el("legend-min").classList.toggle("modified", "vmin" in custom);
-    el("legend-max").classList.toggle("modified", "vmax" in custom);
+    el("legend-min").classList.toggle("modified", "vmin" in own);
+    el("legend-max").classList.toggle("modified", "vmax" in own);
     for (const unit of el("legend-labels").querySelectorAll(".unit")) {
       unit.textContent = unitSuffix(layer);
     }
-    if (el("scale-editor").open) syncEditor(layer);
   }
+  if (el("scale-editor").open && editable(layer)) syncEditor(layer);
   el("layer-info").replaceChildren(...layerDetail(layer).map((line) => h("div", { textContent: line })));
 }
 
 function updateChannelLegend(layer) {
-  const unit = unitSuffix(layer);
   el("legend-channels").replaceChildren(
-    ...layer.channels.flatMap(({ band, vmin, vmax }, at) => [
-      h("span", { class: "swatch", style: { background: CHANNEL_SWATCHES[at] } }),
-      h("span", { class: "band", textContent: band }),
-      h("span", { textContent: `${round(vmin, vmax - vmin)} to ${round(vmax, vmax - vmin)}${unit}` }),
-    ]),
+    ...bandsOf(layer).flatMap((band, at) => {
+      const { vmin, vmax } = rangeOf(layer, at);
+      const own = ownLimits(layer, at);
+      const limit = (which, value) =>
+        h("span", { class: which in own ? "modified" : null, textContent: round(value, vmax - vmin) });
+      return [
+        h("span", { class: "swatch", style: { background: CHANNEL_SWATCHES[at] } }),
+        h("span", { class: "band", textContent: band.band }),
+        h("span", {}, limit("vmin", vmin), " to ", limit("vmax", vmax), unitSuffix(band)),
+      ];
+    }),
   );
 }
 
@@ -392,117 +426,177 @@ export function layerDetail(layer) {
 /* ---------- scale editor ---------- */
 
 /*
- * The limits the archive can draw: below code 1 the ramp falls into the nodata
- * stop, and above code 255 MapLibre's packed ramp wraps around. It rounds a stop
- * to the smallest factor, so the top allows less than half of that, enough for
- * floating-point error.
+ * The limits a band can take. For an archive, below code 1 the ramp falls into
+ * the nodata stop, and above code 255 MapLibre's packed ramp wraps around. It
+ * rounds a stop to the smallest factor, so the top allows less than half of
+ * that, enough for floating-point error. A ratio channel takes its axis. The
+ * refusal names bottom and top: an archive's codes 1 and 255.
  */
-function drawable(encoding) {
+function limitsRange(band) {
+  if (band.bounds) {
+    const [low, high] = band.bounds;
+    return { lowest: low, highest: high, bottom: low, top: high };
+  }
+  const { encoding } = band;
   const { redFactor, greenFactor, blueFactor } = encoding;
+  const bottom = decodePixel(encoding, 1, 1, 1);
+  const top = decodePixel(encoding, 255, 255, 255);
   return {
-    lowest: decodePixel(encoding, 1, 1, 1) - step(encoding) / 2,
-    highest: decodePixel(encoding, 255, 255, 255) + Math.min(redFactor, greenFactor, blueFactor) / 4,
+    lowest: bottom - step(encoding) / 2,
+    highest: top + Math.min(redFactor, greenFactor, blueFactor) / 4,
+    bottom,
+    top,
   };
 }
 
-/* The values of codes 1 and 255; the limits allow a little past either. */
-function drawableText(layer) {
-  const bottom = decodePixel(layer.encoding, 1, 1, 1);
-  const top = decodePixel(layer.encoding, 255, 255, 255);
-  return `Enter a value between ${round(bottom, top - bottom)} and ${round(top, top - bottom)}${unitSuffix(layer)}.`;
+function rangeText(band) {
+  const { bottom, top } = limitsRange(band);
+  return `Enter a value between ${round(bottom, top - bottom)} and ${round(top, top - bottom)}${unitSuffix(band)}.`;
 }
 
 /*
  * Parse a typed limit, rounded to the precision the legend shows so what is shown
- * is what is drawn. Text, an inverted range, or a limit the archive cannot draw
- * is a problem, with the reason to show.
+ * is what is drawn. Text, an inverted range, or a limit the band cannot take is
+ * a problem, with the reason to show.
  *
  * @returns {{value: number}|{problem: string}}
  */
-function parseLimit(layer, which, typed) {
+function parseLimit(layer, at, which, typed) {
+  const band = bandsOf(layer)[at];
   const text = typed.trim().replace(",", ".");
-  const range = rangeOf(layer);
+  const range = rangeOf(layer, at);
   const other = which === "vmin" ? range.vmax : range.vmin;
   const value = Number(Number(text).toFixed(decimals(other - Number(text))));
   const next = { ...range, [which]: value };
-  const { lowest, highest } = drawable(layer.encoding);
-  if (text === "" || !Number.isFinite(value)) return { problem: drawableText(layer) };
+  const { lowest, highest } = limitsRange(band);
+  if (text === "" || !Number.isFinite(value)) return { problem: rangeText(band) };
   if (next.vmin >= next.vmax) return { problem: "Min must be below Max." };
-  if (next.vmin < lowest || next.vmax > highest) return { problem: drawableText(layer) };
+  if (next.vmin < lowest || next.vmax > highest) return { problem: rangeText(band) };
   return { value };
 }
 
 /*
- * The histogram's axis runs over codes 1-255 at even width, from half a step
- * below code 1 to half a step above code 255.
+ * A histogram's axis runs over codes 1-255 at even width, from half a step
+ * below code 1 to half a step above code 255. A ratio's encoding has 255 such
+ * steps across its axis.
  */
-const HISTOGRAM_HEIGHT = 64; // the viewBox of #histogram's SVG
+const HISTOGRAM_HEIGHT = 64; // the viewBox of each histogram's SVG
 const clamp = (value, low, high) => Math.min(high, Math.max(low, value));
 const fractionOf = (encoding, value) =>
   clamp(((value + encoding.baseShift) / step(encoding) - 0.5) / 255, 0, 1);
 const valueAt = (encoding, fraction) => (fraction * 255 + 0.5) * step(encoding) - encoding.baseShift;
 const percent = (fraction) => `${(fraction * 100).toFixed(3)}%`;
 
+const bandNodes = () => [...el("bands").children];
+const limitInputs = () => [...el("bands").querySelectorAll("input")];
+
+/*
+ * One block per band from #band-template: a histogram over the band's axis,
+ * the ramp it draws and its limits, Min left and Max right. False color names
+ * each channel.
+ */
+function buildBands(layer) {
+  const template = el("band-template").content.firstElementChild;
+  const nodes = bandsOf(layer).map((band, at) => {
+    const node = template.cloneNode(true);
+    node.dataset.band = at;
+    for (const which of ["vmin", "vmax"]) {
+      const input = node.querySelector(`input.${which}`);
+      input.id = `${which}-${at}`;
+      const name = which === "vmin" ? "Min" : "Max";
+      input.setAttribute("aria-label", layer.composite ? `${band.band} ${name.toLowerCase()}` : name);
+      initField(input, at, which);
+    }
+    const name = node.querySelector(".band-name");
+    name.hidden = !layer.composite;
+    if (layer.composite) {
+      node.style.setProperty("--tint", CHANNEL_SWATCHES[at]);
+      name.querySelector(".channel").textContent = "RGB"[at];
+      name.querySelector(".name").textContent = band.band;
+    }
+    initHistogram(node.querySelector(".histogram"), at);
+    return node;
+  });
+  el("bands").replaceChildren(...nodes);
+  el("bands").classList.toggle("channels", Boolean(layer.composite));
+}
+
+/* The bands' names, so blocks are rebuilt only for a layer of another kind. */
+const bandsKey = (layer) => bandsOf(layer).map((band) => band.band ?? "").join("|");
+
 /* Fill the editor from the layer. A field being typed in is left alone unless forced. */
 function syncEditor(layer, { force = false } = {}) {
-  const custom = customOf(layer);
-  const { vmin, vmax } = rangeOf(layer);
-  const span = vmax - vmin;
-  for (const [id, value] of [["vmin", vmin], ["vmax", vmax]]) {
-    const input = el(id);
-    if (force || document.activeElement !== input) {
-      input.value = round(value, span);
-      input.removeAttribute("aria-invalid");
+  if (el("bands").dataset.key !== bandsKey(layer)) {
+    buildBands(layer);
+    el("bands").dataset.key = bandsKey(layer);
+  }
+  bandsOf(layer).forEach((band, at) => {
+    const node = bandNodes()[at];
+    const { vmin, vmax } = rangeOf(layer, at);
+    for (const [which, value] of [["vmin", vmin], ["vmax", vmax]]) {
+      const input = el(`${which}-${at}`);
+      if (force || document.activeElement !== input) {
+        input.value = round(value, vmax - vmin);
+        input.removeAttribute("aria-invalid");
+      }
+      // iOS's decimal keypad has no minus sign.
+      input.inputMode = limitsRange(band).bottom < 0 ? "text" : "decimal";
     }
-  }
-  // Handles, shading and the ramp below sit where the limits fall on the axis.
-  const low = fractionOf(layer.encoding, vmin);
-  const high = fractionOf(layer.encoding, vmax);
-  el("histogram").style.setProperty("--low", percent(low));
-  el("histogram").style.setProperty("--high", percent(high));
-  const colors = colorsOf(layer);
-  const stops = colors.map(
-    (color, at) => `${color} ${percent(low + ((high - low) * at) / Math.max(1, colors.length - 1))}`,
-  );
-  el("editor-bar").style.background = `linear-gradient(to right, ${stops.join(", ")})`;
-  for (const unit of el("scale-editor").querySelectorAll(".unit")) {
-    unit.textContent = unitSuffix(layer).trim();
-  }
+    // Handles, shading and the ramp below sit where the limits fall on the axis.
+    const low = fractionOf(band.encoding, vmin);
+    const high = fractionOf(band.encoding, vmax);
+    const chart = node.querySelector(".histogram");
+    chart.style.setProperty("--low", percent(low));
+    chart.style.setProperty("--high", percent(high));
+    const colors = layer.composite ? CHANNEL_RAMPS[at] : colorsOf(layer);
+    const stops = colors.map(
+      (color, index) => `${color} ${percent(low + ((high - low) * index) / Math.max(1, colors.length - 1))}`,
+    );
+    node.querySelector(".band-bar").style.background = `linear-gradient(to right, ${stops.join(", ")})`;
+    for (const unit of node.querySelectorAll(".unit")) unit.textContent = unitSuffix(band).trim();
+  });
   // The reason a limit was refused stays only while its field is flagged. The live
   // region is emptied rather than hidden, so it exists when the next reason comes.
-  const flagged = [el("vmin"), el("vmax")].some((input) => input.getAttribute("aria-invalid") === "true");
+  const flagged = limitInputs().some((input) => input.getAttribute("aria-invalid") === "true");
   if (!flagged) el("limits-hint").textContent = "";
   // aria-disabled, not disabled: a focused button that turns unavailable keeps focus.
-  el("range-reset").setAttribute("aria-disabled", String(!("vmin" in custom || "vmax" in custom)));
-  const counted = viewed?.layer === layer && codeRange(viewed.counts) !== null;
+  el("range-reset").setAttribute("aria-disabled", String(!customOf(layer).limits));
+  const counted = viewed?.layer === layer && viewed.counts.some((counts) => codeRange(counts) !== null);
   el("range-percentile").setAttribute("aria-disabled", String(!counted));
   el("range-extent").setAttribute("aria-disabled", String(!counted));
-  // iOS's decimal keypad has no minus sign.
-  const signed = decodePixel(layer.encoding, 1, 1, 1) < 0;
-  for (const input of [el("vmin"), el("vmax")]) input.inputMode = signed ? "text" : "decimal";
+  el("cmap-section").hidden = Boolean(layer.composite);
   const current = cmapOf(layer);
   for (const option of el("cmap-options").children) {
     option.setAttribute("aria-pressed", String(option.dataset.value === current));
   }
 }
 
-const editable = () => {
+/** The selected layer, where the editor can edit it. */
+const editing = () => {
   const layer = selected();
-  return encoded(layer) ? layer : null;
+  return editable(layer) ? layer : null;
 };
 
 /* The read in progress, aborted when the editor closes or reopens. */
 let reading = null;
-/* The layer the histogram shows or is reading, and the counts once read. */
+/* The layer the histograms show or are reading, and their counts once read. */
 let shown = null;
 let viewed = null;
 
-/* A note over the chart; the chart is an image, so its label carries the note too. */
-const note = (text) => {
-  el("histogram-note").textContent = text;
-  const label = "Histogram of the values in view";
-  el("histogram").setAttribute("aria-label", text ? `${label}: ${text}` : label);
-};
+/* A note over the charts; a chart is an image, so its label carries the note too. */
+function note(layer, text) {
+  bandNodes().forEach((node, at) => {
+    node.querySelector(".note").textContent = text;
+    const band = bandsOf(layer)[at].band;
+    const label = `Histogram of ${band ?? "the values"} in view`;
+    node.querySelector(".histogram").setAttribute("aria-label", text ? `${label}: ${text}` : label);
+  });
+}
+
+const drawBars = (counts) =>
+  bandNodes().forEach((node, at) =>
+    node.querySelector(".bars").setAttribute("d", counts ? histogramPath(counts[at], HISTOGRAM_HEIGHT) : ""),
+  );
 
 /*
  * Count the values in view. A new layer starts blank; a recount of the same
@@ -515,8 +609,8 @@ async function showHistogram(layer) {
     shown = layer;
     viewed = null;
     syncEditor(layer);
-    el("histogram-bars").setAttribute("d", "");
-    note("Reading the view…");
+    drawBars(null);
+    note(layer, "Loading…");
   }
   try {
     const bounds = map.getBounds();
@@ -525,23 +619,19 @@ async function showHistogram(layer) {
     // Drawn tiles are at least 181 px wide (256 px at half a zoom down).
     const { clientWidth: width, clientHeight: height } = map.getContainer();
     const budget = Math.ceil(width / 181 + 1) * Math.ceil(height / 181 + 1);
-    const counts = await viewCounts(
-      layer,
-      [bounds.getWest() - shift, bounds.getSouth(), bounds.getEast() - shift, bounds.getNorth()],
-      map.getZoom(),
-      controller.signal,
-      budget,
-    );
-    const path = histogramPath(counts, HISTOGRAM_HEIGHT);
-    el("histogram-bars").setAttribute("d", path);
-    note(path ? "" : "No data in view");
+    const view = [bounds.getWest() - shift, bounds.getSouth(), bounds.getEast() - shift, bounds.getNorth()];
+    const counts = layer.composite
+      ? await compositeCounts(layer, view, map.getZoom(), controller.signal, budget)
+      : [await viewCounts(layer, view, map.getZoom(), controller.signal, budget)];
+    drawBars(counts);
+    note(layer, counts.some((band) => codeRange(band) !== null) ? "" : "No data in view");
     viewed = { layer, counts };
     syncEditor(layer);
   } catch {
     if (controller.signal.aborted) return;
     viewed = null;
-    el("histogram-bars").setAttribute("d", "");
-    note("The values in view could not be read");
+    drawBars(null);
+    note(layer, "The values in view could not be read");
     syncEditor(layer);
   }
 }
@@ -550,7 +640,7 @@ async function showHistogram(layer) {
 function followSelection(layer) {
   const editor = el("scale-editor");
   if (!editor.open) return;
-  if (!encoded(layer)) {
+  if (!editable(layer)) {
     editor.close();
   } else if (shown !== layer) {
     syncEditor(layer, { force: true });
@@ -559,86 +649,140 @@ function followSelection(layer) {
 }
 
 /*
- * Round to `digits`, then into the drawable range on that grid, so a limit at
+ * Round to `digits`, then into the band's range on that grid, so a limit at
  * either end is drawn rather than refused.
  */
-function onGrid(encoding, value, digits) {
+function onGrid(band, value, digits) {
   const unit = 10 ** -digits;
-  const { lowest, highest } = drawable(encoding);
+  const { lowest, highest } = limitsRange(band);
   const inside = clamp(value, Math.ceil(lowest / unit) * unit, Math.floor(highest / unit) * unit);
   return Number(inside.toFixed(digits));
 }
 
 /*
- * Set both limits from code positions, rounded as the fields show them and kept
- * a shown digit apart within what the archive can draw.
+ * Limits from code positions, rounded as the fields show them and kept a shown
+ * digit apart within what the band can take.
  */
-function limitCodes(layer, low, high) {
-  const scale = step(layer.encoding);
-  const [from, to] = [low * scale - layer.encoding.baseShift, high * scale - layer.encoding.baseShift];
+function limitsAt(band, low, high) {
+  const { encoding } = band;
+  const scale = step(encoding);
+  const [from, to] = [low * scale - encoding.baseShift, high * scale - encoding.baseShift];
   const digits = decimals(to - from);
   const unit = 10 ** -digits;
-  const fit = (value) => onGrid(layer.encoding, value, digits);
+  const fit = (value) => onGrid(band, value, digits);
   let [vmin, vmax] = [fit(from), fit(to)];
   if (vmax <= vmin) {
     if (fit(vmin + unit) > vmin) vmax = fit(vmin + unit);
     else vmin = fit(vmax - unit);
   }
-  customize(layer, { vmin, vmax });
+  return { vmin, vmax };
+}
+
+/* Fit every counted band's limits to the code positions `pick` finds in its counts. */
+function fitBands(layer, pick) {
+  if (viewed?.layer !== layer) return;
+  const limits = {};
+  bandsOf(layer).forEach((band, at) => {
+    if (codeRange(viewed.counts[at]) !== null) limits[at] = limitsAt(band, ...pick(viewed.counts[at]));
+  });
+  customize(layer, { limits });
 }
 
 /*
- * Drag a limit across the histogram. A press moves the nearer handle there and
- * keeps it under the pointer until release; a limit stops one shown digit short
- * of the other.
+ * Drag a band's limit across its histogram. A press moves the nearer handle
+ * there and keeps it under the pointer until release; a limit stops one shown
+ * digit short of the other. A touch may start a scroll of the editor instead,
+ * so it moves the handle once it travels across, or on release as a tap.
  */
-function initHistogram() {
-  const node = el("histogram");
+const ACROSS = 6; // px
+
+function initHistogram(node, at) {
   let dragging = null;
+  let touch = null;
 
   const fractionAt = (event) => {
     const box = node.getBoundingClientRect();
     return box.width > 0 ? clamp((event.clientX - box.left) / box.width, 0, 1) : null;
   };
   const follow = (layer, fraction) => {
-    const range = rangeOf(layer);
+    const band = bandsOf(layer)[at];
+    const range = rangeOf(layer, at);
     const other = dragging === "vmin" ? range.vmax : range.vmin;
-    const raw = valueAt(layer.encoding, fraction);
+    const raw = valueAt(band.encoding, fraction);
     // The precision of the range this drag makes, as parseLimit rounds it.
     const digits = decimals(other - raw);
     const unit = 10 ** -digits;
-    let value = onGrid(layer.encoding, raw, digits);
+    let value = onGrid(band, raw, digits);
     value = dragging === "vmin" ? Math.min(value, other - unit) : Math.max(value, other + unit);
-    const { value: limit } = parseLimit(layer, dragging, value.toFixed(digits));
-    if (limit !== undefined && limit !== range[dragging]) customize(layer, { [dragging]: limit });
+    const { value: limit } = parseLimit(layer, at, dragging, value.toFixed(digits));
+    if (limit !== undefined && limit !== range[dragging]) {
+      customize(layer, { limits: { [at]: { [dragging]: limit } } });
+    }
   };
 
   node.addEventListener("pointerdown", (event) => {
-    const layer = editable();
+    const layer = editing();
     const fraction = fractionAt(event);
     if (!layer || fraction === null) return;
     event.preventDefault();
     // A field being typed in would not show the dragged value.
-    if (document.activeElement?.matches("#vmin, #vmax")) document.activeElement.blur();
-    const { vmin, vmax } = rangeOf(layer);
-    const toLow = Math.abs(fraction - fractionOf(layer.encoding, vmin));
-    const toHigh = Math.abs(fraction - fractionOf(layer.encoding, vmax));
+    if (document.activeElement?.matches("#bands input")) document.activeElement.blur();
+    const { encoding } = bandsOf(layer)[at];
+    const { vmin, vmax } = rangeOf(layer, at);
+    const toLow = Math.abs(fraction - fractionOf(encoding, vmin));
+    const toHigh = Math.abs(fraction - fractionOf(encoding, vmax));
     dragging = toLow <= toHigh ? "vmin" : "vmax";
     node.setPointerCapture?.(event.pointerId);
     node.classList.add("dragging");
-    follow(layer, fraction);
+    if (event.pointerType === "touch") touch = { x: event.clientX, y: event.clientY };
+    else follow(layer, fraction);
   });
   node.addEventListener("pointermove", (event) => {
-    const layer = editable();
+    const layer = editing();
     const fraction = fractionAt(event);
-    if (dragging && layer && fraction !== null) follow(layer, fraction);
+    if (!dragging || !layer || fraction === null) return;
+    if (touch) {
+      const across = Math.abs(event.clientX - touch.x);
+      if (across < ACROSS || across < Math.abs(event.clientY - touch.y)) return;
+      touch = null;
+    }
+    follow(layer, fraction);
   });
-  for (const type of ["pointerup", "pointercancel", "lostpointercapture"]) {
-    node.addEventListener(type, () => {
-      dragging = null;
-      node.classList.remove("dragging");
-    });
-  }
+  const end = () => {
+    dragging = null;
+    touch = null;
+    node.classList.remove("dragging");
+  };
+  node.addEventListener("pointerup", (event) => {
+    const layer = editing();
+    const fraction = fractionAt(event);
+    if (touch && dragging && layer && fraction !== null) follow(layer, fraction);
+    end();
+  });
+  // The browser cancels a touch it scrolls with.
+  for (const type of ["pointercancel", "lostpointercapture"]) node.addEventListener(type, end);
+}
+
+/* A band's limit field: each valid value applies as it is typed; the rest are flagged. */
+function initField(input, at, which) {
+  input.addEventListener("input", () => {
+    const layer = editing();
+    if (!layer) return;
+    const { value, problem } = parseLimit(layer, at, which, input.value);
+    input.setAttribute("aria-invalid", String(problem !== undefined));
+    el("limits-hint").textContent = problem ?? "";
+    if (value !== undefined && value !== rangeOf(layer, at)[which]) {
+      customize(layer, { limits: { [at]: { [which]: value } } });
+    }
+  });
+  // Leaving the field shows what is drawn, which also discards invalid text.
+  input.addEventListener("change", () => {
+    const layer = editing();
+    if (layer) syncEditor(layer, { force: true });
+  });
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") input.blur();
+  });
 }
 
 function initLegend() {
@@ -649,7 +793,7 @@ function initLegend() {
    * after each move. The edit button toggles it.
    */
   el("legend-edit").addEventListener("click", () => {
-    const layer = editable();
+    const layer = editing();
     if (editor.open || !layer) {
       editor.close();
       return;
@@ -671,10 +815,9 @@ function initLegend() {
     if (event.key === "Escape") editor.close();
   });
   map.on("moveend", () => {
-    const layer = editable();
+    const layer = editing();
     if (editor.open && layer) showHistogram(layer);
   });
-  initHistogram();
 
   el("cmap-options").replaceChildren(
     ...Object.keys(COLOR_MAPS).map((name) =>
@@ -685,8 +828,8 @@ function initLegend() {
           class: "cmap-option",
           dataset: { value: name },
           onclick: () => {
-            const layer = editable();
-            if (layer) customize(layer, { cmap: name });
+            const layer = editing();
+            if (layer && !layer.composite) customize(layer, { cmap: name });
           },
         },
         h("span", { class: "ramp", style: { background: gradient(COLOR_MAPS[name]) } }),
@@ -695,48 +838,24 @@ function initLegend() {
     ),
   );
 
-  for (const input of [el("vmin"), el("vmax")]) {
-    // Apply each valid value as it is typed; flag the rest until the field is left.
-    input.addEventListener("input", () => {
-      const layer = editable();
-      if (!layer) return;
-      const { value, problem } = parseLimit(layer, input.id, input.value);
-      input.setAttribute("aria-invalid", String(problem !== undefined));
-      el("limits-hint").textContent = problem ?? "";
-      if (value !== undefined && value !== rangeOf(layer)[input.id]) {
-        customize(layer, { [input.id]: value });
-      }
-    });
-    // Leaving the field shows what is drawn, which also discards invalid text.
-    input.addEventListener("change", () => {
-      const layer = editable();
-      if (layer) syncEditor(layer, { force: true });
-    });
-    input.addEventListener("keydown", (event) => {
-      if (event.key === "Enter") input.blur();
-    });
-  }
-
-  /* Presets from the values in view, as the histogram counted them. */
+  /* Presets fit every band to the values in view, as the histograms counted them. */
   const unavailable = (id) => el(id).getAttribute("aria-disabled") === "true";
   el("range-percentile").addEventListener("click", () => {
-    const layer = editable();
-    if (unavailable("range-percentile")) return;
-    if (layer && viewed?.layer === layer) {
-      limitCodes(layer, codeAt(viewed.counts, 0.02), codeAt(viewed.counts, 0.98));
+    const layer = editing();
+    if (layer && !unavailable("range-percentile")) {
+      fitBands(layer, (counts) => [codeAt(counts, 0.02), codeAt(counts, 0.98)]);
     }
   });
   el("range-extent").addEventListener("click", () => {
-    const layer = editable();
-    const range = viewed?.layer === layer ? codeRange(viewed.counts) : null;
-    if (range) limitCodes(layer, ...range);
+    const layer = editing();
+    if (layer && !unavailable("range-extent")) fitBands(layer, codeRange);
   });
 
-  /* Reset restores the default limits and keeps the chosen color map. */
+  /* Reset restores every band's default limits and keeps the chosen color map. */
   el("range-reset").addEventListener("click", () => {
-    const layer = editable();
+    const layer = editing();
     if (!layer || unavailable("range-reset")) return;
-    customize(layer, { vmin: layer.vmin, vmax: layer.vmax });
+    customize(layer, { limits: bandsOf(layer).map(({ vmin, vmax }) => ({ vmin, vmax })) });
     syncEditor(layer, { force: true });
   });
 }

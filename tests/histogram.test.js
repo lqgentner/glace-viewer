@@ -6,7 +6,8 @@ import test from "node:test";
 import { installBrowser, load } from "./helpers/browser.js";
 
 installBrowser();
-const { codeAt, codeRange, histogramPath, viewCounts } = await load("js/histogram.js");
+const { codeAt, codeRange, compositeCounts, histogramPath, viewCounts } = await load("js/histogram.js");
+const { compositeLayers } = await load("js/composite.js");
 
 /* value = code / 10 - 19.1 in the blue channel; code 0 in all three is nodata. */
 const ENCODING = { encoding: "custom", redFactor: 0, greenFactor: 0, blueFactor: 0.1, baseShift: 19.1 };
@@ -94,12 +95,20 @@ test("an aborted read rejects", async () => {
   });
 });
 
-test("bars span one code each, with heights on a log scale", () => {
+test("bars span three codes, with heights by the square root of the count", () => {
   const counts = new Float64Array(256);
-  counts[5] = 99;
-  counts[6] = 9; // log(10) is half of log(100)
-  assert.equal(histogramPath(counts, 64), "M4 64h1V0.00h-1ZM5 64h1V32.00h-1Z");
+  counts[4] = 100; // the bar of codes 4-6
+  counts[7] = 25; // a quarter of the pixels, half the height
+  assert.equal(histogramPath(counts, 64), "M3 64h3V0.00h-3ZM6 64h3V32.00h-3Z");
   assert.equal(histogramPath(new Float64Array(256), 64), "", "nothing counted, nothing drawn");
+});
+
+test("a code the codec never produces does not lower its bar", () => {
+  // Lossy WebP skips about every seventh code: a bar's height averages the codes counted.
+  const counts = new Float64Array(256);
+  counts.fill(100, 1, 7);
+  counts[2] = 0;
+  assert.equal(histogramPath(counts, 64), "M0 64h3V0.00h-3ZM3 64h3V0.00h-3Z");
 });
 
 test("percentiles interpolate within a code, and the range spans the counted codes", () => {
@@ -112,4 +121,31 @@ test("percentiles interpolate within a code, and the range spans the counted cod
   assert.equal(codeAt(counts, 1), 30.5);
   assert.deepEqual(codeRange(counts), [10, 30]);
   assert.equal(codeRange(new Float64Array(256)), null);
+});
+
+test("a composite counts its channels where both polarizations have data", async () => {
+  // VV code 91 is -10 dB and VH code 32 is -15.9 dB: the ratio is 5.9 dB.
+  const [vv, vh] = [layer().record, layer().record];
+  const served = {
+    [vv.url]: tile([91], [91], [91], [0]),
+    [vh.url]: tile([32], [0], [32], [32]),
+  };
+  globalThis.pmtiles.PMTiles = class {
+    constructor(source) { this.source = source; }
+    async getHeader() { return HEADER; }
+    async getZxy(z, x, y) {
+      return `${z}/${x}/${y}` === "8/134/90" ? { data: served[this.source.getKey()].buffer } : undefined;
+    }
+  };
+  const record = (over) => ({ product: "RTC", year: 2024, units: "dB", vmin: -20, vmax: 0, ...over });
+  const [rgb] = compositeLayers([
+    record({ ...vv, id: "vv", stem: "rtc_vv", polarization: "VV" }),
+    record({ ...vh, id: "vh", stem: "rtc_vh", polarization: "VH" }),
+  ]);
+  const [red, green, blue] = await compositeCounts(rgb, tileBounds(8, 134, 90), 7);
+  // Pixels 0 and 2 have both; 1 lacks VH, and 3 is VV nodata.
+  assert.deepEqual(counted(red), { 91: 2 });
+  assert.deepEqual(counted(green), { 32: 2 });
+  // The ratio's axis is 0-15 dB in 255 codes, code c from (c - 1) / 17 to c / 17 dB.
+  assert.deepEqual(counted(blue), { 101: 2 });
 });

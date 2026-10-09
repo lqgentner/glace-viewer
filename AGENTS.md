@@ -63,11 +63,11 @@ A gitignored `tiles` symlink to the catalog root also works. The root is above
 | `js/config.js`, `site-config.js` | Resolved settings and deployment overrides |
 | `js/map.js` | Map singleton, style readiness, draw order, basemap, labels, terrain |
 | `js/store.js` | Catalog/style/item reads and validation; one record per raster archive |
-| `js/rasters.js` | Raster selection, source creation, panel axes, legend editing |
+| `js/rasters.js` | Raster selection, source creation, panel axes, legend and scale editing |
 | `js/composite.js` | False color composed from VV and VH archives via `glace-rgb://` |
 | `js/archive.js` | Shared PMTiles readers, their byte cache, the `pmtiles://` protocol |
-| `js/values.js` | Tile decoding for false-color composites |
-| `js/histogram.js` | Archive codes counted over the view, drawn as the scale editor's bars |
+| `js/values.js` | Tile decoding for false-color composites and histograms |
+| `js/histogram.js` | Archive codes or composite channels counted over the view, drawn as the scale editor's bars |
 | `js/overlays.js` | Inventory controls, overlay lifecycle, grid layers, feature popups |
 | `js/tile-grid.js` | GeoParquet index to deduplicated tile footprints |
 | `js/ui.js` | DOM helpers, status messages, segmented controls, popovers, pickers |
@@ -140,11 +140,13 @@ can look like an invalid archive.
 
 `js/composite.js` derives one RGB record per product and year with VV and VH
 data layers and serves it through `glace-rgb://`, decoding both archives' tiles
-with `js/values.js`. Red and green reuse the single-band default stretches;
-blue's range is a viewer constant per product. A pixel needs data in both
-archives. The protocol returns an `ImageBitmap`, or an empty buffer that
-MapLibre draws transparent where an archive has no tile; a failed read rejects
-and is not cached.
+with `js/values.js`. Red and green default to the single-band default
+stretches; blue's range and the span of its editor axis are viewer constants
+per product. The scale editor changes all three: new limits reload the source's
+tiles, one reload per tiles drawn, because MapLibre requests every tile again
+without canceling the last. A pixel needs data in both archives. The protocol
+returns an `ImageBitmap`, or an empty buffer that MapLibre draws transparent
+where an archive has no tile; a failed read rejects and is not cached.
 
 `js/archive.js` keeps one PMTiles reader per raster archive, registered with
 the `pmtiles://` protocol before its source is added, over a byte cache bounded
@@ -225,21 +227,26 @@ collapses it on the first drag, which the OSMF attribution guidelines allow.
 The legend only displays. Its Edit button's `::after` covers the whole legend,
 so a click anywhere on it toggles `#scale-editor`, a non-modal `<dialog>`:
 beside the panel, or in the panel's place below 640 px. The map stays live, and
-the close button or Escape closes it. Its histogram counts the archive's codes
-in the view at the zoom MapLibre draws, coarser past a tile budget sized to the
+the close button or Escape closes it. It holds one block per band from
+`#band-template`: one for a value-encoded layer, three for false color, whose
+ratio channel has a fixed axis of 255 steps. Each histogram counts the band in
+the view at the zoom MapLibre draws, coarser past a tile budget sized to the
 viewport, again after each `moveend`; a recount keeps the old bars until it is
-ready. The open editor follows the selection and closes on a layer it cannot
-edit. The axis spans codes 1-255, and the limits are handles on it: a press
-moves the nearer one. 2–98% and Min/Max fit both limits to those counts. Limits
-apply as they are typed or dragged, and render never overwrites the field being
-typed in. A refused value flags its field and shows why below the presets.
-Leaving a field shows what is drawn, which discards invalid text and the
-reason. A color map applies on click and the dialog stays open. Choices are
-kept per layer stem, and Reset restores the default limits only. Limits outside
-the archive's codes 1-255 are refused: below, the ramp falls into the nodata
-stop; above, MapLibre's packed ramp wraps around. Keep the dialog's fields at
-16 px or more on touch screens, or iOS zooms into them. False color is not
-editable.
+ready. Bars span three codes and average the codes counted, because lossy WebP
+never produces about one code in seven. The open editor follows the selection
+and closes when the selection has no layer. The axis spans codes 1-255, and the
+limits are handles on it: a press moves the nearer one. A touch moves it only
+once it travels across, or as a tap, so a vertical swipe scrolls the editor.
+2–98%, Min/Max and Reset act on every band; the presets fit the limits to the
+counts. Limits apply as they are typed or dragged, and render never overwrites
+the field being typed in. A refused value flags its field and shows why below
+the presets. Leaving a field shows what is drawn, which discards invalid text
+and the reason. A color map applies on click and the dialog stays open; false
+color has none. Choices are kept per layer stem, and Reset restores the default
+limits only. Limits outside the archive's codes 1-255 are refused: below, the
+ramp falls into the nodata stop; above, MapLibre's packed ramp wraps around.
+The ratio's limits stay on its axis. Keep the dialog's fields at 16 px or more
+on touch screens, or iOS zooms into them.
 
 ## Inventories and the tile grid
 

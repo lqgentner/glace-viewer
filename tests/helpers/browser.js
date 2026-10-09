@@ -195,6 +195,13 @@ class FakeMap {
 
   addSource(id, spec) {
     if (this.sources.has(id)) throw new Error(`source '${id}' added twice`);
+    // Not enumerable, so a test comparing the spec does not see it.
+    Object.defineProperty(spec, "setTiles", {
+      value: (tiles) => {
+        spec.tiles = tiles;
+        this.calls.push(`tiles ${id}`);
+      },
+    });
     this.sources.set(id, spec);
     this.calls.push(`+source ${id}`);
   }

@@ -419,7 +419,8 @@ details:not([open]) > summary .chevron { transform: rotate(180deg); }
 #legend-labels .limit { display: inline-flex; align-items: baseline; }
 #legend-labels .unit { margin-left: 4px; }
 /* A changed limit takes the accent. */
-#legend-labels .modified { color: var(--accent); }
+#legend-labels .modified,
+#legend-channels .modified { color: var(--accent); }
 
 #legend-channels {
   display: grid;
@@ -767,8 +768,7 @@ details[open] > :is(#inventories-toggle, #extras-toggle) { margin-bottom: 8px; }
   margin-bottom: 8px;
 }
 #scale-editor h2,
-#scale-editor h3,
-#scale-editor .limit > label:first-child {
+#scale-editor h3 {
   margin: 0;
   font-size: calc(11px * var(--text-scale));
   font-weight: 400;
@@ -777,38 +777,41 @@ details[open] > :is(#inventories-toggle, #extras-toggle) { margin-bottom: 8px; }
   color: var(--muted);
 }
 #scale-editor h3 { margin: 18px 0 8px; }
-/* What the values cover, quieter than the heading it follows. */
-#scale-editor h2 .context {
-  margin-left: 6px;
-  text-transform: none;
-  letter-spacing: 0;
-  color: rgba(255, 255, 255, 0.35);
-}
+/* The editor's title outranks the headings below it. */
+#scale-editor h2 { color: var(--text); }
+
+/* A band's channel letter in its color, then the band it shows. */
+#scale-editor .band-name { margin: 0 0 6px; }
+#scale-editor .band-name .channel { margin-right: 6px; font-weight: 600; color: var(--tint); }
+#scale-editor .band + .band { margin-top: 16px; }
 
 /*
  * The histogram's handles and shading read --low and --high, the limits'
- * positions on its axis. The whole chart is the drag target.
+ * positions on its axis. The whole chart is the drag target. False color
+ * tints the bars with the channel's color.
  */
-#histogram {
+#scale-editor .histogram {
   position: relative;
   height: 64px;
   background: rgba(255, 255, 255, 0.04);
   border-radius: 4px 4px 0 0;
   cursor: crosshair;
-  touch-action: none;
+  /* A vertical swipe scrolls the editor; js/rasters.js drags only across. */
+  touch-action: pan-y;
   user-select: none;
 }
-#histogram.dragging { cursor: grabbing; }
-#histogram svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-#histogram-bars { fill: rgba(255, 255, 255, 0.5); shape-rendering: crispEdges; }
-#histogram .shade {
+#bands.channels .histogram { height: 48px; }
+#scale-editor .histogram.dragging { cursor: grabbing; }
+#scale-editor .histogram svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+#scale-editor .bars { fill: var(--tint, #fff); fill-opacity: 0.5; shape-rendering: crispEdges; }
+#scale-editor .shade {
   position: absolute;
   inset-block: 0;
   background: rgba(0, 0, 0, 0.45);
 }
-#histogram .shade.low { left: 0; width: var(--low); }
-#histogram .shade.high { left: var(--high); right: 0; }
-#histogram .handle {
+#scale-editor .shade.low { left: 0; width: var(--low); }
+#scale-editor .shade.high { left: var(--high); right: 0; }
+#scale-editor .handle {
   position: absolute;
   top: 50%;
   width: 14px;
@@ -818,9 +821,9 @@ details[open] > :is(#inventories-toggle, #extras-toggle) { margin-bottom: 8px; }
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
   transform: translate(-50%, -50%);
 }
-#histogram .handle.low { left: var(--low); }
-#histogram .handle.high { left: var(--high); }
-#histogram-note {
+#scale-editor .handle.low { left: var(--low); }
+#scale-editor .handle.high { left: var(--high); }
+#scale-editor .note {
   position: absolute;
   inset: 0;
   display: grid;
@@ -830,25 +833,25 @@ details[open] > :is(#inventories-toggle, #extras-toggle) { margin-bottom: 8px; }
   pointer-events: none;
 }
 /* The ramp as drawn: the end colors hold beyond the limits. */
-#editor-bar {
+#scale-editor .band-bar {
   height: 8px;
   border: 1px solid var(--border);
   border-radius: 0 0 3px 3px;
 }
 
-/* Min, Max, and Reset as a square of the fields' height at the end. */
 #scale-editor .limits {
-  --field-height: calc(32px * var(--text-scale));
+  /* No taller than the panel's segmented buttons. */
+  --field-height: calc(28px * var(--text-scale));
   display: grid;
-  grid-template-columns: 1fr 1fr auto;
-  align-items: end;
+  grid-template-columns: 1fr 1fr;
   gap: 8px;
   margin-top: 12px;
 }
-#scale-editor .limit { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+#bands.channels .limits { margin-top: 8px; }
 /* The field draws the box; the unit inside it is not typed but focuses the field. */
 #scale-editor .field {
   display: flex;
+  min-width: 0;
   align-items: baseline;
   gap: 6px;
   height: var(--field-height);
@@ -863,17 +866,17 @@ details[open] > :is(#inventories-toggle, #extras-toggle) { margin-bottom: 8px; }
 #scale-editor .field:has([aria-invalid="true"]) { border-color: #e0524f; }
 #scale-editor .field .unit {
   flex: none;
-  font-size: calc(13px * var(--text-scale));
+  font-size: calc(12px * var(--text-scale));
   color: var(--muted);
 }
-/* 14px scales to 16px on touch screens, below which iOS zooms into a field. */
+/* On touch screens 16px, below which iOS zooms into a field. */
 #scale-editor input {
   flex: 1;
   width: 0;
   min-width: 0;
   padding: 0;
   font: inherit;
-  font-size: calc(14px * var(--text-scale));
+  font-size: calc(13px * var(--text-scale));
   font-variant-numeric: tabular-nums;
   color: var(--text);
   background: none;
@@ -887,12 +890,15 @@ details[open] > :is(#inventories-toggle, #extras-toggle) { margin-bottom: 8px; }
   color: #f08a87;
 }
 
-#scale-editor .presets { display: flex; gap: 6px; margin-top: 10px; }
-#scale-editor .presets button,
-#range-reset {
+/* The presets and, at the end, Reset as a square of their height: all act on every band. */
+#scale-editor .presets { display: flex; gap: 6px; margin-top: 12px; }
+/* Farther from false color's last band than the bands are apart: they act on all three. */
+#bands.channels + .presets { margin-top: 26px; }
+#scale-editor .presets button {
   padding: 2px 9px;
   font: inherit;
   font-size: calc(11px * var(--text-scale));
+  line-height: 1.6;
   color: #fff;
   background: rgba(255, 255, 255, 0.13);
   border: 1px solid rgba(255, 255, 255, 0.15);
@@ -902,18 +908,19 @@ details[open] > :is(#inventories-toggle, #extras-toggle) { margin-bottom: 8px; }
 #range-reset {
   display: grid;
   place-items: center;
-  width: var(--field-height);
-  height: var(--field-height);
-  padding: 0;
+  /* Square: the presets' line, padding and border. */
+  width: calc(11px * var(--text-scale) * 1.6 + 6px);
+  margin-left: auto;
 }
-:is(#scale-editor .presets button, #range-reset)[aria-disabled="true"] {
+#scale-editor .presets #range-reset { padding: 0; }
+#scale-editor .presets button[aria-disabled="true"] {
   opacity: 0.35;
   cursor: default;
 }
 /* Empty while every limit is accepted. */
 #limits-hint:empty { margin: 0; }
 @media (hover: hover) {
-  :is(#scale-editor .presets button, #range-reset):hover:not([aria-disabled="true"]) {
+  #scale-editor .presets button:hover:not([aria-disabled="true"]) {
     background: rgba(255, 255, 255, 0.24);
   }
 }
@@ -1002,7 +1009,9 @@ details[open] > :is(#inventories-toggle, #extras-toggle) { margin-bottom: 8px; }
   input[type="range"] { height: 32px; margin-block: -8px; }
 
   .cmap-option { padding-block: 10px; }
-  #histogram { height: 80px; }
+  #scale-editor input { font-size: 16px; }
+  #scale-editor .histogram { height: 80px; }
+  #bands.channels .histogram { height: 56px; }
   /* Taller tap areas for the low buttons; their row has room above and below. */
   #scale-editor .presets button { position: relative; }
   #scale-editor .presets button::after {
@@ -1010,7 +1019,7 @@ details[open] > :is(#inventories-toggle, #extras-toggle) { margin-bottom: 8px; }
     position: absolute;
     inset: -8px -3px;
   }
-  #histogram .handle { width: 20px; height: 20px; }
+  #scale-editor .handle { width: 20px; height: 20px; }
   .palette-popover { grid-template-columns: repeat(3, 36px); }
   .palette-popover .chip { width: 36px; height: 36px; padding: 3px; }
   .credit-popover { line-height: 1.7; }

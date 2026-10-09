@@ -1,10 +1,12 @@
 /*
- * The scale editor's histogram: the codes of a value-encoded archive counted
- * over the current view. Tiles are those MapLibre draws at this zoom, so most
- * come from the shared readers' cache in js/archive.js.
+ * The scale editor's histograms: the codes of a value-encoded archive, or a
+ * false-color composite's channels, counted over the current view. Tiles are
+ * those MapLibre draws at this zoom, so most come from the shared readers'
+ * cache in js/archive.js.
  */
 
 import { archive, unlessAborted } from "./archive.js";
+import { channelValues } from "./composite.js";
 import { step, tilePixels } from "./values.js";
 
 /* The default budget of tiles, past which a coarser zoom is read. */
@@ -25,14 +27,22 @@ function extent([west, south, east, north], z) {
   return { x0: tileX(west, z), x1: tileX(east, z), y0: tileY(north, z), y1: tileY(south, z) };
 }
 
+/* The pixel rectangle of tile x, y inside the view's extent, as [c0, c1, r0, r1]. */
+function cropOf(size, x, y, view) {
+  const px = (at, origin) => clamp(Math.round((at - origin) * size), 0, size);
+  return [px(view.x0, x), px(view.x1, x), px(view.y0, y), px(view.y1, y)];
+}
+
+/* The code 1-255 under which `value` falls on an encoding's axis, clamped to its ends. */
+const codeOf = (encoding, value) => clamp(Math.round((value + encoding.baseShift) / step(encoding)), 1, 255);
+
 /*
  * Count each code 1-255 in one decoded tile, within the view's extent. Code 0
  * in all channels is nodata, and a lossy tile marks nodata with alpha 0.
  */
 function countTile(counts, tile, x, y, view, encoding) {
   const { size, data } = tile;
-  const px = (at, origin) => clamp(Math.round((at - origin) * size), 0, size);
-  const [c0, c1, r0, r1] = [px(view.x0, x), px(view.x1, x), px(view.y0, y), px(view.y1, y)];
+  const [c0, c1, r0, r1] = cropOf(size, x, y, view);
   const { redFactor, greenFactor, blueFactor } = encoding;
   const scale = step(encoding);
   for (let row = r0; row < r1; row++) {
@@ -47,6 +57,34 @@ function countTile(counts, tile, x, y, view, encoding) {
   }
 }
 
+/*
+ * The tiles of archive `url` covering the view, at the zoom MapLibre draws or
+ * coarser past `maxTiles`, with the view's fractional extent at that zoom.
+ */
+async function tilesInView(url, minZoom, maxZoom, bounds, zoom, signal, maxTiles) {
+  const header = await unlessAborted(archive(url).getHeader(), signal);
+  const area = [
+    Math.max(bounds[0], header.minLon),
+    Math.max(bounds[1], header.minLat),
+    Math.min(bounds[2], header.maxLon),
+    Math.min(bounds[3], header.maxLat),
+  ];
+  if (area[0] >= area[2] || area[1] >= area[3]) return { z: minZoom, view: null, tiles: [] };
+
+  // MapLibre draws 256 px raster-dem tiles one zoom above the map's, rounded.
+  let z = clamp(Math.round(zoom + 1), minZoom, maxZoom);
+  let view = extent(area, z);
+  const count = (v) => (Math.floor(v.x1) - Math.floor(v.x0) + 1) * (Math.floor(v.y1) - Math.floor(v.y0) + 1);
+  while (z > minZoom && count(view) > maxTiles) view = extent(area, --z);
+
+  const tiles = [];
+  const last = 2 ** z - 1;
+  for (let y = Math.floor(view.y0); y <= Math.min(last, Math.floor(view.y1)); y++) {
+    for (let x = Math.floor(view.x0); x <= Math.min(last, Math.floor(view.x1)); x++) tiles.push({ x, y });
+  }
+  return { z, view, tiles };
+}
+
 /**
  * Count the archive's codes in view. Index 0 of the result is unused.
  *
@@ -59,29 +97,11 @@ function countTile(counts, tile, x, y, view, encoding) {
  * @returns {Promise<Float64Array>}  256 counts
  */
 export async function viewCounts(layer, bounds, zoom, signal, maxTiles = MAX_TILES) {
-  const header = await unlessAborted(archive(layer.url).getHeader(), signal);
-  const area = [
-    Math.max(bounds[0], header.minLon),
-    Math.max(bounds[1], header.minLat),
-    Math.min(bounds[2], header.maxLon),
-    Math.min(bounds[3], header.maxLat),
-  ];
+  const { z, view, tiles } = await tilesInView(
+    layer.url, layer.minZoom, layer.maxZoom, bounds, zoom, signal, maxTiles,
+  );
   const counts = new Float64Array(256);
-  if (area[0] >= area[2] || area[1] >= area[3]) return counts;
-
-  // MapLibre draws 256 px raster-dem tiles one zoom above the map's, rounded.
-  let z = clamp(Math.round(zoom + 1), layer.minZoom, layer.maxZoom);
-  let view = extent(area, z);
-  const tiles = (v) => (Math.floor(v.x1) - Math.floor(v.x0) + 1) * (Math.floor(v.y1) - Math.floor(v.y0) + 1);
-  while (z > layer.minZoom && tiles(view) > maxTiles) view = extent(area, --z);
-
-  const reads = [];
-  const last = 2 ** z - 1;
-  for (let y = Math.floor(view.y0); y <= Math.min(last, Math.floor(view.y1)); y++) {
-    for (let x = Math.floor(view.x0); x <= Math.min(last, Math.floor(view.x1)); x++) {
-      reads.push(tilePixels(layer.url, z, x, y, signal).then((tile) => tile && { tile, x, y }));
-    }
-  }
+  const reads = tiles.map(({ x, y }) => tilePixels(layer.url, z, x, y, signal).then((tile) => tile && { tile, x, y }));
   for (const read of await unlessAborted(Promise.all(reads), signal)) {
     if (read) countTile(counts, read.tile, read.x, read.y, view, layer.encoding);
   }
@@ -89,18 +109,70 @@ export async function viewCounts(layer, bounds, zoom, signal, maxTiles = MAX_TIL
 }
 
 /**
- * An SVG path of one bar per code over a viewBox of 255 by `height`. Heights
- * follow log(1 + count), so one dominant code leaves the rest readable. Empty
- * when nothing was counted.
+ * Count a false-color composite's channels in view, where both archives have
+ * data as it is drawn. Each channel is counted over its encoding's axis: an
+ * archive's codes, or the ratio's 255 steps, with values beyond its ends at
+ * the ends.
+ *
+ * @param {object} record  a composite from js/composite.js
+ * @returns {Promise<Float64Array[]>}  256 counts per channel
+ */
+export async function compositeCounts(record, bounds, zoom, signal, maxTiles = MAX_TILES) {
+  const { vv, vh } = record.composite;
+  const { z, view, tiles } = await tilesInView(
+    vv.url, record.minZoom, record.maxZoom, bounds, zoom, signal, maxTiles,
+  );
+  const counts = record.channels.map(() => new Float64Array(256));
+  const encodings = record.channels.map((channel) => channel.encoding);
+  const reads = tiles.map(({ x, y }) =>
+    Promise.all([tilePixels(vv.url, z, x, y, signal), tilePixels(vh.url, z, x, y, signal)]).then(
+      ([a, b]) => a && b && a.size === b.size && { a, b, x, y },
+    ),
+  );
+  const values = new Float64Array(3);
+  for (const read of await unlessAborted(Promise.all(reads), signal)) {
+    if (!read) continue;
+    const { size } = read.a;
+    const [c0, c1, r0, r1] = cropOf(size, read.x, read.y, view);
+    for (let row = r0; row < r1; row++) {
+      for (let col = c0; col < c1; col++) {
+        if (!channelValues(record, read.a.data, read.b.data, (row * size + col) * 4, values)) continue;
+        for (let at = 0; at < 3; at++) counts[at][codeOf(encodings[at], values[at])] += 1;
+      }
+    }
+  }
+  return counts;
+}
+
+/*
+ * Codes per bar. Lossy WebP keeps about 220 of the 256 levels, so single codes
+ * leave a gap about every seventh; a bar's height is the mean of the codes in
+ * it that were counted, which a gap does not lower.
+ */
+const BAR = 3;
+
+/**
+ * An SVG path of one bar per BAR codes over a viewBox of 255 by `height`.
+ * Heights follow the square root of the count: a log scale made thin tails
+ * look as full as the peak. Empty when nothing was counted.
  */
 export function histogramPath(counts, height) {
-  const top = Math.log1p(Math.max(...counts));
+  const bars = [];
+  for (let first = 1; first <= 255; first += BAR) {
+    let sum = 0;
+    let counted = 0;
+    for (let code = first; code < first + BAR && code <= 255; code++) {
+      sum += counts[code];
+      if (counts[code] > 0) counted += 1;
+    }
+    bars.push(counted ? Math.sqrt(sum / counted) : 0);
+  }
+  const top = Math.max(...bars);
   if (top === 0) return "";
   let path = "";
-  for (let code = 1; code <= 255; code++) {
-    const bar = (Math.log1p(counts[code]) / top) * height;
-    if (bar > 0) path += `M${code - 1} ${height}h1V${(height - bar).toFixed(2)}h-1Z`;
-  }
+  bars.forEach((bar, at) => {
+    if (bar > 0) path += `M${at * BAR} ${height}h${BAR}V${(height - (bar / top) * height).toFixed(2)}h-${BAR}Z`;
+  });
   return path;
 }
 

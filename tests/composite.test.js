@@ -6,7 +6,7 @@ import test from "node:test";
 import { installBrowser, load } from "./helpers/browser.js";
 
 installBrowser();
-const { compositeLayers, compositePixels, compositeProtocol, compositeTiles } = await load(
+const { compositeLayers, compositePixels, compositeProtocol, compositeTiles, restretch } = await load(
   "js/composite.js",
 );
 
@@ -28,18 +28,29 @@ test("one composite per product and year with both polarizations", () => {
   assert.equal(rgb.id, "glace-rtc_rgb-2024");
   assert.equal(rgb.polarization, "RGB");
   assert.equal(rgb.attribution, "Credit 2024");
-  assert.deepEqual(rgb.channels, [
-    { band: "VV", vmin: -16, vmax: -5 },
-    { band: "VH", vmin: -22, vmax: -11 },
-    { band: "VV − VH", vmin: 3.5, vmax: 10.5 },
-  ]);
+  assert.deepEqual(
+    rgb.channels.map(({ band, vmin, vmax, units }) => ({ band, vmin, vmax, units })),
+    [
+      { band: "VV", vmin: -16, vmax: -5, units: "dB" },
+      { band: "VH", vmin: -22, vmax: -11, units: "dB" },
+      { band: "VV − VH", vmin: 3.5, vmax: 10.5, units: "dB" },
+    ],
+  );
+  assert.equal(rgb.channels[0].encoding, ENCODING, "the polarizations keep their archives' axes");
+  // The ratio's axis splits its bounds into 255 codes, centered half a code in.
+  const { bounds, encoding } = rgb.channels[2];
+  assert.deepEqual(bounds, [0, 15]);
+  const center = (code) => code * encoding.redFactor - encoding.baseShift;
+  assert.ok(Math.abs(center(1) - 15 / 510) < 1e-12);
+  assert.ok(Math.abs(center(255) - (15 - 15 / 510)) < 1e-12);
 });
 
 test("coherence composes a quotient over its own blue range", () => {
   const cvv = record({ id: "glace-coh12_vv-2024", stem: "coh12_vv", product: "COH12", polarization: "VV", units: "", vmin: 0.1, vmax: 0.75 });
   const cvh = record({ id: "glace-coh12_vh-2024", stem: "coh12_vh", product: "COH12", polarization: "VH", units: "", vmin: 0.1, vmax: 0.55 });
   const [rgb] = compositeLayers([cvv, cvh]);
-  assert.deepEqual(rgb.channels[2], { band: "VV / VH", vmin: 0.8, vmax: 2.6 });
+  const { band, vmin, vmax, units, bounds } = rgb.channels[2];
+  assert.deepEqual({ band, vmin, vmax, units, bounds }, { band: "VV / VH", vmin: 0.8, vmax: 2.6, units: "", bounds: [0.5, 3] });
   assert.equal(rgb.composite.decibel, false);
 });
 
@@ -76,6 +87,64 @@ test("each channel is stretched, and a pixel needs both polarizations", () => {
   assert.deepEqual(px(1), [0, 0, 0, 0], "VH nodata: transparent, not black");
   assert.deepEqual(px(2), [0, 0, 0, 0], "VV nodata");
   assert.deepEqual(px(3), [0, 0, 0, 0], "VV transparent in a lossy tile");
+});
+
+test("new limits restretch the channels", () => {
+  const [rgb] = compositeLayers([VV, VH]);
+  // VV -10 dB, VH -16 dB, ratio 6 dB, as above.
+  const pixel = () => [...compositePixels(tile([91]), tile([31]), rgb).slice(0, 3)];
+  assert.deepEqual(pixel(), [139, 139, 91]);
+  restretch(rgb, [{ vmin: -10, vmax: 0 }, { vmin: -16, vmax: -14 }, { vmin: 6, vmax: 8 }]);
+  assert.deepEqual(pixel(), [0, 0, 0], "each at its new bottom");
+});
+
+test("redraws wait a gap after the last, and for the tiles being drawn", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const [rgb] = compositeLayers([
+    { ...VV, url: "https://redraw/VV.pmtiles" },
+    { ...VH, url: "https://redraw/VH.pmtiles" },
+  ]);
+  let release;
+  const gate = new Promise((resolve) => { release = resolve; });
+  globalThis.pmtiles.PMTiles = reader(async () => {
+    await gate;
+    return { data: tile([91]).data.buffer };
+  });
+  const reloads = [];
+  const limits = (vmin) => [{ vmin, vmax: 0 }, { vmin: -22, vmax: -11 }, { vmin: 3.5, vmax: 10.5 }];
+  const change = (vmin) => restretch(rgb, limits(vmin), () => reloads.push(vmin));
+
+  change(-16);
+  assert.deepEqual(reloads, [-16], "the first at once");
+  change(-15);
+  assert.deepEqual(reloads, [-16], "the next waits for the gap");
+  t.mock.timers.tick(100);
+  assert.deepEqual(reloads, [-16, -15]);
+
+  t.mock.timers.tick(100);
+  const drawing = compositeProtocol({ url: "glace-rgb://glace-rtc_rgb-2024/10/1/1" });
+  change(-14);
+  change(-13);
+  t.mock.timers.tick(100);
+  assert.deepEqual(reloads, [-16, -15], "and for the tile being drawn");
+  release();
+  await drawing;
+  t.mock.timers.tick(100);
+  assert.deepEqual(reloads, [-16, -15, -13], "then only the latest limits are drawn");
+  assert.equal(rgb.stretch[0].vmin, -13);
+});
+
+test("a tile that never settles holds a redraw back for ten gaps only", (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const [rgb] = compositeLayers([VV, VH]);
+  const reloads = [];
+  rgb.drawing = 1; // a read that never settles
+  restretch(rgb, rgb.channels, () => reloads.push("redrawn"));
+  for (let gap = 1; gap < 10; gap++) t.mock.timers.tick(100);
+  assert.deepEqual(reloads, []);
+  t.mock.timers.tick(100);
+  assert.deepEqual(reloads, ["redrawn"]);
+  rgb.drawing = 0;
 });
 
 test("the protocol composes a named tile and blanks one an archive lacks", async () => {
