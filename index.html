@@ -88,13 +88,17 @@
             <p id="selection-summary"></p>
           </div>
 
-          <button type="button" id="panel-toggle" aria-expanded="true" aria-controls="panel-body">
-            <span class="chevron" aria-hidden="true"
-                  ><svg viewBox="0 0 12 12" width="12" height="12" fill="none"
-                        stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
-                        stroke-linejoin="round"><path d="M2.5 4.5 6 8 9.5 4.5" /></svg
-                ></span>
-          </button>
+          <div class="header-actions">
+            <button type="button" id="about-open" aria-haspopup="dialog"
+                    aria-controls="about">About</button>
+            <button type="button" id="panel-toggle" aria-expanded="true" aria-controls="panel-body">
+              <span class="chevron" aria-hidden="true"
+                    ><svg viewBox="0 0 12 12" width="12" height="12" fill="none"
+                          stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                          stroke-linejoin="round"><path d="M2.5 4.5 6 8 9.5 4.5" /></svg
+                  ></span>
+            </button>
+          </div>
         </header>
 
         <div id="panel-body">
@@ -256,6 +260,101 @@
         <div id="cmap-section">
           <h3 id="cmap-options-title">Color map</h3>
           <div id="cmap-options" role="group" aria-labelledby="cmap-options-title"></div>
+        </div>
+      </div>
+    </dialog>
+    <!-- About GLACE: modal, closed by its button, Esc or a click outside. js/app.js
+         fills in the catalog's years. -->
+    <dialog id="about" closedby="any" aria-labelledby="about-title">
+      <div class="glass" aria-hidden="true"></div>
+      <div class="sheet">
+        <header>
+          <h2 id="about-title">About GLACE</h2>
+          <button type="button" class="close" aria-label="Close" title="Close" autofocus
+            ><svg viewBox="0 0 12 12" width="12" height="12" fill="none" stroke="currentColor"
+                  stroke-width="1.8" stroke-linecap="round" aria-hidden="true"
+              ><path d="M3 3 9 9M9 3 3 9" /></svg
+          ></button>
+        </header>
+
+        <!-- Only the text scrolls; the header and its close button stay. -->
+        <div class="body">
+          <p>GLACE is a dataset of annual Sentinel-1 summer composites of the European Alps.
+            It was primarily made for glacier mapping. Debris-covered glaciers are hard to separate from the
+            rock around them for humans and machine learning models alike. Interferometric
+            Synthetic Aperture Radar (InSAR) can separate them, because glacier flow lowers the
+            interferometric coherence between repeated observations.</p>
+
+          <h3>The dataset</h3>
+          <p>For each summer <span id="about-years">since 2015</span>, GLACE provides two
+            measurements, in VV and VH polarization, at 10 m grid spacing:</p>
+          <ul>
+            <li><strong>Coherence (COH12):</strong> how similar the radar phase stays between
+              two acquisitions 12 days apart. Flowing ice usually has lower coherence than
+              stable terrain.</li>
+            <li><strong>Backscatter (RTC):</strong> the strength of the radar echo,
+              radiometrically corrected for terrain (gamma-nought).</li>
+          </ul>
+          <p>Each measurement comes with two quality bands, an observation count (QA: Count)
+            and a composite quality map (QA: Quality).</p>
+
+          <h3>How it was made</h3>
+          <p>Sentinel-1 SLC bursts are processed to 12-day coherence and terrain-corrected
+            backscatter. Each year's composite uses all ascending and descending acquisitions
+            in the 90-day window with the least snow cover, measured by the MODIS snow index
+            (NDSI). The acquisitions are combined by local resolution weighting (LRW;
+            <a href="https://doi.org/10.1109/TGRS.2021.3055562" target="_blank"
+            rel="noopener">Small et al., 2022</a>): at each pixel, acquisitions that resolve
+            the slope more finely receive a higher weight. This reduces shadow, layover and
+            foreshortening artifacts in steep terrain. GLACE is, to our knowledge, the first
+            to apply LRW to coherence.</p>
+
+          <h3>Getting the data</h3>
+          <p>The composites are cloud-optimized GeoTIFFs, available as a STAC catalog on
+            <a href="https://source.coop/giuz/glace-alps" target="_blank" rel="noopener">Source
+            Cooperative</a>, licensed CC BY 4.0. You can browse the catalog with the
+            <a href="https://browser.portolan-sdi.org/#/external/data.source.coop/giuz/glace-alps/catalog.json"
+            target="_blank" rel="noopener">Portolan/STAC browser</a>. This map shows lossy
+            8-bit previews, so use the GeoTIFFs for analysis.</p>
+
+          <h3>About this map</h3>
+          <p>This map visualizes the GLACE dataset. The data is streamed from Source Cooperative. All streaming,
+            decoding and rendering happens in your browser, with no application server
+            required. Click the map to read a value. Share a view by copying the page URL:
+            the address keeps the extent and selections.</p>
+          <p>Built with:</p>
+          <ul>
+            <li><a href="https://maplibre.org" target="_blank" rel="noopener">MapLibre GL
+              JS</a>: map rendering</li>
+            <li><a href="https://docs.protomaps.com/pmtiles/" target="_blank"
+              rel="noopener">PMTiles</a>: single-file tile archives, read in chunks over HTTP
+              range requests</li>
+            <li><a href="https://protomaps.com" target="_blank" rel="noopener">Protomaps
+              basemaps</a> with <a href="https://www.openstreetmap.org/copyright"
+              target="_blank" rel="noopener">OpenStreetMap</a> data</li>
+            <li><a href="https://mapterhorn.com" target="_blank" rel="noopener">Mapterhorn</a>:
+              digital elevation model tiles</li>
+            <li><a href="https://github.com/hyparam/hyparquet" target="_blank"
+              rel="noopener">hyparquet</a>: GeoParquet reading for the catalog's tile grid</li>
+          </ul>
+          <p>The color maps are Fabio Crameri's
+            <a href="https://doi.org/10.5281/zenodo.1243862" target="_blank"
+            rel="noopener">Scientific colour maps</a> and matplotlib's viridis, magma and
+            cividis. The viewer is <a href="https://github.com/lqgentner/glace-viewer"
+            target="_blank" rel="noopener">open source</a> under the MIT license.</p>
+
+          <h3>Credits</h3>
+          <p>Contains modified Copernicus Sentinel data. GLACE is produced at the Department of
+            Geography, University of Zurich. Credits for the basemaps, terrain and glacier
+            inventories are shown on the map and beside each inventory. A dataset citation
+            will be added with the preprint.</p>
+
+          <h3>Feedback</h3>
+          <p>Problems or suggestions? Report them in the
+            <a href="https://github.com/lqgentner/glace-catalog/issues" target="_blank"
+            rel="noopener">dataset's issue tracker</a> or, for the web map, the
+            <a href="https://github.com/lqgentner/glace-viewer/issues" target="_blank"
+            rel="noopener">viewer's issue tracker</a>.</p>
         </div>
       </div>
     </dialog>

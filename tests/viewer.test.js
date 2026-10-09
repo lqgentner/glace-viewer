@@ -289,6 +289,16 @@ test("the viewer", async (t) => {
     info.click();
   });
 
+  await t.test("the about dialog names the catalog's years and closes again", async () => {
+    const about = el("about");
+    assert.equal(el("about-years").textContent, "from 2022 to 2023");
+    el("about-open").click();
+    assert.equal(about.open, true);
+    assert.equal(page.window.document.activeElement, about.querySelector(".close"));
+    about.querySelector(".close").click();
+    assert.equal(about.open, false);
+  });
+
   await t.test("the home button shows only while the catalog is out of view", async () => {
     const home = el("home");
     const shown = () => !home.hidden;

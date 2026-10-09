@@ -48,7 +48,36 @@ function setPanelOpen(open) {
   toggle.querySelector(".chevron").classList.toggle("up", !open);
 }
 
+/*
+ * The about dialog. closedby="any" closes it on a click outside; browsers without
+ * that attribute get the same from a click on the dialog box's backdrop area.
+ */
+function initAbout() {
+  const about = el("about");
+  el("about-open").addEventListener("click", () => about.showModal());
+  about.querySelector(".close").addEventListener("click", () => about.close());
+  if (!("closedBy" in about)) {
+    about.addEventListener("click", (event) => {
+      if (event.target !== about) return;
+      const box = about.getBoundingClientRect();
+      const inside =
+        box.left <= event.clientX &&
+        event.clientX <= box.right &&
+        box.top <= event.clientY &&
+        event.clientY <= box.bottom;
+      if (!inside) about.close();
+    });
+  }
+}
+
+/* Replace the about text's fixed "since 2015" with the catalog's year range. */
+function showAboutYears(years) {
+  if (years.length < 2) return;
+  el("about-years").textContent = `from ${years[0]} to ${years[years.length - 1]}`;
+}
+
 function initControls() {
+  initAbout();
   el("panel-toggle").addEventListener("click", (event) => {
     setPanelOpen(event.currentTarget.getAttribute("aria-expanded") !== "true");
   });
@@ -104,7 +133,8 @@ async function boot() {
   // Load the independent inventory list immediately to avoid panel layout shifts.
   loadInventories();
 
-  await loadRasters();
+  const axes = await loadRasters();
+  if (axes) showAboutYears(axes.years);
 }
 
 boot();

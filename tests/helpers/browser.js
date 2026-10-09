@@ -314,13 +314,16 @@ export function installBrowser({
   else globalThis.GLACE_CONFIG = site;
 
   /* jsdom's dialogs lack the focusing steps. The page needs only the open
-   * state, the autofocus that show() gives, and close() with its event. */
+   * state, the autofocus that show() and showModal() give, and close() with
+   * its event. */
+  function show() {
+    if (this.open) return;
+    this.setAttribute("open", "");
+    this.querySelector("[autofocus]")?.focus();
+  }
   Object.assign(window.HTMLDialogElement.prototype, {
-    show() {
-      if (this.open) return;
-      this.setAttribute("open", "");
-      this.querySelector("[autofocus]")?.focus();
-    },
+    show,
+    showModal: show,
     close() {
       if (!this.open) return;
       this.removeAttribute("open");

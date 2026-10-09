@@ -6,6 +6,8 @@
   --muted: #8b95a8;
   /* Wordmark pink for text on dark surfaces. */
   --accent: #d7acce;
+  /* The wordmark gradient's blue end, for headings on dark surfaces. */
+  --accent-blue: #8bc6db;
   /* Darker accent for readable text on white controls. */
   --accent-ink: #b8479f;
   /* Every font size is a multiple of this, so touch screens can enlarge them all. */
@@ -89,7 +91,8 @@ html, body {
  * scrolling panel so it stays fixed behind the controls.
  */
 #panel-glass,
-#scale-editor .glass {
+#scale-editor .glass,
+#about .glass {
   position: absolute;
   inset: calc(-1 * var(--glass-reach));
   pointer-events: none;
@@ -114,10 +117,11 @@ html, body {
 }
 
 /*
- * The scale editor's sheet takes the panel's surface. Declared before the glass
- * tint below, which overrides it.
+ * The scale editor's and the about dialog's sheets take the panel's surface.
+ * Declared before the glass tint below, which overrides it.
  */
-#scale-editor .sheet {
+#scale-editor .sheet,
+#about .sheet {
   border: 1px solid var(--border);
   border-radius: 10px;
   /* Opaque fallback for browsers without backdrop-filter. */
@@ -126,14 +130,16 @@ html, body {
 
 @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
   #panel-glass,
-  #scale-editor .glass {
+  #scale-editor .glass,
+  #about .glass {
     -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
       brightness(var(--glass-brightness));
     backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
       brightness(var(--glass-brightness));
   }
   #panel,
-  #scale-editor .sheet {
+  #scale-editor .sheet,
+  #about .sheet {
     background: hsl(var(--glass-tint) / var(--glass-alpha));
     border-color: rgba(255, 255, 255, 0.14);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09);
@@ -206,19 +212,26 @@ html, body {
 #panel:not(.collapsed) #selection-summary { display: none; }
 
 /*
- * The panel's collapse button and the scale editor's close button: boxed, in
- * each surface's top right corner 10px from its edges, so they read above the
- * headings beside them. The panel's padding is 16px, the editor's 10px by 16px.
+ * The panel's header buttons and the dialogs' close buttons: boxed, in each
+ * surface's top right corner 10px from its edges, so they read above the
+ * headings beside them. The panel's padding is 16px, the dialogs' 10px by 16px.
  */
+.header-actions {
+  flex: none;
+  display: flex;
+  gap: 6px;
+  margin: -6px -6px 0 0;
+}
 #panel-toggle,
-#scale-editor .close {
+#about-open,
+:is(#scale-editor, #about) .close {
   flex: none;
   display: flex;
   align-items: center;
   justify-content: center;
   width: 26px;
   height: 26px;
-  margin: -6px -6px 0 0;
+  margin: 0 -6px 0 0;
   padding: 0;
   color: var(--text);
   background-color: rgba(255, 255, 255, 0.13);
@@ -230,11 +243,19 @@ html, body {
     background-color 0.14s ease,
     border-color 0.14s ease;
 }
-#scale-editor .close { margin-top: 0; }
-:is(#panel-toggle, #scale-editor .close) svg { width: 14px; height: 14px; }
+#panel-toggle,
+#about-open { margin: 0; }
+#about-open {
+  width: auto;
+  padding: 0 9px;
+  font: inherit;
+  font-size: calc(12px * var(--text-scale));
+}
+:is(#panel-toggle, #scale-editor .close, #about .close) svg { width: 14px; height: 14px; }
 @media (hover: hover) {
   #panel-toggle:hover,
-  #scale-editor .close:hover {
+  #about-open:hover,
+  :is(#scale-editor, #about) .close:hover {
     color: #fff;
     background-color: rgba(255, 255, 255, 0.24);
     border-color: rgba(255, 255, 255, 0.3);
@@ -768,6 +789,91 @@ details[open] > :is(#inventories-toggle, #extras-toggle) { margin-bottom: 8px; }
 .maplibregl-popup-content > div + .pop-head { margin-top: 7px; }
 
 /*
+ * About GLACE: a modal dialog, centered over the dimmed map, 16px clear of the
+ * viewport edges on small screens. It fades in; closing is immediate.
+ */
+#about {
+  position: fixed;
+  inset: 0;
+  width: min(640px, 100vw - 32px);
+  max-height: min(80dvh, 100dvh - 32px);
+  margin: auto;
+  padding: 0;
+  /* Built like the panel: this shell clips the glass, the sheet's body scrolls over it. */
+  overflow: hidden;
+  color: var(--text);
+  background: none;
+  border: 0;
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+}
+#about[open] {
+  display: flex;
+  flex-direction: column;
+  transition: opacity 0.18s ease-out, transform 0.18s ease-out;
+  @starting-style {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+#about::backdrop { background: rgba(6, 9, 14, 0.5); }
+/* The header stays in place; only the body below its rule scrolls. */
+#about .sheet {
+  position: relative;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-size: calc(13px * var(--text-scale));
+  line-height: 1.55;
+}
+#about header {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+#about .body {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 16px 18px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.28) transparent;
+}
+#about h2,
+#about h3 {
+  margin: 0;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--text);
+}
+#about h2 { font-size: calc(20px * var(--text-scale)); }
+#about h3 {
+  margin: 20px 0 6px;
+  font-size: calc(15px * var(--text-scale));
+  color: var(--accent-blue);
+}
+#about .body > :first-child { margin-top: 10px; }
+#about p { margin: 0 0 8px; }
+#about ul { margin: 0 0 8px; padding-left: 18px; }
+#about li + li { margin-top: 3px; }
+#about strong { font-weight: 600; }
+#about a { color: var(--accent); }
+#about :is(a, .close):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  #about[open] {
+    transition-duration: 0.1s;
+    @starting-style { transform: none; }
+  }
+}
+
+/*
  * The scale editor, a non-modal dialog: beside the panel on wide screens, in
  * its place on narrow ones. The map stays live around it.
  */
@@ -1013,13 +1119,15 @@ details[open] > :is(#inventories-toggle, #extras-toggle) { margin-bottom: 8px; }
   :root { --text-scale: 1.15; --box: 20px; }
 
   #panel-toggle,
-  #scale-editor .close,
+  #about-open,
+  :is(#scale-editor, #about) .close,
   .credit,
   .inventory .swatch,
   #inventories-toggle,
   #extras-toggle { position: relative; }
   #panel-toggle::after,
-  #scale-editor .close::after,
+  #about-open::after,
+  :is(#scale-editor, #about) .close::after,
   .credit::after,
   .inventory .swatch::after,
   #inventories-toggle::after,
@@ -1028,6 +1136,9 @@ details[open] > :is(#inventories-toggle, #extras-toggle) { margin-bottom: 8px; }
     position: absolute;
     inset: -11px;
   }
+  /* The gap keeps the two header buttons' tap areas apart. */
+  .header-actions { gap: 10px; }
+  #about-open::after { inset: -11px 0 -11px -11px; }
   .credit { width: 24px; height: 24px; }
   .credit svg { width: 18px; height: 18px; }
   .credit::after { inset: -10px; }
