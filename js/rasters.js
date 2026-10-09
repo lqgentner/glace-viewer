@@ -687,6 +687,9 @@ let reading = null;
 /* The layer the histograms show or are reading, and their counts once read. */
 let shown = null;
 let viewed = null;
+/* Whether a recount is under way, and the preset pressed meanwhile, for when it ends. */
+let recounting = false;
+let queued = null;
 
 /*
  * A note over the charts; a chart is an image, so its label carries the note
@@ -712,18 +715,20 @@ const drawBars = (counts) =>
 /*
  * Count the values in view. A new layer starts blank; a recount of the same
  * one, after the map moves, keeps the old bars until the new ones are ready.
- * Either way the presets wait for the new counts.
+ * A preset pressed during a recount applies to the new counts.
  */
 async function showHistogram(layer) {
   reading?.abort();
   const controller = (reading = new AbortController());
-  viewed = null;
-  syncEditor(layer);
   if (shown !== layer) {
     shown = layer;
+    viewed = null;
+    queued = null;
+    syncEditor(layer);
     drawBars(null);
     note(layer, "Loading…");
   }
+  recounting = true;
   try {
     const bounds = map.getBounds();
     // After panning across world copies, longitudes run past ±180.
@@ -738,9 +743,14 @@ async function showHistogram(layer) {
     drawBars(counts);
     note(layer, counts.some((band) => codeRange(band) !== null) ? "" : "No data in view", counts);
     viewed = { layer, counts };
+    recounting = false;
     syncEditor(layer);
+    if (queued) fitBands(layer, queued);
+    queued = null;
   } catch {
     if (controller.signal.aborted) return;
+    recounting = false;
+    queued = null;
     viewed = null;
     drawBars(null);
     note(layer, "The values in view could not be read");
@@ -793,6 +803,10 @@ function limitsAt(band, low, high) {
 /* Fit every counted band's limits to the code positions `pick` finds in its counts. */
 function fitBands(layer, pick) {
   if (viewed?.layer !== layer) return;
+  if (recounting) {
+    queued = pick;
+    return;
+  }
   const limits = {};
   bandsOf(layer).forEach((band, at) => {
     if (codeRange(viewed.counts[at]) !== null) limits[at] = limitsAt(band, ...pick(viewed.counts[at]));
@@ -919,6 +933,8 @@ function initLegend() {
     reading?.abort();
     shown = null;
     viewed = null;
+    recounting = false;
+    queued = null;
     el("legend-edit").setAttribute("aria-expanded", "false");
   });
   editor.querySelector(".close").addEventListener("click", () => editor.close());

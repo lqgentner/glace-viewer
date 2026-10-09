@@ -70,7 +70,7 @@ test("a raster failure stays reported when the opacity changes", async () => {
   assert.match(el("status").textContent, /Error loading this layer/, "the failed one still does");
 });
 
-test("presets wait for the recount after the map moves", async () => {
+test("a preset pressed during a recount fits the new view", async () => {
   // One z5 tile in view, as in legend.test.js.
   const lat = (y) => (Math.atan(Math.sinh(Math.PI * (1 - y / 16))) * 180) / Math.PI;
   const { getBounds } = map;
@@ -93,18 +93,15 @@ test("presets wait for the recount after the map moves", async () => {
     await settle();
     assert.ok(pending.length > 0, "the recount is waiting on its tile");
 
+    assert.equal(off("range-extent"), false, "it stays available, so it does not flicker");
     el("range-extent").click();
     await settle();
     // Code 101 is 0.39; code 201 is 0.79.
-    assert.notEqual(el("vmin-0").value, "0.39", "Min/Max did not fit the view the map left");
-    assert.equal(off("range-extent"), true, "it waits for the recount");
+    assert.equal(el("vmin-0").value, "0.10", "Min/Max did not fit the view the map left");
 
     pending.splice(0).forEach((resolve) => resolve(tileOf(201)));
     await settle();
-    assert.equal(off("range-extent"), false);
-    el("range-extent").click();
-    await settle();
-    assert.equal(el("vmin-0").value, "0.79", "and then fits the view in front of it");
+    assert.equal(el("vmin-0").value, "0.79", "it fits the view in front of it once counted");
   } finally {
     Object.assign(map, { getBounds, zoom });
     reader.getZxy = getZxy;

@@ -258,8 +258,9 @@ the close button or Escape closes it. It holds one block per band from
 ratio channel has a fixed axis of 255 steps. Each histogram counts the band in
 the view at the zoom MapLibre draws, coarser past a tile budget sized to the
 viewport, again after each `moveend`; a recount keeps the old bars until it is
-ready, and the presets wait for it. Bars span three codes and average the codes
-counted, because lossy WebP never produces about one code in seven. The open editor follows the selection
+ready. The presets stay available meanwhile, so they do not flicker; one pressed
+during a recount applies to the new counts. Bars span three codes and average
+the codes counted, because lossy WebP never produces about one code in seven. The open editor follows the selection
 and closes when the selection has no layer. The axis spans codes 1-255, and the
 limits are handles on it: a press moves the nearer one. A touch moves it only
 once it travels across, or as a tap, so a vertical swipe scrolls the editor.
