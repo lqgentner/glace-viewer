@@ -404,8 +404,25 @@ function closePopup() {
   return true;
 }
 
+/*
+ * A click waits this long for a second one, which makes it a double-click zoom
+ * that opens nothing. Closing does not wait.
+ */
+const DOUBLE_CLICK_MS = 250;
+let lastClick = -Infinity;
+let pendingClick = null;
+
 map.on("click", (event) => {
-  if (!closePopup()) inspect(event.point, event.lngLat);
+  const now = performance.now();
+  const double = now - lastClick < DOUBLE_CLICK_MS;
+  lastClick = now;
+  clearTimeout(pendingClick);
+  pendingClick = null;
+  if (double || closePopup()) return;
+  pendingClick = setTimeout(() => {
+    pendingClick = null;
+    inspect(event.point, event.lngLat);
+  }, DOUBLE_CLICK_MS);
 });
 // Tilting covers the 3D button, which eases the pitch.
 for (const event of ["dragstart", "zoomstart", "pitchstart"]) map.on(event, closePopup);

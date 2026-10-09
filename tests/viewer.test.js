@@ -497,6 +497,8 @@ test("the viewer", async (t) => {
     // Escape closes the last popup, which this click would otherwise only close.
     page.window.document.dispatchEvent(new page.window.KeyboardEvent("keydown", { key: "Escape" }));
     map.fire("click", { point: { x: 10, y: 10 }, lngLat: { lng: 8, lat: 46 } });
+    // A single click waits 250 ms for a second one.
+    await new Promise((resolve) => setTimeout(resolve, 300));
     await settle();
 
     assert.equal(page.popups.length, 1);
@@ -517,6 +519,8 @@ test("the viewer", async (t) => {
     // Escape closes the last popup, which this click would otherwise only close.
     page.window.document.dispatchEvent(new page.window.KeyboardEvent("keydown", { key: "Escape" }));
     map.fire("click", { point: { x: 10, y: 10 }, lngLat: { lng: 8, lat: 46 } });
+    // A single click waits 250 ms for a second one.
+    await new Promise((resolve) => setTimeout(resolve, 300));
     await settle();
 
     const { content } = page.popups.at(-1);
@@ -586,6 +590,8 @@ test("the viewer", async (t) => {
     // Escape closes the last popup, which this click would otherwise only close.
     page.window.document.dispatchEvent(new page.window.KeyboardEvent("keydown", { key: "Escape" }));
     map.fire("click", { point: { x: 10, y: 10 }, lngLat: { lng: 8, lat: 46 } });
+    // A single click waits 250 ms for a second one.
+    await new Promise((resolve) => setTimeout(resolve, 300));
     await settle();
 
     const text = page.popups.at(-1).content.textContent;

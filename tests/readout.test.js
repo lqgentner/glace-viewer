@@ -52,11 +52,15 @@ function inside(z, x, y, fx, fy) {
 }
 const escape = () =>
   page.window.document.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+/* A single click waits 250 ms for a second; past that it is a click of its own. */
+const pause = () => new Promise((resolve) => setTimeout(resolve, 300));
+const fireClick = (lngLat) => map.fire("click", { point: { x: 10, y: 10 }, lngLat });
 /* A click with no popup open, which a click with one open would only close. */
 async function click(lngLat) {
   escape();
   popups.length = 0;
-  map.fire("click", { point: { x: 10, y: 10 }, lngLat });
+  fireClick(lngLat);
+  await pause();
   await settle();
 }
 const shown = () => popups.map((popup) => popup.content.textContent);
@@ -107,11 +111,11 @@ test("a slow read never opens a popup over a newer click", async () => {
   const pending = [];
   tileFor = () => new Promise((resolve) => pending.push(resolve));
   popups.length = 0;
-  map.fire("click", { point: { x: 10, y: 10 }, lngLat: inside(...AT, 0.25, 0.25) });
-  await settle();
+  fireClick(inside(...AT, 0.25, 0.25));
+  await pause();
   tileFor = () => tile(201, 201, 201, 201);
-  map.fire("click", { point: { x: 10, y: 10 }, lngLat: inside(...AT, 0.25, 0.25) });
-  await settle();
+  fireClick(inside(...AT, 0.25, 0.25));
+  await pause();
   pending.forEach((resolve) => resolve(tile(101, 101, 101, 101)));
   await settle();
   assert.deepEqual(shown(), ["Coherence 2023VV: 0.79"]);
@@ -131,12 +135,13 @@ test("a click elsewhere, a drag, a zoom, a tilt or Escape closes the popup", asy
   const [first] = popups;
   assert.equal(first.options.closeButton, false, "there is no close button");
 
-  map.fire("click", { point: { x: 10, y: 10 }, lngLat: inside(...AT, 0.75, 0.75) });
-  await settle();
-  assert.equal(first.removed, true, "a click elsewhere closes it");
+  fireClick(inside(...AT, 0.75, 0.75));
+  assert.equal(first.removed, true, "a click elsewhere closes it at once");
+  await pause();
   assert.equal(popups.length, 1, "and opens no other");
 
-  map.fire("click", { point: { x: 10, y: 10 }, lngLat: inside(...AT, 0.75, 0.75) });
+  fireClick(inside(...AT, 0.75, 0.75));
+  await pause();
   await settle();
   assert.equal(popups.length, 2, "the next click opens one again");
   map.fire("dragstart");
@@ -151,4 +156,24 @@ test("a click elsewhere, a drag, a zoom, a tilt or Escape closes the popup", asy
   await click(inside(...AT, 0.25, 0.25));
   escape();
   assert.equal(popups[0].removed, true, "and so does Escape");
+});
+
+test("a double click zooms and opens no popup", async () => {
+  tileFor = () => tile(101, 101, 101, 101);
+  escape();
+  popups.length = 0;
+  fireClick(inside(...AT, 0.25, 0.25));
+  fireClick(inside(...AT, 0.25, 0.25));
+  await pause();
+  await settle();
+  assert.deepEqual(shown(), []);
+
+  // With a popup open, its first click closes it and its second opens none.
+  await click(inside(...AT, 0.25, 0.25));
+  fireClick(inside(...AT, 0.25, 0.25));
+  fireClick(inside(...AT, 0.25, 0.25));
+  await pause();
+  await settle();
+  assert.equal(popups.length, 1);
+  assert.equal(popups[0].removed, true);
 });

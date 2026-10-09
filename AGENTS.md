@@ -230,7 +230,8 @@ selected layer's value on top, from the pixel MapLibre draws at that zoom (VV
 and VH for false color), then the overlays under the pointer. A newer click wins
 over a slower read. The archives are lossy, so the value is a guide, not data.
 The popup has no close button: a click while it is open, a drag, a zoom, a tilt
-or Escape closes it. The map shows the arrow cursor, and the move cursor while
+or Escape closes it. A click waits 250 ms for a second one, so a double-click
+zooms without opening a popup. The map shows the arrow cursor, and the move cursor while
 pressed.
 
 The panel's 640 px breakpoint must agree in `js/app.js` and `style.css`. CSS
