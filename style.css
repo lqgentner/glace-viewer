@@ -438,10 +438,36 @@ details[open] > summary .chevron { transform: rotate(180deg); }
 #hillshade-strength-row { margin-top: -6px; padding-left: 22px; }
 
 /*
- * The top right controls take the panel's 12px inset. The map ID outranks
- * MapLibre's corners for focused buttons.
+ * MapLibre's controls, attribution and scale bar take the panel's glass and its
+ * 12px inset. The map ID outranks MapLibre's rules, including its corners for
+ * focused buttons. Small and unscrolled, each blurs its own backdrop. The
+ * outline is inset and drawn over the buttons, so the sizes stay MapLibre's.
  */
 #map .maplibregl-ctrl-top-right .maplibregl-ctrl { margin: 12px 12px 0 0; }
+#map .maplibregl-ctrl-bottom-left .maplibregl-ctrl { margin: 0 0 12px 12px; }
+/* The left margin keeps the expanded attribution off the edge of a narrow screen. */
+#map .maplibregl-ctrl-bottom-right .maplibregl-ctrl { margin: 0 12px 12px; }
+#map :is(.maplibregl-ctrl-group, .maplibregl-ctrl-attrib, .maplibregl-ctrl-scale) {
+  color: var(--text);
+  background-color: var(--panel);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+#map :is(.maplibregl-ctrl-group, .maplibregl-ctrl-attrib) {
+  outline: 1px solid var(--border);
+  outline-offset: -1px;
+}
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  #map :is(.maplibregl-ctrl-group, .maplibregl-ctrl-attrib, .maplibregl-ctrl-scale) {
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
+      brightness(var(--glass-brightness));
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
+      brightness(var(--glass-brightness));
+    background-color: hsl(var(--glass-tint) / var(--glass-alpha));
+  }
+  #map :is(.maplibregl-ctrl-group, .maplibregl-ctrl-attrib) {
+    outline-color: rgba(255, 255, 255, 0.14);
+  }
+}
 #map .maplibregl-ctrl-group { border-radius: var(--ctrl-radius); }
 #map .maplibregl-ctrl-group button:first-child {
   border-radius: var(--ctrl-radius) var(--ctrl-radius) 0 0;
@@ -450,13 +476,56 @@ details[open] > summary .chevron { transform: rotate(180deg); }
   border-radius: 0 0 var(--ctrl-radius) var(--ctrl-radius);
 }
 #map .maplibregl-ctrl-group button:only-child { border-radius: inherit; }
+#map .maplibregl-ctrl-group button + button { border-top-color: rgba(255, 255, 255, 0.14); }
+#map .maplibregl-ctrl button:not(:disabled):active { background-color: rgba(255, 255, 255, 0.13); }
+@media (hover: hover) {
+  #map .maplibregl-ctrl button:not(:disabled):hover { background-color: rgba(255, 255, 255, 0.13); }
+}
+
+/*
+ * Replace MapLibre's blue focus glow, which the info button keeps even after a
+ * click, with the panel's accent ring, for keyboard focus only.
+ */
+#map :is(.maplibregl-ctrl-group button, .maplibregl-ctrl-attrib-button):focus { box-shadow: none; }
+#map :is(.maplibregl-ctrl-group button, .maplibregl-ctrl-attrib-button):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/*
+ * MapLibre's icons are dark images; these redraw them in --text, the compass's
+ * south half in --muted.
+ */
+#map .maplibregl-ctrl-zoom-in .maplibregl-ctrl-icon {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='29' height='29' viewBox='0 0 29 29' fill='%23e6eaf2'%3E%3Cpath d='M14.5 8.5c-.75 0-1.5.75-1.5 1.5v3h-3c-.75 0-1.5.75-1.5 1.5S9.25 16 10 16h3v3c0 .75.75 1.5 1.5 1.5S16 19.75 16 19v-3h3c.75 0 1.5-.75 1.5-1.5S19.75 13 19 13h-3v-3c0-.75-.75-1.5-1.5-1.5'/%3E%3C/svg%3E");
+}
+#map .maplibregl-ctrl-zoom-out .maplibregl-ctrl-icon {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='29' height='29' viewBox='0 0 29 29' fill='%23e6eaf2'%3E%3Cpath d='M10 13c-.75 0-1.5.75-1.5 1.5S9.25 16 10 16h9c.75 0 1.5-.75 1.5-1.5S19.75 13 19 13z'/%3E%3C/svg%3E");
+}
+#map .maplibregl-ctrl-compass .maplibregl-ctrl-icon {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='29' height='29' viewBox='0 0 29 29' fill='%23e6eaf2'%3E%3Cpath d='m10.5 14 4-8 4 8z'/%3E%3Cpath fill='%238b95a8' d='m10.5 16 4 8 4-8z'/%3E%3C/svg%3E");
+}
 
 /* MapLibre buttons default to image glyphs; the 3D/2D text needs explicit styling. */
 .maplibregl-ctrl-3d {
   font: 600 calc(11px * var(--text-scale))/1 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   letter-spacing: 0.04em;
-  color: #333;
+  color: var(--text);
 }
+
+/* The attribution: text and links in --muted, and a light info button. */
+#map .maplibregl-ctrl-attrib { color: var(--muted); }
+#map .maplibregl-ctrl-attrib a { color: inherit; }
+#map .maplibregl-ctrl-attrib-button {
+  background-color: transparent;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='%23e6eaf2' fill-rule='evenodd' viewBox='0 0 20 20'%3E%3Cpath d='M4 10a6 6 0 1 0 12 0 6 6 0 1 0-12 0m5-3a1 1 0 1 0 2 0 1 1 0 1 0-2 0m0 3a1 1 0 1 1 2 0v3a1 1 0 1 1-2 0'/%3E%3C/svg%3E");
+}
+#map .maplibregl-compact-show .maplibregl-ctrl-attrib-button {
+  background-color: rgba(255, 255, 255, 0.13);
+}
+
+/* The scale bar keeps its ruler: open at the top, in a light line. */
+#map .maplibregl-ctrl-scale { border-color: rgba(255, 255, 255, 0.6); }
 
 .ticks {
   display: flex;
