@@ -958,9 +958,11 @@ details[open] > :is(#inventories-toggle, #extras-toggle) { margin-bottom: 8px; }
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px 16px 10px;
+  padding: 10px 16px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
 }
+/* At the top, 10px from the edges as on the panel, however tall the heading grows. */
+#about header .close { align-self: flex-start; }
 #about .body {
   min-height: 0;
   overflow-y: auto;
