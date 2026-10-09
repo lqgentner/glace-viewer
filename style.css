@@ -14,6 +14,13 @@
   --text-scale: 1;
   /* Checkboxes and the inventory swatches beside them share this size. */
   --box: 14px;
+  /*
+   * The panel's and the dialogs' corners: their 6px buttons' radius plus the 10px
+   * between those buttons and the edges, so the corners are concentric.
+   */
+  --surface-radius: 16px;
+  /* The map controls' corners; the touch block raises them to the panel's. */
+  --ctrl-radius: 10px;
 }
 
 * { box-sizing: border-box; }
@@ -78,7 +85,7 @@ html, body {
 
   display: flex;
   flex-direction: column;
-  border-radius: 10px;
+  border-radius: var(--surface-radius);
 
   overflow: hidden;
   /* Keep the shadow outside the clipped panel. */
@@ -111,7 +118,7 @@ html, body {
   overflow: hidden;
   padding: 16px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--surface-radius);
   /* Opaque fallback for browsers without backdrop-filter. */
   background: var(--panel);
 }
@@ -123,7 +130,7 @@ html, body {
 #scale-editor .sheet,
 #about .sheet {
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--surface-radius);
   /* Opaque fallback for browsers without backdrop-filter. */
   background: var(--panel);
 }
@@ -430,6 +437,20 @@ details[open] > summary .chevron { transform: rotate(180deg); }
 
 #hillshade-strength-row { margin-top: -6px; padding-left: 22px; }
 
+/*
+ * The top right controls take the panel's 12px inset. The map ID outranks
+ * MapLibre's corners for focused buttons.
+ */
+#map .maplibregl-ctrl-top-right .maplibregl-ctrl { margin: 12px 12px 0 0; }
+#map .maplibregl-ctrl-group { border-radius: var(--ctrl-radius); }
+#map .maplibregl-ctrl-group button:first-child {
+  border-radius: var(--ctrl-radius) var(--ctrl-radius) 0 0;
+}
+#map .maplibregl-ctrl-group button:last-child {
+  border-radius: 0 0 var(--ctrl-radius) var(--ctrl-radius);
+}
+#map .maplibregl-ctrl-group button:only-child { border-radius: inherit; }
+
 /* MapLibre buttons default to image glyphs; the 3D/2D text needs explicit styling. */
 .maplibregl-ctrl-3d {
   font: 600 calc(11px * var(--text-scale))/1 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -586,8 +607,8 @@ details[open] > summary .chevron { transform: rotate(180deg); }
 
 @media (max-width: 640px) {
   #panel-shell {
-    /* Leave room for the map controls, at their touch size, and their margin. */
-    right: 62px;
+    /* Leave room for the map controls, at their touch size, with 12px on each side. */
+    right: 64px;
     width: auto;
     max-height: 46%;
   }
@@ -839,7 +860,7 @@ details[open] > :is(#inventories-toggle, #extras-toggle) { margin-bottom: 8px; }
   color: var(--text);
   background: none;
   border: 0;
-  border-radius: 10px;
+  border-radius: var(--surface-radius);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
 }
 #about[open] {
@@ -916,8 +937,8 @@ details[open] > :is(#inventories-toggle, #extras-toggle) { margin-bottom: 8px; }
   position: fixed;
   z-index: 3;
   width: 300px;
-  /* Clear of the map controls: its 316px offset and their 62px column. */
-  max-width: calc(100vw - 316px - 62px);
+  /* Clear of the map controls: its 316px offset and their 64px column. */
+  max-width: calc(100vw - 316px - 64px);
   max-height: calc(100dvh - 24px);
   /* Right of the panel: its 12px margin, 292px width and a 12px gap. */
   inset: 12px auto auto 316px;
@@ -928,7 +949,7 @@ details[open] > :is(#inventories-toggle, #extras-toggle) { margin-bottom: 8px; }
   color: var(--text);
   background: none;
   border: 0;
-  border-radius: 10px;
+  border-radius: var(--surface-radius);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
 }
 #scale-editor[open] { display: flex; flex-direction: column; }
@@ -1135,7 +1156,7 @@ details[open] > :is(#inventories-toggle, #extras-toggle) { margin-bottom: 8px; }
 @media (max-width: 640px) {
   /* The panel's place, clear of the map controls; the panel returns on close. */
   #scale-editor {
-    inset: 12px 62px auto 12px;
+    inset: 12px 64px auto 12px;
     width: auto;
     max-width: none;
     max-height: 60dvh;
@@ -1151,7 +1172,7 @@ details[open] > :is(#inventories-toggle, #extras-toggle) { margin-bottom: 8px; }
  * areas enlarge small buttons without moving the layout; the rest grow in place.
  */
 @media (pointer: coarse) {
-  :root { --text-scale: 1.15; --box: 20px; }
+  :root { --text-scale: 1.15; --box: 20px; --ctrl-radius: var(--surface-radius); }
 
   #panel-toggle,
   #about-open,
