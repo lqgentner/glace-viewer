@@ -9,23 +9,35 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
+import { pathToFileURL } from "node:url";
 import vm from "node:vm";
 
 import { JSDOM } from "jsdom";
 
 import { REPO } from "./helpers/browser.js";
 
-/* Every local src/href on the page. The absolute ones are the CDN libraries,
- * which are somebody else's to keep alive. */
+const page = () =>
+  new JSDOM(fs.readFileSync(path.join(REPO, "index.html"), "utf8")).window.document;
+
+const importMap = (document) =>
+  JSON.parse(document.querySelector('script[type="importmap"]').textContent);
+
+/* Every local src/href and import-map target, without a leading "./". Absolute
+ * ones are other origins' to keep alive, such as the catalog. */
 function localReferences() {
-  const dom = new JSDOM(fs.readFileSync(path.join(REPO, "index.html"), "utf8"));
-  const refs = new Set();
-  for (const el of dom.window.document.querySelectorAll("[src], [href]")) {
-    const value = el.getAttribute("src") ?? el.getAttribute("href");
-    if (value && !/^[a-z]+:|^\/\//i.test(value)) refs.add(value);
-  }
-  return [...refs];
+  const document = page();
+  const values = [
+    ...Object.values(importMap(document).imports),
+    ...[...document.querySelectorAll("[src], [href]")].map(
+      (el) => el.getAttribute("src") ?? el.getAttribute("href"),
+    ),
+  ];
+  const local = values.filter((value) => value && !/^[a-z]+:|^\/\//i.test(value));
+  return [...new Set(local.map((value) => value.replace(/^\.\//, "")))];
 }
+
+const libraries = () => localReferences().filter((ref) => ref.startsWith("node_modules/"));
+const packageName = (ref) => /^node_modules\/((?:@[^/]+\/)?[^/]+)\//.exec(ref)[1];
 
 test("every file the page references is in the repository", () => {
   const refs = localReferences();
@@ -33,16 +45,64 @@ test("every file the page references is in the repository", () => {
   assert.ok(refs.includes("assets/glace-wordmark.svg"), "the wordmark is one of them");
 
   for (const ref of refs) {
-    assert.ok(fs.existsSync(path.join(REPO, ref)), `index.html asks for ${ref}, which is missing`);
+    assert.ok(
+      fs.existsSync(path.join(REPO, ref)),
+      `index.html asks for ${ref}, which is missing; run pixi run --locked install`,
+    );
   }
 });
 
-/* The stylesheet is a <link> and the script an import-map entry, so the two
- * pins of one library are in different syntaxes and would drift silently. */
-test("every pin of maplibre-gl on the page names one version", () => {
-  const html = fs.readFileSync(path.join(REPO, "index.html"), "utf8");
-  const versions = new Set([...html.matchAll(/maplibre-gl@([^/]+)\//g)].map((m) => m[1]));
-  assert.equal(versions.size, 1, `index.html pins maplibre-gl at ${[...versions].join(" and ")}`);
+/* A browser ignores an address that is neither a URL nor starts with "/", "./"
+ * or "../", and the bare name then fails to resolve. */
+test("every import-map address is a relative URL", () => {
+  for (const [name, address] of Object.entries(importMap(page()).imports)) {
+    assert.match(address, /^\.\/node_modules\//, `${name} maps to ${address}`);
+  }
+});
+
+/* Direct runtime dependencies, so Dependabot moves them and npm installs each
+ * at the top of node_modules/, where the import map looks. */
+test("every library the page loads is a runtime dependency in package.json", () => {
+  const manifest = JSON.parse(fs.readFileSync(path.join(REPO, "package.json"), "utf8"));
+  const names = [...new Set(libraries().map(packageName))].sort();
+  assert.deepEqual(names, ["@protomaps/basemaps", "fflate", "hyparquet", "maplibre-gl", "pmtiles"]);
+  for (const name of names) {
+    assert.ok(manifest.dependencies?.[name], `package.json does not depend on ${name}`);
+  }
+});
+
+/* The jsdom suites use fakes, so a release that renames an export would pass
+ * them and fail only in the browser. */
+test("the libraries export what the viewer calls", async () => {
+  const imports = importMap(page()).imports;
+  const load = (name) => import(pathToFileURL(path.join(REPO, imports[name])).href);
+  const source = fs
+    .readdirSync(path.join(REPO, "js"))
+    .map((name) => fs.readFileSync(path.join(REPO, "js", name), "utf8"))
+    .join("\n");
+  const used = (global) => [
+    ...new Set([...source.matchAll(new RegExp(`\\b${global}\\.(\\w+)`, "g"))].map((m) => m[1])),
+  ];
+
+  const expected = {
+    "maplibre-gl": used("maplibregl"),
+    pmtiles: used("pmtiles"),
+    "@protomaps/basemaps": used("basemaps"),
+    hyparquet: ["asyncBufferFromUrl", "parquetReadObjects"],
+  };
+  assert.ok(expected.pmtiles.includes("Protocol"), "the scan found the viewer's calls");
+  for (const [name, members] of Object.entries(expected)) {
+    const module = await load(name);
+    for (const member of members) assert.ok(member in module, `${name} has no export ${member}`);
+  }
+});
+
+/* BSD and MIT require the notice wherever the code is redistributed. */
+test("every library the page loads has its license notice", () => {
+  const notices = fs.readFileSync(path.join(REPO, "assets", "third-party-licenses.txt"), "utf8");
+  for (const name of new Set(libraries().map(packageName))) {
+    assert.ok(notices.includes(`==== ${name} ====`), `third-party-licenses.txt lacks ${name}`);
+  }
 });
 
 test("the manifest's icons resolve, relative to the manifest itself", () => {
@@ -63,12 +123,12 @@ test("the deploy stages every directory the page reads from", () => {
 
   for (const ref of localReferences()) {
     const root = ref.split("/")[0];
+    // stage-libraries.test.js checks what the script copies.
+    if (root === "node_modules") continue;
     assert.match(stage, new RegExp(`\\b${root}\\b`), `deploy.yml never copies ${root}`);
   }
+  assert.match(stage, /node scripts\/stage-libraries\.mjs _site/, "deploy.yml stages the libraries");
 });
-
-const page = () =>
-  new JSDOM(fs.readFileSync(path.join(REPO, "index.html"), "utf8")).window.document;
 
 /* An edited inline script no longer matches its hash, and the browser skips it. */
 test("the content security policy allows each inline script by hash", () => {
@@ -85,21 +145,25 @@ test("the content security policy allows each inline script by hash", () => {
   }
 });
 
-test("every CDN file the page loads carries an integrity hash", () => {
+/* Same-origin code needs no integrity hash, and a CDN host in the policy would
+ * let any package on that host run. */
+test("the page loads its code and styles from its own origin", () => {
   const document = page();
-  const map = JSON.parse(document.querySelector('script[type="importmap"]').textContent);
-  const cdn = [
-    ...Object.values(map.imports),
-    ...[...document.querySelectorAll('link[rel="modulepreload"]')]
-      .map((link) => link.getAttribute("href"))
-      .filter((href) => /^https:/.test(href)),
+  const code = [
+    ...Object.values(importMap(document).imports),
+    ...[...document.querySelectorAll('script[src], link[rel="modulepreload"], link[rel="stylesheet"]')].map(
+      (el) => el.getAttribute("src") ?? el.getAttribute("href"),
+    ),
   ];
-  for (const url of cdn) {
-    assert.match(map.integrity[url] ?? "", /^sha384-/, `the import map has no integrity for ${url}`);
-  }
-  for (const link of document.querySelectorAll('link[rel="stylesheet"][href^="https:"]')) {
-    assert.match(link.getAttribute("integrity") ?? "", /^sha384-/, link.getAttribute("href"));
-    assert.equal(link.getAttribute("crossorigin"), "anonymous");
+  for (const url of code) assert.doesNotMatch(url, /^[a-z]+:|^\/\//i, `${url} is on another origin`);
+  assert.equal(importMap(document).integrity, undefined, "same-origin modules need no integrity");
+
+  const policy = document
+    .querySelector('meta[http-equiv="Content-Security-Policy"]')
+    .getAttribute("content");
+  for (const directive of ["script-src", "style-src", "worker-src"]) {
+    const sources = policy.split(";").find((part) => part.trim().startsWith(directive));
+    assert.doesNotMatch(sources, /https?:/, `${directive} still allows a remote host`);
   }
 });
 

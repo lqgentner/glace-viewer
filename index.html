@@ -4,10 +4,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <!-- Hashes allow the two inline scripts below; page-assets.test.js checks them.
-         MapLibre runs its worker from a blob that imports from unpkg, which worker-src
-         governs, and stores may live on any HTTPS host. -->
+         MapLibre may run its worker from a blob, and stores may live on any HTTPS host. -->
     <meta http-equiv="Content-Security-Policy"
-          content="default-src 'self'; script-src 'self' https://unpkg.com https://esm.sh 'sha256-hnvnq61naOLqPcnUawD5h8TgoJLfUcvBIdEzljK4Me4=' 'sha256-6h8qqahDQjUTtzvmhn+n6/MoNHltOJxupIIfNqSXRTI='; style-src 'self' https://unpkg.com; img-src 'self' data: blob:; connect-src 'self' https: data: blob:; worker-src 'self' blob: https://unpkg.com; object-src 'none'; base-uri 'self'; form-action 'none'" />
+          content="default-src 'self'; script-src 'self' 'sha256-5yRwLI7ss0pzmDfBgqhU9kAmRrUIJ5xdTDNio0+e37k=' 'sha256-6h8qqahDQjUTtzvmhn+n6/MoNHltOJxupIIfNqSXRTI='; style-src 'self'; img-src 'self' data: blob:; connect-src 'self' https: data: blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'none'" />
     <title>GLACE — Sentinel-1 composites, European Alps</title>
     <meta name="description"
           content="Explore annual Sentinel-1 coherence and backscatter composites of the European Alps, with glacier inventories, hillshade and 3D terrain." />
@@ -25,36 +24,28 @@
     <link rel="preconnect" href="https://api.protomaps.com" crossorigin />
     <link rel="preconnect" href="https://protomaps.github.io" crossorigin />
 
-    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@6.12.0/dist/maplibre-gl.css"
-          integrity="sha384-pGcTesCDxgCFx0yvZdwOw9yHx4Gw6kQK19wigRk1RcuDoLTLdbPMEnK7w8e9MgjS"
-          crossorigin="anonymous" />
+    <link rel="stylesheet" href="node_modules/maplibre-gl/dist/maplibre-gl.css" />
     <link rel="stylesheet" href="style.css" />
 
-    <!-- Parse the import map before any module fetch. MapLibre loads sibling chunks
-         and a worker; PMTiles needs the bare fflate mapping. Integrity covers every
-         CDN module, including those preloaded below. -->
+    <!-- Parse the import map before any module fetch. npm installs the libraries,
+         and scripts/stage-libraries.mjs copies each target's directory for Pages.
+         PMTiles needs the bare fflate mapping; tile-grid.js imports hyparquet on
+         demand. -->
     <script type="importmap">
       {
         "imports": {
-          "maplibre-gl": "https://unpkg.com/maplibre-gl@6.12.0/dist/maplibre-gl.mjs",
-          "pmtiles": "https://unpkg.com/pmtiles@4.5.0/dist/esm/index.js",
-          "fflate": "https://unpkg.com/fflate@0.8.3/esm/browser.js",
-          "@protomaps/basemaps": "https://unpkg.com/@protomaps/basemaps@5.7.2/dist/esm/index.js"
-        },
-        "integrity": {
-          "https://unpkg.com/maplibre-gl@6.12.0/dist/maplibre-gl.mjs": "sha384-vBS3VmrCg3Nx8PUcTevNEjjj7+TCKU6VjJdezON8yplGOARpTkld7CN+keiqcPmj",
-          "https://unpkg.com/maplibre-gl@6.12.0/dist/maplibre-gl-shared.mjs": "sha384-OGp4zg2g805tukqDpmZzKOURd8MNCD2kvcC/OxRKuwSGKokyy00oiZ5ULT1Gl99V",
-          "https://unpkg.com/pmtiles@4.5.0/dist/esm/index.js": "sha384-Ohx3fvw/UYxrc8vmqvMaO2aAWouBFSe7w9VKOU/siixKmoPu14eYMCPNz+k8CPTW",
-          "https://unpkg.com/fflate@0.8.3/esm/browser.js": "sha384-qEYGUupjunWfiQrMjBBQ8XYX03MQwNxGZJuPkxRr/5vErQwQZwbqaBxk/pjvWAx6",
-          "https://unpkg.com/@protomaps/basemaps@5.7.2/dist/esm/index.js": "sha384-4gIgDkmrvXb4bDGA88krbayOq48DRB8Eljy1EP01Z/i9e8qIqDZOfbLaxHoBZ60g"
+          "maplibre-gl": "./node_modules/maplibre-gl/dist/maplibre-gl.mjs",
+          "pmtiles": "./node_modules/pmtiles/dist/esm/index.js",
+          "fflate": "./node_modules/fflate/esm/browser.js",
+          "@protomaps/basemaps": "./node_modules/@protomaps/basemaps/dist/esm/index.js",
+          "hyparquet": "./node_modules/hyparquet/src/index.js"
         }
       }
     </script>
 
     <!-- Fetch modules found only one or two imports deep in parallel with their
          importers. page-assets.test.js requires every js/ module but app.js here. -->
-    <link rel="modulepreload" href="https://unpkg.com/maplibre-gl@6.12.0/dist/maplibre-gl-shared.mjs" />
-    <link rel="modulepreload" href="https://unpkg.com/fflate@0.8.3/esm/browser.js" />
+    <link rel="modulepreload" href="node_modules/fflate/esm/browser.js" />
     <link rel="modulepreload" href="js/config.js" />
     <link rel="modulepreload" href="js/map.js" />
     <link rel="modulepreload" href="js/overlays.js" />
@@ -346,6 +337,8 @@
             <li><a href="https://github.com/hyparam/hyparquet" target="_blank"
               rel="noopener">hyparquet</a>: GeoParquet reading for the catalog's tile grid</li>
           </ul>
+          <p>Their licenses are in
+            <a href="assets/third-party-licenses.txt">third-party-licenses.txt</a>.</p>
           <p>The color maps are Fabio Crameri's
             <a href="https://doi.org/10.5281/zenodo.1243862" target="_blank"
             rel="noopener">Scientific colour maps</a> and matplotlib's viridis, magma and

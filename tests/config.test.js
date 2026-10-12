@@ -87,7 +87,7 @@ test("deployment-only settings are not reachable from the address bar", async ()
   // The reader URL is imported and executed, so it matters most here.
   assert.equal(config.GRID_INDEX_URL, "tiles/tiles/items.parquet");
   assert.equal(config.MOSAIC_COLLECTION_URL, "tiles/mosaics/collection.json");
-  assert.match(config.HYPARQUET_URL, /^https:\/\/esm\.sh\//);
+  assert.equal(config.HYPARQUET_URL, "hyparquet", "the import map resolves the reader");
   assert.equal("COG_READER_URL" in config, false, "the COG reader is gone");
   assert.equal(config.INVENTORY_BASE, "data");
   assert.equal(config.TERRAIN_TILEJSON, "https://tiles.mapterhorn.com/tilejson.json");

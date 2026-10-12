@@ -1,4 +1,4 @@
-# Python, Node, and tippecanoe are locked by pixi; jsdom is locked by npm.
+# Python, Node, and tippecanoe are locked by pixi; the page's libraries and jsdom by npm.
 [workspace]
 name = "glace-viewer"
 description = "Interactive web map viewer for GLACE – Sentinel-1 coherence and backscatter composites of the European Alps."
@@ -18,10 +18,10 @@ nodejs = "24.*"
 tippecanoe = "==2.79.0"
 
 [tasks]
-# Development dependencies only; the browser loads modules directly.
+# The page's libraries and the test dependencies, from package-lock.json.
 install = "npm ci"
 test-py = "python -m unittest discover -s tests -v"
 test-js = { cmd = "npm test", depends-on = ["install"] }
 test = { depends-on = ["test-py", "test-js"] }
 build-tiles = "python scripts/build-tiles.py"
-serve = "python scripts/serve.py"
+serve = { cmd = "python scripts/serve.py", depends-on = ["install"] }

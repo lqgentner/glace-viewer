@@ -15,8 +15,8 @@ const DEFAULTS = {
   /* GeoParquet tile-grid index, relative to tilesBase. */
   gridIndex: "tiles/items.parquet",
 
-  /* Loaded on demand for the tile grid. Keep executable library URLs out of query parameters. */
-  hyparquetUrl: "https://esm.sh/hyparquet@1.30.1",
+  /* Loaded on demand for the tile grid, through the import map. Keep executable library URLs out of query parameters. */
+  hyparquetUrl: "hyparquet",
 
   /* Protomaps hosted TileJSON. Manage the API key in the Protomaps dashboard. */
   basemapUrl: "https://api.protomaps.com/tiles/v4.json?key=54af1e244a8f1599",
