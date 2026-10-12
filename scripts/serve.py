@@ -23,7 +23,7 @@ from urllib.parse import unquote
 
 RANGE_RE = re.compile(r"^bytes=(\d*)-(\d*)$")
 # Reload page code and JSON; allow normal caching for tiles and archives.
-NO_STORE_SUFFIXES = frozenset({"", ".html", ".js", ".css", ".json"})
+NO_STORE_SUFFIXES = frozenset({"", ".html", ".js", ".mjs", ".css", ".json"})
 
 
 class RangeRequestHandler(SimpleHTTPRequestHandler):
