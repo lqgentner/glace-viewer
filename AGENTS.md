@@ -12,7 +12,7 @@ URLs and verbatim third-party citations.
 
 Work from the repository root. Use the environment in `pixi.toml` and
 `pixi.lock`; it supplies Python, Node, and tippecanoe on Linux x86-64 and Apple
-silicon. jsdom is a development dependency locked separately by npm.
+silicon. npm locks the page's libraries and the test dependencies.
 
 ```sh
 pixi run --locked build-tiles  # required for local inventory overlays
@@ -21,18 +21,19 @@ pixi run --locked test        # Python + npm ci + JavaScript tests
 ```
 
 For focused checks, use `pixi run --locked test-py` or
-`pixi run --locked test-js`. There is no compilation, bundling, or runtime npm
-installation. Browser dependencies are pinned CDN imports in `index.html` and
-`js/config.js`. Keep MapLibre's CSS and JavaScript pins aligned.
+`pixi run --locked test-js`. There is no compilation or bundling. The page's
+libraries are npm `dependencies`, loaded unchanged from `./node_modules/`
+through the import map in `index.html`; `pixi run --locked install`, which
+`serve` and `test-js` run first, puts them there. Dependabot moves them with
+the test dependencies in one monthly PR. A library the page loads must be a
+direct dependency, so npm installs it where the import map looks, and needs
+its license in `assets/third-party-licenses.txt`. Import-map addresses must
+start with `./`, or browsers ignore them.
 
-`index.html` carries a Content-Security-Policy and Subresource Integrity, and
-`page-assets.test.js` checks both offline. When changing a pin, update the
-import map's `integrity` entry, or the stylesheet's `integrity` attribute, with
-`curl -s URL | openssl dgst -sha384 -binary | openssl base64 -A`. The worker and
-MapLibre's sibling chunk follow the main module's version. When editing either
-inline script, replace its `sha256-` hash in the policy; the test prints the
-failing script. hyparquet from esm.sh has no hash because esm.sh builds per
-browser. A new script or data host needs a CSP entry. Module workers' imports
+`index.html` carries a Content-Security-Policy that allows only same-origin
+scripts and styles, and `page-assets.test.js` checks it offline. When editing
+either inline script, replace its `sha256-` hash in the policy; the test prints
+the failing script. A new data host needs a CSP entry. Module workers' imports
 fall under `worker-src`, not `script-src`.
 
 The head preloads the default `mosaics/collection.json` and every module that
@@ -74,6 +75,7 @@ A gitignored `tiles` symlink to the catalog root also works. The root is above
 | `js/sky.js` | Globe silhouette measurements for CSS |
 | `sw.js` | Service worker: stale-while-revalidate for JSON reads |
 | `scripts/serve.py` | Development HTTP server and local catalog mount |
+| `scripts/stage-libraries.mjs` | Copies the import map's library directories into the Pages site |
 | `scripts/build-tiles.py` | Inventory GeoJSON to vector PMTiles |
 | `scripts/colormaps.py` | Writes `js/colormaps.js` (`uv run`) |
 | `data/inventories.json` | Inventory build settings, display metadata, citations and licenses |
@@ -311,8 +313,8 @@ The JavaScript suites use jsdom and the strict fake MapLibre in
 unadded layers throw. jsdom's dialogs skip the focusing steps, so the helper's
 `show()` opens the dialog and focuses its `autofocus` element, and its `close()`
 fires `close` at once where browsers queue it. These tests check
-application behavior, not actual WebGL rendering or CDN availability; inspect
-visual changes in a real browser too.
+application behavior, not actual WebGL rendering; inspect visual changes in a
+real browser too.
 
 Modules hold state and the map is a singleton. Put scenarios needing a fresh
 catalog, viewport, or initial camera in separate test files so `node --test`
@@ -330,7 +332,7 @@ Use the relevant suites when changing behavior:
 | Choices in the URL | `url-state`, `url-state-invalid` |
 | Startup failures, viewport, camera, labels | `viewer-degraded`, `viewer-no-webgl`, `viewer-narrow`, `viewer-3d-restore`, `viewer-light-flavor` |
 | Globe calculations | `sky` |
-| Static assets, dependency pins, CSP, integrity, preloads | `page-assets` |
+| Static assets, libraries, CSP, preloads, staging | `page-assets`, `stage-libraries` |
 | Server or inventory build | `test_serve.py`, `test_build_tiles.py` |
 
 JavaScript names above refer to `tests/<name>.test.js`. Server traversal tests
@@ -339,9 +341,11 @@ Keep that coverage when changing `/tiles` containment or range handling.
 
 GitHub Actions runs both suites on pull requests. On pushes to `main`, the
 Pages workflow runs the same checks, builds inventory PMTiles, and stages the
-page, settings, `js/`, `assets/`, archives, and inventory index. It excludes
-GeoJSON. New runtime files must be included in that staging step. Keep asset
-URLs relative so the site works under a Pages project subpath. Pages must use
-**GitHub Actions** as its source; branch publishing skips tile generation.
+page, settings, `js/`, `assets/`, archives, inventory index, and, through
+`scripts/stage-libraries.mjs`, each import-map target's directory without
+source maps or development builds. It excludes GeoJSON. New runtime files must
+be included in that staging step. Keep asset URLs relative so the site works
+under a Pages project subpath. Pages must use **GitHub Actions** as its source;
+branch publishing skips tile generation.
 
 `CLAUDE.md` points to this file; keep one set of contributor instructions.
