@@ -20,11 +20,12 @@ const site = fs.mkdtempSync(path.join(os.tmpdir(), "glace-site-"));
 after(() => fs.rmSync(site, { recursive: true, force: true }));
 stageLibraries(site);
 const staged = (ref) => path.join(site, ref);
+await init;
 
-test("the staged libraries hold every module the import map reaches", async () => {
-  await init;
-  const imports = importMap();
-  const queue = Object.values(imports).map(staged);
+/* Follow imports from roots as a browser resolves them: relative ones beside
+ * their importer, bare ones through checkBare. Returns the files visited. */
+function walk(roots, checkBare) {
+  const queue = [...roots];
   const seen = new Set();
   while (queue.length > 0) {
     const file = queue.pop();
@@ -36,16 +37,28 @@ test("the staged libraries hold every module the import map reaches", async () =
     for (const { specifier } of parse(fs.readFileSync(file, "utf8"))[0]) {
       if (typeof specifier !== "string") continue;
       if (/^\.{1,2}\//.test(specifier)) queue.push(path.resolve(path.dirname(file), specifier));
-      else assert.ok(specifier in imports, `${from} imports ${specifier}, which the import map lacks`);
+      else checkBare(specifier, from);
     }
   }
+  return seen;
+}
+
+test("the staged libraries hold every module the import map reaches", () => {
+  const imports = importMap();
+  const seen = walk(Object.values(imports).map(staged), (specifier, from) =>
+    assert.ok(specifier in imports, `${from} imports ${specifier}, which the import map lacks`),
+  );
   assert.ok(seen.size > Object.keys(imports).length, "the walk followed relative imports");
 });
 
-/* MapLibre builds its worker URL from its own module's URL. */
-test("MapLibre's worker is staged beside its module", () => {
-  const dir = path.dirname(staged(importMap()["maplibre-gl"]));
-  assert.ok(fs.existsSync(path.join(dir, "maplibre-gl-worker.mjs")));
+/* MapLibre builds its worker URL from its own module's URL, and the page's
+ * import map does not apply inside a worker, so the worker can import only
+ * relative paths. */
+test("MapLibre's worker is staged beside its module and imports no bare name", () => {
+  const worker = path.join(path.dirname(staged(importMap()["maplibre-gl"])), "maplibre-gl-worker.mjs");
+  walk([worker], (specifier, from) =>
+    assert.fail(`${from} imports ${specifier}, which a worker cannot resolve`),
+  );
 });
 
 test("the page's stylesheet and preloads from node_modules are staged", () => {
