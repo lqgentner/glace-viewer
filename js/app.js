@@ -72,8 +72,11 @@ function initAbout() {
 
 /* Replace the about text's fixed "since 2015" with the catalog's year range. */
 function showAboutYears(years) {
+  if (years.length === 0) return;
+  const [first, last] = [years[0], years[years.length - 1]];
+  el("about-credit-years").textContent = first === last ? `${first}` : `${first}–${last}`;
   if (years.length < 2) return;
-  el("about-years").textContent = `from ${years[0]} to ${years[years.length - 1]}`;
+  el("about-years").textContent = `from ${first} to ${last}`;
 }
 
 function initControls() {

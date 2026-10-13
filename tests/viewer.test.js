@@ -304,6 +304,8 @@ test("the viewer", async (t) => {
   await t.test("the about dialog names the catalog's years and closes again", async () => {
     const about = el("about");
     assert.equal(el("about-years").textContent, "from 2022 to 2023");
+    // The Copernicus notice for modified data names the years it covers.
+    assert.equal(el("about-credit-years").textContent, "2022–2023");
     el("about-open").click();
     assert.equal(about.open, true);
     assert.equal(page.window.document.activeElement, about.querySelector(".close"));
