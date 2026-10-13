@@ -207,3 +207,13 @@ test("the scale editor's fields are 16px on touch screens, so iOS does not zoom"
   // Nothing after the touch block may shrink them again.
   assert.equal(coarse.match(/#scale-editor input/g).length, 1);
 });
+
+/* Following a link out of the About dialog would replace the map. */
+test("every link in the About dialog opens in a new tab", () => {
+  const links = [...page().querySelectorAll("#about a[href]")];
+  assert.ok(links.length > 0);
+  for (const link of links) {
+    assert.equal(link.getAttribute("target"), "_blank", link.getAttribute("href"));
+    assert.match(link.getAttribute("rel") ?? "", /\bnoopener\b/, link.getAttribute("href"));
+  }
+});
