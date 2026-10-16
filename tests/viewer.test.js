@@ -53,8 +53,8 @@ test("the viewer", async (t) => {
   assert.equal(el("legend").hasAttribute("aria-busy"), false);
 
   await t.test("a wide viewport opens with the panel expanded", async () => {
-    assert.equal(el("panel").classList.contains("collapsed"), false);
-    assert.equal(el("panel").classList.contains("expanded"), true);
+    assert.equal(el("panel-shell").classList.contains("expanded"), true);
+    assert.equal(el("panel-body").hasAttribute("inert"), false);
     assert.equal(el("sheet-handle").getAttribute("aria-expanded"), "true");
   });
 
@@ -82,11 +82,11 @@ test("the viewer", async (t) => {
     assert.equal(credit.options.compact, undefined, "MapLibre collapses it only on narrow maps");
   });
 
-  await t.test("rotating onto a narrow screen collapses it again", async () => {
+  await t.test("rotating onto a narrow screen lowers it to the compact sheet", async () => {
     page.setNarrow(true);
-    assert.ok(el("panel").classList.contains("collapsed"), "the new width's default wins");
+    assert.equal(el("panel-shell").classList.contains("expanded"), false, "the new width's default wins");
     page.setNarrow(false);
-    assert.ok(el("panel").classList.contains("expanded"));
+    assert.ok(el("panel-shell").classList.contains("expanded"));
   });
 
   await t.test("the style asks for a globe that flattens as you zoom in", async () => {

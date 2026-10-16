@@ -692,42 +692,77 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
 #map .maplibregl-popup-anchor-right .maplibregl-popup-tip { border-left-color: #fff; }
 
 @media (max-width: 640px) {
+  /*
+   * A sheet docked to the bottom, open or compact; js/sheet.js drags it between
+   * the two through --sheet-progress. The glass moves with it.
+   */
   #panel-shell {
-    /* Leave room for the map controls, at their touch size, with 12px on each side. */
-    right: 64px;
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
     width: auto;
-    max-height: 46%;
+    height: 66dvh;
+    max-height: none;
+    border-radius: var(--surface-radius) var(--surface-radius) 0 0;
+    padding-bottom: env(safe-area-inset-bottom);
+    transform: translateY(calc(var(--sheet-travel, 0px) * (1 - var(--sheet-progress, 0))));
+    transition: transform 220ms ease-out;
   }
-  /* Collapse before scripts run; expanded overrides this default. */
-  #panel:not(.expanded) #panel-body { display: none; }
-  #panel:not(.expanded) #tabs { display: none; }
-  #panel:not(.expanded) #panel-nav { padding-bottom: 16px; }
-  /* A bar atop the band; js/app.js labels it. */
+  /*
+   * Compact before scripts run: only the band above the pills shows. 99px is its
+   * loaded height on a touch screen; js/sheet.js measures it.
+   */
+  #panel-shell:not(.expanded) {
+    transform: translateY(calc(66dvh - var(--sheet-visible, 99px)));
+  }
+  #panel-shell.dragging { transition: none; }
+  #panel { height: 100%; border-radius: inherit; }
+  /* The band drags the sheet; the content scrolls, and at its top a pull drags it. */
+  #panel-nav { touch-action: none; }
+  #panel-body { flex: 1; touch-action: pan-y; }
+  /*
+   * A bar atop the band; js/sheet.js labels it. Above the legend, so its tap
+   * area wins where the two overlap.
+   */
   #sheet-handle {
     display: block;
     position: relative;
+    z-index: 1;
     width: 36px;
     height: 4px;
-    margin: -6px auto 12px;
+    margin: -4px auto 12px;
     padding: 0;
     background: rgba(255, 255, 255, 0.35);
     border: 0;
     border-radius: 2px;
     cursor: pointer;
   }
+  /* From the band's top edge, inside the panel's clip. */
   #sheet-handle::after {
     content: "";
     position: absolute;
-    inset: -10px -20px;
+    inset: -12px -20px -8px;
   }
 
-  /* Above the scale bar and attribution. */
+  /* The map's bottom corners and the notices ride the sheet's top edge. */
+  #map .maplibregl-ctrl-bottom-left,
+  #map .maplibregl-ctrl-bottom-right { bottom: var(--sheet-visible, 99px); }
+  /* The scale bar and the credit fade as the sheet opens, and hide once it is open. */
+  #map :is(.maplibregl-ctrl-scale, .maplibregl-ctrl-attrib) {
+    opacity: calc(1 - var(--sheet-progress, 0));
+  }
+  body:has(#panel-shell.expanded:not(.dragging)) #map :is(.maplibregl-ctrl-scale, .maplibregl-ctrl-attrib) {
+    visibility: hidden;
+  }
   #notices {
     top: auto;
-    bottom: 64px;
+    bottom: calc(var(--sheet-visible, 99px) + 12px);
     left: 12px;
     right: 12px;
+    transition: bottom 220ms ease-out;
   }
+  body:has(#panel-shell.dragging) #notices { transition: none; }
   #status { align-self: stretch; text-align: center; }
 }
 
@@ -1001,6 +1036,8 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   outline-offset: 2px;
 }
 @media (prefers-reduced-motion: reduce) {
+  #panel-shell,
+  #notices { transition: none; }
   #about[open] {
     transition-duration: 0.1s;
     @starting-style { transform: none; }
@@ -1270,7 +1307,8 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   .inventory .swatch::after { inset: -8px; }
   /* Taller, not wider, so neighboring pills keep apart. */
   #tabs [role="tab"]::after { inset: -9px 0; }
-  #sheet-handle::after { inset: -16px -40px; }
+  /* 44px tall, from the band's top edge. */
+  #sheet-handle::after { inset: -12px -28px -28px; }
   #about-open { padding-block: 11px; }
 
   .segmented button { padding-block: 10px; }

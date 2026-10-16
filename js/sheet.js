@@ -1,0 +1,240 @@
+/*
+ * The panel on phones: a sheet docked to the bottom at two heights, compact (the
+ * handle and the legend) and open. A drag writes --sheet-progress on the root,
+ * and style.css turns it into the sheet's transform and places the map's
+ * furniture above its edge. Nothing moves between input events but CSS
+ * transitions.
+ */
+
+import { el, NARROW_VIEWPORT } from "./ui.js";
+
+/** Movement in px before a gesture counts as vertical or horizontal. */
+export const LOCK_PX = 8;
+/** Release speed in px/ms past which the sheet follows the flick. */
+export const FLICK = 0.5;
+
+/* Release speed is measured over this many ms before the release. */
+const VELOCITY_WINDOW_MS = 100;
+/* A click this soon after a drag is the drag's own click. */
+const DRAG_CLICK_MS = 300;
+
+const PROPERTIES = ["--sheet-travel", "--sheet-progress", "--sheet-visible"];
+
+/** The gesture's axis once it has moved LOCK_PX, before that null. */
+export function lockAxis(dx, dy) {
+  if (Math.hypot(dx, dy) < LOCK_PX) return null;
+  return Math.abs(dy) > Math.abs(dx) ? "y" : "x";
+}
+
+/**
+ * The height a released sheet settles at.
+ *
+ * @param {number} progress  0 compact, 1 open
+ * @param {number} velocity  px/ms, positive upward
+ */
+export function snapTarget(progress, velocity) {
+  if (velocity > FLICK) return "open";
+  if (velocity < -FLICK) return "compact";
+  return progress >= 0.5 ? "open" : "compact";
+}
+
+let isOpen = false;
+/* The band above the pills, which the compact sheet shows, and the distance to open. */
+let band = 0;
+let travel = 0;
+let visible = 0;
+/* The touch or pointer moving the sheet: its start, axis and recent positions. */
+let gesture = null;
+
+function measure() {
+  band = el("panel-nav").offsetHeight - el("tabs").offsetHeight;
+  travel = Math.max(0, el("panel-shell").offsetHeight - band);
+}
+
+function show(progress) {
+  visible = band + progress * travel;
+  const style = document.documentElement.style;
+  style.setProperty("--sheet-travel", `${travel}px`);
+  style.setProperty("--sheet-progress", String(progress));
+  style.setProperty("--sheet-visible", `${visible}px`);
+}
+
+/** Open or lower the sheet; on desktop only the handle's state changes. */
+export function setSheetOpen(open) {
+  isOpen = open;
+  el("panel-shell").classList.toggle("expanded", open);
+  const handle = el("sheet-handle");
+  handle.setAttribute("aria-expanded", String(open));
+  const action = open ? "Hide the controls" : "Show the controls";
+  handle.title = action;
+  handle.setAttribute("aria-label", action);
+  if (!NARROW_VIEWPORT.matches) return;
+  // The pills and the content sit below the compact sheet's edge.
+  for (const id of ["tabs", "panel-body"]) el(id).toggleAttribute("inert", !open);
+  measure();
+  show(open ? 1 : 0);
+}
+
+/** On desktop the panel is always open and carries none of the sheet's state. */
+function toWide() {
+  gesture = null;
+  el("panel-shell").classList.remove("dragging");
+  for (const name of PROPERTIES) document.documentElement.style.removeProperty(name);
+  for (const id of ["tabs", "panel-body"]) el(id).removeAttribute("inert");
+  setSheetOpen(true);
+}
+
+/**
+ * "bottom" for a click in the lower half of the map left above the sheet, so
+ * its popup opens upward; otherwise MapLibre chooses.
+ */
+export function popupAnchor(y) {
+  if (!NARROW_VIEWPORT.matches) return undefined;
+  return y > (window.innerHeight - visible) / 2 ? "bottom" : undefined;
+}
+
+const startsOnRange = (target) => target.closest?.('input[type="range"]') != null;
+
+function begin(x, y, time) {
+  measure();
+  const from = isOpen ? 1 : 0;
+  gesture = { x, y, axis: null, from, progress: from, samples: [] };
+  track(y, time);
+}
+
+function track(y, time) {
+  const { samples } = gesture;
+  samples.push({ y, time });
+  while (samples.length > 2 && time - samples[0].time > VELOCITY_WINDOW_MS) samples.shift();
+}
+
+function drag(y, time) {
+  const offset = travel ? (gesture.y - y) / travel : 0;
+  gesture.progress = Math.min(1, Math.max(0, gesture.from + offset));
+  el("panel-shell").classList.add("dragging");
+  show(gesture.progress);
+  track(y, time);
+}
+
+/* Settle a drag at the height its position and speed point to. */
+function release() {
+  const { samples, progress } = gesture;
+  const [first, last] = [samples[0], samples.at(-1)];
+  // Upward is positive; no time between samples reads as a flick.
+  const velocity = (first.y - last.y) / (last.time - first.time);
+  gesture = null;
+  el("panel-shell").classList.remove("dragging");
+  setSheetOpen(snapTarget(progress, velocity) === "open");
+}
+
+/* A drag ends without the click that browsers may send at its release. */
+function swallowNextClick() {
+  const swallow = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
+  window.addEventListener("click", swallow, { capture: true, once: true });
+  setTimeout(() => window.removeEventListener("click", swallow, { capture: true }), DRAG_CLICK_MS);
+}
+
+/*
+ * The band and the compact sheet drag on pointer events. A gesture that never
+ * locks is a tap and clicks as usual, which opens the editor from the legend.
+ */
+function wireBand(nav) {
+  nav.addEventListener("pointerdown", (event) => {
+    if (!NARROW_VIEWPORT.matches || !event.isPrimary || event.button !== 0) return;
+    if (startsOnRange(event.target)) return;
+    begin(event.clientX, event.clientY, event.timeStamp);
+    gesture.pointerId = event.pointerId;
+  });
+  nav.addEventListener("pointermove", (event) => {
+    if (gesture?.pointerId !== event.pointerId) return;
+    if (!gesture.axis) {
+      gesture.axis = lockAxis(event.clientX - gesture.x, event.clientY - gesture.y);
+      if (gesture.axis !== "y") return;
+      // Captured only once it is a drag: a captured tap would click the band, not its target.
+      nav.setPointerCapture?.(event.pointerId);
+    }
+    if (gesture.axis === "y") drag(event.clientY, event.timeStamp);
+  });
+  const end = (event) => {
+    if (gesture?.pointerId !== event.pointerId) return;
+    if (gesture.axis !== "y") {
+      gesture = null;
+      return;
+    }
+    if (event.type === "pointerup") swallowNextClick();
+    release();
+  };
+  nav.addEventListener("pointerup", end);
+  nav.addEventListener("pointercancel", end);
+}
+
+/*
+ * The content scrolls; scrolled to its top, a pull down moves the sheet. Touch
+ * events, since only a cancelable touchmove can take the gesture from the scroller.
+ */
+function wireContent(body) {
+  body.addEventListener(
+    "touchstart",
+    (event) => {
+      gesture = null;
+      if (!NARROW_VIEWPORT.matches || event.touches.length > 1 || startsOnRange(event.target)) {
+        return;
+      }
+      const [{ clientX, clientY }] = event.touches;
+      begin(clientX, clientY, event.timeStamp);
+    },
+    { passive: false },
+  );
+  body.addEventListener(
+    "touchmove",
+    (event) => {
+      if (!gesture || event.touches.length > 1) return;
+      const [{ clientX, clientY }] = event.touches;
+      if (!gesture.axis) {
+        const dy = clientY - gesture.y;
+        gesture.axis = lockAxis(clientX - gesture.x, dy);
+        if (!gesture.axis) return;
+        if (gesture.axis !== "y" || dy < 0 || body.scrollTop > 0) {
+          gesture = null;
+          return;
+        }
+      }
+      event.preventDefault();
+      drag(clientY, event.timeStamp);
+    },
+    { passive: false },
+  );
+  const end = () => {
+    if (gesture?.axis === "y") release();
+    gesture = null;
+  };
+  body.addEventListener("touchend", end);
+  body.addEventListener("touchcancel", end);
+}
+
+export function initSheet() {
+  el("sheet-handle").addEventListener("click", () => setSheetOpen(!isOpen));
+  wireBand(el("panel-nav"));
+  wireContent(el("panel-body"));
+
+  // The band's height changes with the legend; the sheet's with the viewport.
+  if (typeof ResizeObserver === "function") {
+    const observer = new ResizeObserver(() => {
+      if (!NARROW_VIEWPORT.matches || gesture?.axis === "y") return;
+      measure();
+      show(isOpen ? 1 : 0);
+    });
+    observer.observe(el("panel-nav"));
+    observer.observe(el("panel-shell"));
+  }
+
+  NARROW_VIEWPORT.addEventListener("change", (event) => {
+    if (event.matches) setSheetOpen(false);
+    else toWide();
+  });
+  if (NARROW_VIEWPORT.matches) setSheetOpen(false);
+  else toWide();
+}

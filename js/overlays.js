@@ -7,6 +7,7 @@ import { INVENTORY_BASE, INVENTORY_INDEX_URL } from "./config.js";
 import { addStacked, map, styleReady } from "./map.js";
 import { isNonEmptyString } from "./store.js";
 import { valuesAt } from "./rasters.js";
+import { popupAnchor } from "./sheet.js";
 import { loadTileGrid } from "./tile-grid.js";
 import { attachPicker, clearStatus, creditButton, el, h, hideTab, setStatus } from "./ui.js";
 
@@ -391,7 +392,12 @@ async function inspect(point, lngLat) {
     content.append(...section);
   });
   closePopup();
-  popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false })
+  // On phones, low on the map it opens upward, clear of the sheet.
+  popup = new maplibregl.Popup({
+    closeButton: false,
+    closeOnClick: false,
+    anchor: popupAnchor(point.y),
+  })
     .setLngLat(lngLat)
     .setDOMContent(content)
     .addTo(map);

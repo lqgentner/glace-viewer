@@ -1,0 +1,213 @@
+/*
+ * The phone sheet: how a gesture is classified, and the sheet's two heights on
+ * a narrow page. Its own file because the sheet's state lives in its module and
+ * the map is a singleton.
+ */
+
+import assert from "node:assert/strict";
+import path from "node:path";
+import test from "node:test";
+
+import { captureWarnings, installBrowser, load, REPO, settle } from "./helpers/browser.js";
+
+const page = installBrowser({
+  narrow: true,
+  files: { "data/inventories.json": path.join(REPO, "data", "inventories.json") },
+});
+const { el, window } = page;
+
+// jsdom lays nothing out: the sheet is 500 px tall and its band 90 px above the pills.
+const stub = (node, name, value) =>
+  Object.defineProperty(node, name, { configurable: true, writable: true, value });
+stub(el("panel-shell"), "offsetHeight", 500);
+stub(el("panel-nav"), "offsetHeight", 90);
+stub(el("panel-body"), "scrollTop", 0);
+stub(window, "innerHeight", 844);
+
+// The catalog is not served; only the sheet matters here.
+await captureWarnings(async () => {
+  await load("js/app.js");
+  await settle();
+});
+const { FLICK, LOCK_PX, lockAxis, popupAnchor, snapTarget } = await load("js/sheet.js");
+
+const root = () => window.document.documentElement.style;
+const progress = () => Number(root().getPropertyValue("--sheet-progress"));
+const isOpen = () => el("panel-shell").classList.contains("expanded");
+const inert = () => el("panel-body").hasAttribute("inert");
+
+function pointer(target, type, y, x = 100) {
+  const event = new window.PointerEvent(type, {
+    bubbles: true,
+    cancelable: true,
+    pointerType: "touch",
+    pointerId: 1,
+    isPrimary: true,
+    clientX: x,
+    clientY: y,
+  });
+  target.dispatchEvent(event);
+  return event;
+}
+
+function touch(target, type, y, x = 100) {
+  const touches = type === "touchend" ? [] : [{ clientX: x, clientY: y }];
+  const event = new window.TouchEvent(type, { bubbles: true, cancelable: true, touches });
+  target.dispatchEvent(event);
+  return event;
+}
+
+/* A pointer drag through `ys`, then the click a browser may send after it. */
+function swipe(target, ys, x = 100) {
+  pointer(target, "pointerdown", ys[0], x);
+  for (const y of ys.slice(1)) pointer(target, "pointermove", y, x);
+  pointer(target, "pointerup", ys.at(-1), x);
+  target.dispatchEvent(new window.MouseEvent("click", { bubbles: true, cancelable: true }));
+}
+
+function open() {
+  if (!isOpen()) el("sheet-handle").click();
+  assert.ok(isOpen());
+}
+
+test("a gesture is classified once it has moved", () => {
+  assert.equal(LOCK_PX, 8);
+  assert.equal(FLICK, 0.5);
+  assert.equal(lockAxis(3, 4), null, "5 px is still a tap");
+  assert.equal(lockAxis(2, 9), "y");
+  assert.equal(lockAxis(9, 2), "x");
+});
+
+test("release snaps to the nearer height unless it was flicked", () => {
+  assert.equal(snapTarget(0.3, 0), "compact");
+  assert.equal(snapTarget(0.6, 0), "open");
+  assert.equal(snapTarget(0.2, 0.8), "open");
+  assert.equal(snapTarget(0.9, -0.8), "compact");
+});
+
+test("the sheet starts compact, its content out of reach", () => {
+  assert.equal(isOpen(), false);
+  assert.equal(el("sheet-handle").getAttribute("aria-expanded"), "false");
+  assert.equal(el("sheet-handle").getAttribute("aria-label"), "Show the controls");
+  assert.ok(inert(), "Tab cannot reach the hidden tab content");
+  assert.equal(root().getPropertyValue("--sheet-visible"), "90px");
+  assert.equal(root().getPropertyValue("--sheet-travel"), "410px");
+  assert.equal(progress(), 0);
+});
+
+test("a popup low on the map opens upward, clear of the sheet", () => {
+  // The map shows 844 - 90 px above the compact sheet; half of that is 377.
+  assert.equal(popupAnchor(500), "bottom");
+  assert.equal(popupAnchor(200), undefined);
+});
+
+test("the handle opens and closes the sheet", () => {
+  el("sheet-handle").click();
+  assert.ok(isOpen());
+  assert.equal(inert(), false);
+  assert.equal(progress(), 1);
+  assert.equal(root().getPropertyValue("--sheet-visible"), "500px");
+  assert.equal(el("sheet-handle").getAttribute("aria-expanded"), "true");
+  assert.equal(el("sheet-handle").getAttribute("aria-label"), "Hide the controls");
+
+  el("sheet-handle").click();
+  assert.equal(isOpen(), false);
+  assert.ok(inert());
+  assert.equal(progress(), 0);
+});
+
+test("a swipe up the band opens the sheet", () => {
+  const nav = el("panel-nav");
+  pointer(nav, "pointerdown", 400);
+  pointer(nav, "pointermove", 300);
+  assert.ok(progress() > 0 && progress() < 1, `the sheet follows the finger (${progress()})`);
+  assert.ok(el("panel-shell").classList.contains("dragging"), "without a transition");
+  pointer(nav, "pointermove", 200);
+  pointer(nav, "pointerup", 200);
+
+  assert.ok(isOpen());
+  assert.equal(progress(), 1);
+  assert.equal(el("panel-shell").classList.contains("dragging"), false);
+});
+
+test("a drag that starts on a pill does not select it; a tap with jitter does", () => {
+  open();
+  const selected = () => el("tab-map").getAttribute("aria-selected") === "true";
+  assert.equal(selected(), false);
+
+  swipe(el("tab-map"), [300, 320, 340]);
+  assert.equal(selected(), false, "the drag swallowed its click");
+
+  open();
+  swipe(el("tab-map"), [300, 303]);
+  assert.ok(selected(), "3 px is a tap");
+  assert.ok(isOpen(), "and leaves the sheet where it was");
+});
+
+test("a vertical swipe on a slider leaves the open sheet alone", () => {
+  open();
+  const year = el("year");
+  pointer(year, "pointerdown", 300);
+  touch(year, "touchstart", 300);
+  pointer(year, "pointermove", 360);
+  const move = touch(year, "touchmove", 360);
+  pointer(year, "pointerup", 360);
+  touch(year, "touchend", 360);
+
+  assert.ok(isOpen());
+  assert.equal(progress(), 1);
+  assert.equal(move.defaultPrevented, false, "the slider keeps the gesture");
+});
+
+test("pulling the content down from its top closes the sheet", () => {
+  open();
+  const body = el("panel-body");
+  const inside = el("extras");
+
+  body.scrollTop = 50;
+  touch(inside, "touchstart", 300);
+  let move = touch(inside, "touchmove", 420);
+  touch(inside, "touchend", 420);
+  assert.ok(isOpen(), "scrolled down, the pull scrolls the content");
+  assert.equal(move.defaultPrevented, false);
+
+  body.scrollTop = 0;
+  touch(inside, "touchstart", 300);
+  move = touch(inside, "touchmove", 420);
+  touch(inside, "touchend", 420);
+  assert.equal(move.defaultPrevented, true, "the sheet takes the gesture from the scroller");
+  assert.equal(isOpen(), false);
+
+  open();
+  touch(inside, "touchstart", 300);
+  move = touch(inside, "touchmove", 180);
+  touch(inside, "touchend", 180);
+  assert.ok(isOpen(), "pushed up, the content scrolls");
+  assert.equal(move.defaultPrevented, false);
+});
+
+test("crossing the breakpoint mid-drag leaves nothing behind", () => {
+  open();
+  const nav = el("panel-nav");
+  pointer(nav, "pointerdown", 200);
+  pointer(nav, "pointermove", 260);
+
+  page.setNarrow(false);
+  const shell = el("panel-shell");
+  assert.equal(shell.style.transform, "");
+  assert.equal(shell.classList.contains("dragging"), false);
+  for (const name of ["--sheet-travel", "--sheet-progress", "--sheet-visible"]) {
+    assert.equal(root().getPropertyValue(name), "", `${name} is gone on desktop`);
+  }
+  assert.equal(inert(), false);
+  assert.equal(el("tabs").hasAttribute("inert"), false);
+  assert.equal(popupAnchor(800), undefined, "MapLibre places popups on desktop");
+
+  pointer(nav, "pointerup", 300);
+  assert.equal(root().getPropertyValue("--sheet-progress"), "", "the stale gesture is dropped");
+
+  page.setNarrow(true);
+  assert.equal(isOpen(), false, "phones restart compact");
+  assert.ok(inert());
+  assert.equal(root().getPropertyValue("--sheet-visible"), "90px");
+});

@@ -13,12 +13,12 @@ import {
 } from "./map.js";
 import { grid, loadInventories } from "./overlays.js";
 import { loadRasters } from "./rasters.js";
+import { initSheet } from "./sheet.js";
 import {
   buildSegmented,
   buildTabs,
   creditButton,
   el,
-  NARROW_VIEWPORT,
   rove,
   setUrlParams,
   urlParam,
@@ -37,17 +37,6 @@ const GRID_INFO = {
     },
   ],
 };
-
-function setPanelOpen(open) {
-  // Set both classes to override the CSS default on either side of the breakpoint.
-  el("panel").classList.toggle("expanded", open);
-  el("panel").classList.toggle("collapsed", !open);
-  const handle = el("sheet-handle");
-  handle.setAttribute("aria-expanded", String(open));
-  const action = open ? "Hide the controls" : "Show the controls";
-  handle.title = action;
-  handle.setAttribute("aria-label", action);
-}
 
 /*
  * The about dialog. closedby="any" closes it on a click outside; browsers without
@@ -83,11 +72,7 @@ function showAboutYears(years) {
 function initControls() {
   initAbout();
   buildTabs(el("tabs"));
-  el("sheet-handle").addEventListener("click", (event) => {
-    setPanelOpen(event.currentTarget.getAttribute("aria-expanded") !== "true");
-  });
-  NARROW_VIEWPORT.addEventListener("change", (event) => setPanelOpen(!event.matches));
-  setPanelOpen(!NARROW_VIEWPORT.matches);
+  initSheet();
 
   const basemapOptions = [
     { value: "vector", label: "Vector" },
