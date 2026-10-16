@@ -134,6 +134,7 @@ test("a click elsewhere, a drag, a zoom, a tilt or Escape closes the popup", asy
   await click(inside(...AT, 0.25, 0.25));
   const [first] = popups;
   assert.equal(first.options.closeButton, false, "there is no close button");
+  assert.equal(first.options.padding, undefined, "on desktop there is no sheet to avoid");
 
   fireClick(inside(...AT, 0.75, 0.75));
   assert.equal(first.removed, true, "a click elsewhere closes it at once");

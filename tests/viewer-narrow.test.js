@@ -54,7 +54,10 @@ test("a narrow screen starts with the sheet compact, before any script runs", ()
 
   // The band drags the sheet; the content scrolls until it is at its top.
   assert.match(rule("#panel-nav"), /touch-action: none/);
-  assert.match(rule("#panel-body"), /touch-action: pan-y pinch-zoom;/);
+  // A long press on the band selects nothing and opens no callout.
+  assert.match(rule("#panel-nav"), /user-select: none;\s*-webkit-user-select: none;\s*-webkit-touch-callout: none;/);
+  // Safari may reject pinch-zoom; the plain pan-y before it stands then.
+  assert.match(rule("#panel-body"), /touch-action: pan-y;\s*touch-action: pan-y pinch-zoom;/);
   assert.match(rule("#panel-body"), /overscroll-behavior-y: contain/);
 
   // The map's furniture rides the sheet's top edge.

@@ -84,13 +84,9 @@ function toWide() {
   setSheetOpen(true);
 }
 
-/**
- * "bottom" for a click in the lower half of the map left above the sheet, so
- * its popup opens upward; otherwise MapLibre chooses.
- */
-export function popupAnchor(y) {
-  if (!NARROW_VIEWPORT.matches) return undefined;
-  return y > (window.innerHeight - visible) / 2 ? "bottom" : undefined;
+/** On phones, the popup's padding that keeps it clear of the sheet's visible part. */
+export function popupPadding() {
+  return NARROW_VIEWPORT.matches ? { bottom: visible } : undefined;
 }
 
 const startsOnRange = (target) => target.closest?.('input[type="range"]') != null;

@@ -145,7 +145,7 @@ test("a QA raster brings its own color map and stretch", async () => {
   const units = () => [...el("legend-labels").querySelectorAll(".unit")].map((u) => u.textContent);
   assert.deepEqual([el("legend-min").textContent, el("legend-max").textContent], ["0.0", "80.0"]);
   assert.deepEqual(units(), ["", ""]);
-  assert.equal(el("cmap").textContent, "glasgow", "the QA layer's own map");
+  assert.equal(el("cmap").textContent, "color map glasgow", "the QA layer's own map");
   assert.ok(el("cmap").classList.contains("visually-hidden"), "named for screen readers only");
   assert.deepEqual(
     [...el("layer-info").children].map((line) => line.textContent),
@@ -161,7 +161,7 @@ test("a QA raster brings its own color map and stretch", async () => {
     [...el("layer-info").children].map((line) => line.textContent),
     ["Composite quality map (higher is better)", "2025-06-24 to 2025-09-22"],
   );
-  assert.equal(el("cmap").textContent, "glasgow");
+  assert.equal(el("cmap").textContent, "color map glasgow");
 });
 
 test("the acquisition window comes from the year's STAC item", () => {

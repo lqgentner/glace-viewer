@@ -185,7 +185,7 @@ test("the viewer", async (t) => {
   });
 
   await t.test("the scale names its color map instead of crediting it", async () => {
-    assert.equal(el("cmap").textContent, "lipari");
+    assert.equal(el("cmap").textContent, "color map lipari");
     assert.equal(el("legend-credit"), null);
   });
 
@@ -375,7 +375,6 @@ test("the viewer", async (t) => {
 
     assert.equal(el("year-value").textContent, "2022");
     assert.equal(el("legend-note").textContent, "No Backscatter VH layer for 2022");
-    assert.equal(el("legend-note").hidden, false);
     assert.equal(el("layer-info").textContent, "");
     assert.equal(
       glaceLayers(map).filter((id) => visible(map, id)).length,

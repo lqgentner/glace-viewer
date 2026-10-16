@@ -60,7 +60,7 @@ const pick = async (row, value) => {
 };
 
 test("the legend names its color map and shows its limits as text, with one edit button", () => {
-  assert.equal(el("cmap").textContent, "lipari");
+  assert.equal(el("cmap").textContent, "color map lipari");
   assert.ok(el("cmap").classList.contains("visually-hidden"), "the scale editor shows it");
   assert.deepEqual(legend(), ["0.10", "0.75"]);
   assert.equal(el("legend-edit").hidden, false);
@@ -94,7 +94,7 @@ test("a color map applies at once and the editor stays open", async () => {
   assert.equal(editor.open, true);
   assert.equal(option("cmc.batlow").getAttribute("aria-pressed"), "true");
   assert.equal(option("cmc.lipari").getAttribute("aria-pressed"), "false");
-  assert.equal(el("cmap").textContent, "batlow");
+  assert.equal(el("cmap").textContent, "color map batlow");
   assert.equal(ramp(ID).firstColor, COLOR_MAPS["cmc.batlow"][0]);
   assert.equal(off("range-reset"), true, "reset is for the limits only");
 });
@@ -360,11 +360,11 @@ test("choices belong to their layer: kept across years, separate per product", a
   el("year").value = "0";
   el("year").dispatchEvent(new window.Event("input"));
   await settle();
-  assert.equal(el("cmap").textContent, "batlow", "2022 keeps the coherence choice");
+  assert.equal(el("cmap").textContent, "color map batlow", "2022 keeps the coherence choice");
   assert.deepEqual(legend(), ["0.20", "0.75"]);
 
   await pick("product", "RTC");
-  assert.equal(el("cmap").textContent, "navia", "backscatter keeps its own default");
+  assert.equal(el("cmap").textContent, "color map navia", "backscatter keeps its own default");
   assert.equal(el("legend-min").classList.contains("modified"), false);
 
   await pick("product", "COH12");
@@ -374,7 +374,7 @@ test("choices belong to their layer: kept across years, separate per product", a
   assert.equal(el("vmin-0").value, "0.10", "reset restores the limits");
   assert.deepEqual(legend(), ["0.10", "0.75"]);
   assert.equal(ramp("glace-coh12_vv-2022").first, 0.1);
-  assert.equal(el("cmap").textContent, "batlow", "and keeps the color map");
+  assert.equal(el("cmap").textContent, "color map batlow", "and keeps the color map");
   assert.equal(off("range-reset"), true);
   editor.close();
 });

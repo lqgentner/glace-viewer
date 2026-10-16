@@ -266,7 +266,11 @@ test("tabs: a click or the arrow keys select a tab and show only its panel", asy
     panel.hidden = at !== 0;
     return panel;
   });
-  document.body.append(list, ...panels);
+  const body = document.createElement("div");
+  body.append(...panels);
+  document.body.append(list, body);
+  // jsdom does not scroll; a writable scrollTop stands in.
+  Object.defineProperty(body, "scrollTop", { configurable: true, writable: true, value: 0 });
   ui.buildTabs(list);
   const tabs = [...list.children];
   const selected = () => tabs.filter((tab) => tab.getAttribute("aria-selected") === "true");
@@ -274,10 +278,15 @@ test("tabs: a click or the arrow keys select a tab and show only its panel", asy
   const stops = () => tabs.map((tab) => tab.tabIndex);
   assert.deepEqual(stops(), [0, -1, -1], "Tab stops at the selected tab");
 
+  body.scrollTop = 120;
   tabs[1].click();
   assert.deepEqual(selected(), [tabs[1]]);
   assert.deepEqual(shown(), [panels[1]], "its panel shows, the others hide");
   assert.deepEqual(stops(), [-1, 0, -1]);
+  assert.equal(body.scrollTop, 0, "the new panel shows from its top");
+  body.scrollTop = 50;
+  tabs[1].click();
+  assert.equal(body.scrollTop, 50, "the selected tab again keeps the scroll");
 
   tabs[2].click();
   tabs[2].focus();
@@ -294,4 +303,16 @@ test("tabs: a click or the arrow keys select a tab and show only its panel", asy
   tabs[1].focus();
   tabs[1].dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }));
   assert.deepEqual(selected(), [tabs[2]], "the arrow keys skip a hidden tab");
+
+  tabs[2].dispatchEvent(new KeyboardEvent("keydown", { key: "Home", bubbles: true }));
+  assert.deepEqual(selected(), [tabs[1]], "Home selects the first visible tab");
+  assert.equal(document.activeElement, tabs[1]);
+  ui.hideTab(tabs[0], false);
+  tabs[1].dispatchEvent(new KeyboardEvent("keydown", { key: "End", bubbles: true }));
+  assert.deepEqual(selected(), [tabs[2]], "End selects the last tab");
+  assert.equal(document.activeElement, tabs[2]);
+  ui.hideTab(tabs[2], true);
+  tabs[0].focus();
+  tabs[0].dispatchEvent(new KeyboardEvent("keydown", { key: "End", bubbles: true }));
+  assert.deepEqual(selected(), [tabs[1]], "and skips a hidden one");
 });

@@ -22,14 +22,13 @@ const stub = (node, name, value) =>
 stub(el("panel-shell"), "offsetHeight", 500);
 stub(el("panel-nav"), "offsetHeight", 90);
 stub(el("panel-body"), "scrollTop", 0);
-stub(window, "innerHeight", 844);
 
 // The catalog is not served; only the sheet matters here.
 await captureWarnings(async () => {
   await load("js/app.js");
   await settle();
 });
-const { FLICK, LOCK_PX, lockAxis, popupAnchor, snapTarget } = await load("js/sheet.js");
+const { FLICK, LOCK_PX, lockAxis, popupPadding, snapTarget } = await load("js/sheet.js");
 
 const root = () => window.document.documentElement.style;
 const progress = () => Number(root().getPropertyValue("--sheet-progress"));
@@ -118,10 +117,11 @@ test("the sheet starts compact, its content out of reach", () => {
   assert.equal(progress(), 0);
 });
 
-test("a popup low on the map opens upward, clear of the sheet", () => {
-  // The map shows 844 - 90 px above the compact sheet; half of that is 377.
-  assert.equal(popupAnchor(500), "bottom");
-  assert.equal(popupAnchor(200), undefined);
+test("popups keep clear of the sheet's visible part", () => {
+  assert.deepEqual(popupPadding(), { bottom: 90 });
+  el("sheet-handle").click();
+  assert.deepEqual(popupPadding(), { bottom: 500 }, "the open sheet shows all of itself");
+  el("sheet-handle").click();
 });
 
 test("the handle opens and closes the sheet", () => {
@@ -199,6 +199,15 @@ test("a drag that starts on a pill does not select it; a tap with jitter does", 
   swipe(el("tab-map"), [300, 303]);
   assert.ok(selected(), "3 px is a tap");
   assert.ok(isOpen(), "and leaves the sheet where it was");
+});
+
+test("another tab shows its content from the top", () => {
+  open();
+  const body = el("panel-body");
+  body.scrollTop = 200;
+  el("tab-inventories").click();
+  assert.equal(body.scrollTop, 0);
+  el("tab-map").click();
 });
 
 test("a pull down that starts on a slider leaves the open sheet alone", () => {
@@ -289,14 +298,14 @@ test("crossing the breakpoint mid-drag leaves nothing behind", () => {
 
   page.setNarrow(false);
   const shell = el("panel-shell");
-  assert.equal(shell.style.transform, "");
+  assert.equal(shell.style.length, 0, "the shell has no inline style");
   assert.equal(shell.classList.contains("dragging"), false);
   for (const name of ["--sheet-travel", "--sheet-progress", "--sheet-visible"]) {
     assert.equal(root().getPropertyValue(name), "", `${name} is gone on desktop`);
   }
   assert.equal(inert(), false);
   assert.equal(el("tabs").hasAttribute("inert"), false);
-  assert.equal(popupAnchor(800), undefined, "MapLibre places popups on desktop");
+  assert.equal(popupPadding(), undefined, "desktop popups need no padding");
 
   pointer(nav, "pointerup", 300);
   assert.equal(root().getPropertyValue("--sheet-progress"), "", "the stale gesture is dropped");

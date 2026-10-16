@@ -152,25 +152,34 @@ export function rove(node) {
 
 /*
  * A tab list whose tabs name their panels with aria-controls. The left and right
- * arrow keys select the next visible tab, and Tab stops at the selected one.
+ * arrow keys select the next visible tab, Home and End the first and last, and
+ * Tab stops at the selected one.
  */
 export function buildTabs(list) {
   for (const tab of list.children) tab.addEventListener("click", () => selectTab(tab));
   list.addEventListener("keydown", (event) => {
-    const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
-    if (!step) return;
-    event.preventDefault();
     const tabs = [...list.children].filter((tab) => !tab.hidden);
     const at = tabs.indexOf(document.activeElement);
-    const next = tabs[(at + step + tabs.length) % tabs.length];
+    const next = {
+      ArrowRight: tabs[(at + 1) % tabs.length],
+      ArrowLeft: tabs[(at - 1 + tabs.length) % tabs.length],
+      Home: tabs[0],
+      End: tabs.at(-1),
+    }[event.key];
+    if (!next) return;
+    event.preventDefault();
     selectTab(next);
     next.focus();
   });
   rove(list);
 }
 
-/** Select `tab` and show its panel alone. */
+/** Select `tab` and show its panel alone, from the top of the panels' container. */
 export function selectTab(tab) {
+  const panel = el(tab.getAttribute("aria-controls"));
+  if (tab.getAttribute("aria-selected") !== "true" && panel.parentElement) {
+    panel.parentElement.scrollTop = 0;
+  }
   for (const other of tab.parentElement.children) {
     const selected = other === tab;
     other.setAttribute("aria-selected", String(selected));

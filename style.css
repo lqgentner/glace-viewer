@@ -153,6 +153,7 @@ html, body {
 }
 /* One height for the ramp with its limits, the channel row, or the note. */
 #legend-slot { min-height: calc(13px + 11px * 1.45 * var(--text-scale)); }
+/* Never hidden, so it stays a live region; empty, it is 0 px tall. */
 #legend-note {
   margin: 0;
   font-size: calc(12px * var(--text-scale));
@@ -719,9 +720,17 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   #panel-shell.dragging { transition: none; }
   #panel { height: 100%; border-radius: inherit; }
   /* The band drags the sheet; the content scrolls, and at its top a pull drags it. */
-  #panel-nav { touch-action: none; }
+  #panel-nav {
+    touch-action: none;
+    /* A long press drags, not selects. */
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
   #panel-body {
     flex: 1;
+    /* For Safari, which may reject pinch-zoom. */
+    touch-action: pan-y;
     touch-action: pan-y pinch-zoom;
     overscroll-behavior-y: contain;
   }
@@ -1286,15 +1295,24 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
     right: 0;
     width: auto;
     max-width: none;
-    max-height: 60dvh;
+    /* At most 60% of the screen, and clear of its top above the keyboard. */
+    max-height: min(60dvh, calc(100dvh - var(--keyboard-inset, 0px) - 24px));
     padding-bottom: env(safe-area-inset-bottom);
     border-radius: var(--surface-radius) var(--surface-radius) 0 0;
   }
   #scale-editor .sheet { border-radius: inherit; }
-  /* The header is the band: the nav's tint over the same glass, edge to edge. */
+  /*
+   * The header is the band: the nav's tint over the same glass, edge to edge.
+   * It stays at the top while the editor scrolls.
+   */
   #scale-editor header {
+    position: sticky;
+    top: 0;
+    z-index: 1;
     margin: -10px -16px 8px;
     padding: 10px 16px;
+    /* Opaque fallback for browsers without backdrop-filter. */
+    background: #1c2331;
   }
   @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
     #scale-editor header { background: hsl(var(--glass-tint) / var(--glass-alpha-nav)); }

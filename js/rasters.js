@@ -424,14 +424,13 @@ function legendNote(text) {
   for (const id of ["legend-bar", "legend-labels", "legend-channels", "legend-edit", "cmap"]) {
     el(id).hidden = true;
   }
-  // Shown before it changes, so the live region announces the new text.
-  el("legend-note").hidden = false;
+  // Always rendered: a live region shown with its text is often not announced.
   el("legend-note").textContent = text;
 }
 
 function updateLegend(layer) {
   const falseColour = layer.polarization === FALSE_COLOUR;
-  el("legend-note").hidden = true;
+  el("legend-note").textContent = "";
   el("legend-bar").hidden = falseColour;
   el("legend-labels").hidden = falseColour;
   el("legend-channels").hidden = !falseColour;
@@ -445,7 +444,7 @@ function updateLegend(layer) {
     const { vmin, vmax } = rangeOf(layer);
     const span = vmax - vmin;
     el("legend-bar").style.background = gradient(colorsOf(layer));
-    el("cmap").textContent = shortName(cmapOf(layer));
+    el("cmap").textContent = `color map ${shortName(cmapOf(layer))}`;
     el("legend-min").textContent = round(vmin, span);
     el("legend-max").textContent = round(vmax, span);
     for (const which of ["vmin", "vmax"]) {
@@ -929,15 +928,16 @@ function initField(input, at, which) {
 
 /*
  * On a phone the editor is docked to the bottom and rises above the keyboard:
- * the visual viewport shrinks by the keyboard's height, and the editor's
- * offset follows through --keyboard-inset.
+ * the visual viewport shrinks by the keyboard's height within the layout
+ * viewport, and the editor's offset follows through --keyboard-inset.
  */
 function keepAboveKeyboard(editor) {
   const viewport = window.visualViewport;
   if (!NARROW_VIEWPORT.matches || !viewport) return () => {};
   const root = document.documentElement.style;
   const place = () => {
-    const inset = Math.max(0, window.innerHeight - (viewport.height + viewport.offsetTop));
+    const layout = document.documentElement.clientHeight;
+    const inset = Math.max(0, layout - (viewport.height + viewport.offsetTop));
     root.setProperty("--keyboard-inset", `${inset}px`);
   };
   // The keyboard's resize follows the focus; reveal the field once it has.

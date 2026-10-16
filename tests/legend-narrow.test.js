@@ -26,7 +26,9 @@ const stub = (node, name, value) =>
   Object.defineProperty(node, name, { configurable: true, writable: true, value });
 const viewport = Object.assign(new window.EventTarget(), { height: 500, offsetTop: 0 });
 stub(window, "visualViewport", viewport);
-stub(window, "innerHeight", 844);
+// The layout viewport, which the keyboard does not shrink; innerHeight may differ.
+stub(window.document.documentElement, "clientHeight", 844);
+stub(window, "innerHeight", 900);
 
 await load("js/app.js");
 page.map.fire("style.load");
@@ -73,8 +75,9 @@ test("the stylesheet docks the editor and clears the map's corners", () => {
     "top: auto",
     "left: 0",
     "right: 0",
-    "max-height: 60dvh",
+    "max-height: min(60dvh, calc(100dvh - var(--keyboard-inset, 0px) - 24px))",
   ]) assert.ok(dock.includes(rule), rule);
+  assert.match(block("#scale-editor header"), /position: sticky;\s*top: 0;/, "the header stays as the editor scrolls");
   assert.match(block("body:has(#scale-editor[open]) #panel-shell"), /display: none/);
   assert.match(block("body:has(#scale-editor[open]) #map :is(.maplibregl-ctrl-scale, .maplibregl-ctrl-attrib)"), /visibility: hidden/);
   const notices = block("body:has(#scale-editor[open]) #notices");

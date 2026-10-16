@@ -64,7 +64,7 @@ A gitignored `tiles` symlink to the catalog root also works. The root is above
 | `js/config.js`, `site-config.js` | Resolved settings and deployment overrides |
 | `js/map.js` | Map singleton, style readiness, draw order, basemap, labels, terrain |
 | `js/store.js` | Catalog/style/item reads and validation; one record per raster archive |
-| `js/sheet.js` | The panel as a bottom sheet on phones: drag, snap, the properties CSS reads, popup anchor |
+| `js/sheet.js` | The panel as a bottom sheet on phones: drag, snap, the properties CSS reads, popup padding |
 | `js/rasters.js` | Raster selection, source creation, panel axes, legend and scale editing |
 | `js/composite.js` | False color composed from VV and VH archives via `glace-rgb://` |
 | `js/archive.js` | Shared PMTiles readers, their byte cache, the `pmtiles://` protocol |
@@ -253,8 +253,10 @@ be minimized. Below it the panel docks to the bottom as a sheet with two
 heights, compact (the band) and open. CSS provides the compact state before
 scripts run, so the page loads without a flash of the open sheet. `js/sheet.js`
 only writes `--sheet-progress`, `--sheet-travel` and `--sheet-visible` on the
-root and toggles `inert` on the hidden tabs and content; CSS places the sheet
-and the map's furniture from them. Crossing the breakpoint clears them. A
+root, toggles `inert` on the hidden tabs and content and the `.expanded` and
+`.dragging` classes on `#panel-shell`, and sets the handle's `aria-expanded`
+and label; CSS places the sheet and the map's furniture from the properties.
+Crossing the breakpoint clears the properties, `inert` and `.dragging`. A
 vertical swipe on a range input belongs to the input, and the content scrolls
 only while the sheet is open. Initial opacity and hillshade strength in
 `index.html` must agree with their module defaults. Popovers live outside the
@@ -274,8 +276,9 @@ glyphs carry a uniform semi-transparent white SVG stroke drawn behind the fill,
 not a blurred shadow, and the viewBox is padded so the stroke is not clipped.
 The attribution is expanded on desktop and collapses on narrow maps by
 MapLibre's own compact mode, with no option set; the OSMF attribution
-guidelines allow that. A tap that opens a popup in the lower half of
-the map above the sheet anchors it upward, so it stays in view.
+guidelines allow that. MapLibre anchors the value popup, so it shifts
+sideways near an edge; on phones its `padding` is the sheet's visible height,
+so near the sheet it opens upward.
 
 The legend only displays. Its Edit button's `::after` covers the whole legend,
 so a click anywhere on it toggles `#scale-editor`, a non-modal `<dialog>`:

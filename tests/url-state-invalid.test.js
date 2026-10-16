@@ -30,7 +30,7 @@ test("a link to nothing the catalog has opens on the defaults", () => {
   const checked = (row) => el(row).querySelector('[aria-checked="true"]').dataset.value;
   assert.deepEqual([checked("product"), checked("pol"), el("year-value").textContent], ["COH12", "VV", "2023"]);
   assert.equal(el("opacity").value, "100");
-  assert.equal(el("cmap").textContent, "lipari");
+  assert.equal(el("cmap").textContent, "color map lipari");
   assert.deepEqual([el("legend-min").textContent, el("legend-max").textContent], ["0.10", "0.75"]);
   assert.equal(checked("basemap-style"), "vector");
   assert.equal(el("status").hidden, true, "and reports nothing missing");

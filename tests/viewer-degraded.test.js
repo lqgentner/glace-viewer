@@ -29,7 +29,6 @@ test("a missing catalog costs only the rasters", async () => {
   // The band says so in one line, so it is not left empty.
   assert.equal(el("legend").hidden, false);
   assert.equal(el("legend").hasAttribute("aria-busy"), false);
-  assert.equal(el("legend-note").hidden, false);
   assert.equal(el("legend-note").textContent, "The GLACE layers could not be loaded.");
   assert.equal(el("legend-bar").hidden, true);
   assert.equal(el("legend-labels").hidden, true);

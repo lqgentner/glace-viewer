@@ -1,6 +1,6 @@
 /*
- * The value popup on a phone: low on the map it opens upward, clear of the
- * compact sheet. Its own file for a fresh narrow page.
+ * The value popup on a phone: MapLibre keeps it clear of the sheet's visible
+ * part and anchors it near an edge. Its own file for a fresh narrow page.
  */
 
 import assert from "node:assert/strict";
@@ -22,12 +22,11 @@ const page = installBrowser({
 });
 const { el, popups, window } = page;
 
-// The sheet is 500 px tall, 90 px of it showing; the viewport 844 px.
+// The sheet is 500 px tall, 90 px of it showing.
 const stub = (node, name, value) =>
   Object.defineProperty(node, name, { configurable: true, writable: true, value });
 stub(el("panel-shell"), "offsetHeight", 500);
 stub(el("panel-nav"), "offsetHeight", 90);
-stub(window, "innerHeight", 844);
 
 /* Every tile reads code 101, so any click has a value to show. */
 globalThis.pmtiles.PMTiles = class {
@@ -46,18 +45,20 @@ map.zoom = 8;
 
 /* A single click waits 250 ms for a second. */
 const pause = () => new Promise((resolve) => setTimeout(resolve, 300));
-async function clickAt(y) {
+async function clickAt(x, y) {
   page.window.document.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Escape" }));
   popups.length = 0;
-  map.fire("click", { point: { x: 100, y }, lngLat: { lng: 8, lat: 46.5 } });
+  map.fire("click", { point: { x, y }, lngLat: { lng: 8, lat: 46.5 } });
   await pause();
   await settle();
   assert.equal(popups.length, 1, "the click opened a popup");
-  return popups[0].options.anchor;
+  return popups[0].options;
 }
 
-test("a popup low on a phone's map opens upward, above the sheet", async () => {
-  // Half of the 754 px the compact sheet leaves is 377.
-  assert.equal(await clickAt(500), "bottom");
-  assert.equal(await clickAt(200), undefined, "higher up, MapLibre chooses");
+test("a phone's popup keeps clear of the sheet and MapLibre anchors it", async () => {
+  for (const [x, y] of [[100, 700], [100, 200], [4, 700], [386, 300]]) {
+    const options = await clickAt(x, y);
+    assert.equal(options.anchor, undefined, `MapLibre anchors the popup at ${x}, ${y}`);
+    assert.deepEqual(options.padding, { bottom: 90 }, "the compact sheet's 90 px are padding");
+  }
 });

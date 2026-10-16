@@ -120,14 +120,15 @@ test("a missing combination does not keep the previous layer's legend", async ()
   assert.equal(el("legend").hidden, false, "the band keeps its legend");
   assert.equal(el("legend-bar").hidden, true, "no ramp for a layer that is not drawn");
   assert.equal(el("legend-labels").hidden, true);
-  assert.equal(el("legend-note").hidden, false);
   assert.equal(el("legend-note").textContent, "No Backscatter VH layer for 2022");
   assert.equal(el("legend-note").getAttribute("aria-live"), "polite", "and screen readers hear it");
   assert.equal(el("legend-edit").hidden, true, "nothing to edit");
   assert.equal(el("status").hidden, true, "the status line does not repeat it");
   input(el("year"), "1");
   await settle();
-  assert.equal(el("legend-note").hidden, true, "and the ramp returns with the layer");
+  assert.equal(el("legend-note").textContent, "", "and the ramp returns with the layer");
+  // Never hidden, so the next note is announced: a live region shown with its text often is not.
+  assert.equal(el("legend-note").hidden, false);
   assert.equal(el("legend-bar").hidden, false);
   assert.equal(el("legend-edit").hidden, false);
   await pick("product", "COH12");
