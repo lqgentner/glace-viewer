@@ -720,7 +720,11 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   #panel { height: 100%; border-radius: inherit; }
   /* The band drags the sheet; the content scrolls, and at its top a pull drags it. */
   #panel-nav { touch-action: none; }
-  #panel-body { flex: 1; touch-action: pan-y; }
+  #panel-body {
+    flex: 1;
+    touch-action: pan-y pinch-zoom;
+    overscroll-behavior-y: contain;
+  }
   /*
    * A bar atop the band; js/sheet.js labels it. Above the legend, so its tap
    * area wins where the two overlap.
@@ -757,7 +761,8 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   }
   #notices {
     top: auto;
-    bottom: calc(var(--sheet-visible, 99px) + 12px);
+    /* Above the scale bar and the credit, which fade out as the sheet opens. */
+    bottom: calc(var(--sheet-visible, 99px) + 12px + 36px * (1 - var(--sheet-progress, 0)));
     left: 12px;
     right: 12px;
     transition: bottom 220ms ease-out;

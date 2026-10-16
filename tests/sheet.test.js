@@ -36,7 +36,11 @@ const progress = () => Number(root().getPropertyValue("--sheet-progress"));
 const isOpen = () => el("panel-shell").classList.contains("expanded");
 const inert = () => el("panel-body").hasAttribute("inert");
 
-function pointer(target, type, y, x = 100) {
+/* jsdom stamps events with the clock; `time` sets the stamp, in ms. */
+const stamp = (event, time) =>
+  time === undefined ? event : Object.defineProperty(event, "timeStamp", { value: time });
+
+function pointer(target, type, y, { x = 100, time } = {}) {
   const event = new window.PointerEvent(type, {
     bubbles: true,
     cancelable: true,
@@ -46,27 +50,46 @@ function pointer(target, type, y, x = 100) {
     clientX: x,
     clientY: y,
   });
+  target.dispatchEvent(stamp(event, time));
+  return event;
+}
+
+function touch(target, type, y, { fingers = 1, cancelable = true } = {}) {
+  const touches = Array.from({ length: fingers }, (_, i) => ({ clientX: 100 + 40 * i, clientY: y }));
+  const event = new window.TouchEvent(type, { bubbles: true, cancelable, touches });
   target.dispatchEvent(event);
   return event;
 }
 
-function touch(target, type, y, x = 100) {
-  const touches = type === "touchend" ? [] : [{ clientX: x, clientY: y }];
-  const event = new window.TouchEvent(type, { bubbles: true, cancelable: true, touches });
+const click = (target) => {
+  const event = new window.MouseEvent("click", { bubbles: true, cancelable: true });
   target.dispatchEvent(event);
   return event;
+};
+
+/* A tap as browsers send it: a press, a release and a click. */
+function tap(target) {
+  pointer(target, "pointerdown", 300);
+  pointer(target, "pointerup", 300);
+  return click(target);
 }
 
 /* A pointer drag through `ys`, then the click a browser may send after it. */
-function swipe(target, ys, x = 100) {
-  pointer(target, "pointerdown", ys[0], x);
-  for (const y of ys.slice(1)) pointer(target, "pointermove", y, x);
-  pointer(target, "pointerup", ys.at(-1), x);
-  target.dispatchEvent(new window.MouseEvent("click", { bubbles: true, cancelable: true }));
+function swipe(target, ys) {
+  pointer(target, "pointerdown", ys[0]);
+  for (const y of ys.slice(1)) pointer(target, "pointermove", y);
+  pointer(target, "pointerup", ys.at(-1));
+  click(target);
+}
+
+/* Settled at one of the two heights, not stranded mid-drag. */
+function settled() {
+  assert.equal(el("panel-shell").classList.contains("dragging"), false);
+  assert.ok([0, 1].includes(progress()), `progress ${progress()}`);
 }
 
 function open() {
-  if (!isOpen()) el("sheet-handle").click();
+  if (!isOpen()) tap(el("sheet-handle"));
   assert.ok(isOpen());
 }
 
@@ -130,6 +153,40 @@ test("a swipe up the band opens the sheet", () => {
   assert.equal(el("panel-shell").classList.contains("dragging"), false);
 });
 
+test("a drag held still before release settles by position, not by its last speed", () => {
+  assert.equal(isOpen(), true);
+  tap(el("sheet-handle"));
+  const nav = el("panel-nav");
+  pointer(nav, "pointerdown", 400, { time: 1000 });
+  pointer(nav, "pointermove", 380, { time: 1010 });
+  pointer(nav, "pointermove", 300, { time: 1050 });
+  // Two px/ms upward, then held for 450 ms: a quarter of the way is not a flick.
+  pointer(nav, "pointerup", 300, { time: 1500 });
+  assert.equal(isOpen(), false);
+  assert.equal(progress(), 0);
+});
+
+test("a cancelled band drag settles, and swallows no later click", () => {
+  const nav = el("panel-nav");
+  pointer(nav, "pointerdown", 400);
+  pointer(nav, "pointermove", 200);
+  pointer(nav, "pointercancel", 200);
+  assert.ok(isOpen(), "the flick it was");
+  settled();
+  assert.equal(click(el("tab-map")).defaultPrevented, false);
+  tap(el("tab-inventories"));
+});
+
+test("a drag swallows only the band's click", () => {
+  open();
+  const nav = el("panel-nav");
+  pointer(nav, "pointerdown", 300);
+  pointer(nav, "pointermove", 380);
+  pointer(nav, "pointerup", 380);
+  assert.equal(click(el("map")).defaultPrevented, false, "a click elsewhere is the user's");
+  assert.equal(click(nav).defaultPrevented, true, "the band's is the drag's");
+});
+
 test("a drag that starts on a pill does not select it; a tap with jitter does", () => {
   open();
   const selected = () => el("tab-map").getAttribute("aria-selected") === "true";
@@ -144,14 +201,11 @@ test("a drag that starts on a pill does not select it; a tap with jitter does", 
   assert.ok(isOpen(), "and leaves the sheet where it was");
 });
 
-test("a vertical swipe on a slider leaves the open sheet alone", () => {
+test("a pull down that starts on a slider leaves the open sheet alone", () => {
   open();
   const year = el("year");
-  pointer(year, "pointerdown", 300);
   touch(year, "touchstart", 300);
-  pointer(year, "pointermove", 360);
   const move = touch(year, "touchmove", 360);
-  pointer(year, "pointerup", 360);
   touch(year, "touchend", 360);
 
   assert.ok(isOpen());
@@ -184,6 +238,47 @@ test("pulling the content down from its top closes the sheet", () => {
   touch(inside, "touchend", 180);
   assert.ok(isOpen(), "pushed up, the content scrolls");
   assert.equal(move.defaultPrevented, false);
+});
+
+test("a pull the browser already scrolls stays a scroll", () => {
+  open();
+  const inside = el("extras");
+  touch(inside, "touchstart", 300);
+  const move = touch(inside, "touchmove", 420, { cancelable: false });
+  touch(inside, "touchend", 420);
+  assert.ok(isOpen());
+  assert.equal(progress(), 1);
+  assert.equal(move.defaultPrevented, false);
+});
+
+test("a second finger does not strand a drag mid-height", () => {
+  open();
+  const nav = el("panel-nav");
+  const inside = el("extras");
+  pointer(nav, "pointerdown", 300);
+  pointer(nav, "pointermove", 340);
+  touch(inside, "touchstart", 500, { fingers: 2 });
+  touch(inside, "touchend", 500);
+  pointer(nav, "pointerup", 340);
+  settled();
+
+  // A mouse drag on the band and a touch on the content.
+  open();
+  pointer(nav, "pointerdown", 300);
+  pointer(nav, "pointermove", 340);
+  touch(inside, "touchstart", 500);
+  touch(inside, "touchend", 500);
+  assert.ok(el("panel-shell").classList.contains("dragging"), "the band's drag goes on");
+  pointer(nav, "pointerup", 340);
+  settled();
+
+  open();
+  touch(inside, "touchstart", 300);
+  touch(inside, "touchmove", 340);
+  touch(inside, "touchstart", 340, { fingers: 2 });
+  touch(inside, "touchmove", 360, { fingers: 2 });
+  touch(inside, "touchend", 360);
+  settled();
 });
 
 test("crossing the breakpoint mid-drag leaves nothing behind", () => {

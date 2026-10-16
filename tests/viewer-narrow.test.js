@@ -54,14 +54,19 @@ test("a narrow screen starts with the sheet compact, before any script runs", ()
 
   // The band drags the sheet; the content scrolls until it is at its top.
   assert.match(rule("#panel-nav"), /touch-action: none/);
-  assert.match(rule("#panel-body"), /touch-action: pan-y/);
+  assert.match(rule("#panel-body"), /touch-action: pan-y pinch-zoom;/);
+  assert.match(rule("#panel-body"), /overscroll-behavior-y: contain/);
 
   // The map's furniture rides the sheet's top edge.
   assert.match(
     narrow,
     /\.maplibregl-ctrl-bottom-left,\s*#map \.maplibregl-ctrl-bottom-right \{[^}]*bottom: var\(--sheet-visible/,
   );
-  assert.match(rule("#notices"), /bottom: calc\(var\(--sheet-visible/);
+  assert.match(
+    rule("#notices"),
+    /bottom: calc\(var\(--sheet-visible, 99px\) \+ 12px \+ 36px \* \(1 - var\(--sheet-progress, 0\)\)\)/,
+    "the notices clear the scale bar and the credit on the compact sheet",
+  );
   assert.match(
     narrow,
     /:is\(\.maplibregl-ctrl-scale, \.maplibregl-ctrl-attrib\) \{[^}]*opacity: calc\(1 - var\(--sheet-progress/,

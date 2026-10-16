@@ -116,25 +116,37 @@ function drag(y, time) {
   track(y, time);
 }
 
-/* Settle a drag at the height its position and speed point to. */
-function release() {
+/* Settle a drag, released at `time`, at the height its position and speed point to. */
+function release(time) {
   const { samples, progress } = gesture;
-  const [first, last] = [samples[0], samples.at(-1)];
-  // Upward is positive; no time between samples reads as a flick.
-  const velocity = (first.y - last.y) / (last.time - first.time);
+  const last = samples.at(-1);
+  const first = samples.find((sample) => time - sample.time <= VELOCITY_WINDOW_MS) ?? last;
+  // Upward is positive; no time between samples reads as a flick. A finger held
+  // still sends no moves, so after a pause only `last` is recent: no speed.
+  const velocity = (first.y - last.y) / (last.time - first.time) || 0;
   gesture = null;
   el("panel-shell").classList.remove("dragging");
   setSheetOpen(snapTarget(progress, velocity) === "open");
 }
 
-/* A drag ends without the click that browsers may send at its release. */
+/*
+ * A drag on the band ends without the click that browsers may send at its
+ * release. The next press starts a gesture of its own.
+ */
 function swallowNextClick() {
+  const stop = () => {
+    window.removeEventListener("click", swallow, { capture: true });
+    window.removeEventListener("pointerdown", stop, { capture: true });
+  };
   const swallow = (event) => {
+    if (!el("panel-nav").contains(event.target)) return;
     event.preventDefault();
     event.stopPropagation();
+    stop();
   };
-  window.addEventListener("click", swallow, { capture: true, once: true });
-  setTimeout(() => window.removeEventListener("click", swallow, { capture: true }), DRAG_CLICK_MS);
+  window.addEventListener("click", swallow, { capture: true });
+  window.addEventListener("pointerdown", stop, { capture: true });
+  setTimeout(stop, DRAG_CLICK_MS);
 }
 
 /*
@@ -165,7 +177,7 @@ function wireBand(nav) {
       return;
     }
     if (event.type === "pointerup") swallowNextClick();
-    release();
+    release(event.timeStamp);
   };
   nav.addEventListener("pointerup", end);
   nav.addEventListener("pointercancel", end);
@@ -176,28 +188,31 @@ function wireBand(nav) {
  * events, since only a cancelable touchmove can take the gesture from the scroller.
  */
 function wireContent(body) {
+  // A drag on the band belongs to its pointer, whatever other fingers do.
+  const onBand = () => gesture?.pointerId !== undefined;
   body.addEventListener(
     "touchstart",
     (event) => {
+      // A second finger leaves the gesture under way alone.
+      if (event.touches.length > 1 || onBand()) return;
       gesture = null;
-      if (!NARROW_VIEWPORT.matches || event.touches.length > 1 || startsOnRange(event.target)) {
-        return;
-      }
+      if (!NARROW_VIEWPORT.matches || startsOnRange(event.target)) return;
       const [{ clientX, clientY }] = event.touches;
       begin(clientX, clientY, event.timeStamp);
     },
-    { passive: false },
+    { passive: true },
   );
   body.addEventListener(
     "touchmove",
     (event) => {
-      if (!gesture || event.touches.length > 1) return;
+      if (!gesture || onBand() || event.touches.length > 1) return;
       const [{ clientX, clientY }] = event.touches;
       if (!gesture.axis) {
         const dy = clientY - gesture.y;
         gesture.axis = lockAxis(clientX - gesture.x, dy);
         if (!gesture.axis) return;
-        if (gesture.axis !== "y" || dy < 0 || body.scrollTop > 0) {
+        // An uncancelable move means the browser is already scrolling.
+        if (gesture.axis !== "y" || dy < 0 || body.scrollTop > 0 || !event.cancelable) {
           gesture = null;
           return;
         }
@@ -207,8 +222,9 @@ function wireContent(body) {
     },
     { passive: false },
   );
-  const end = () => {
-    if (gesture?.axis === "y") release();
+  const end = (event) => {
+    if (onBand()) return;
+    if (gesture?.axis === "y") release(event.timeStamp);
     gesture = null;
   };
   body.addEventListener("touchend", end);
