@@ -122,6 +122,7 @@ test("a missing combination does not keep the previous layer's legend", async ()
   assert.equal(el("legend-labels").hidden, true);
   assert.equal(el("legend-note").hidden, false);
   assert.equal(el("legend-note").textContent, "No Backscatter VH layer for 2022");
+  assert.equal(el("legend-note").getAttribute("aria-live"), "polite", "and screen readers hear it");
   assert.equal(el("legend-edit").hidden, true, "nothing to edit");
   assert.equal(el("status").hidden, true, "the status line does not repeat it");
   input(el("year"), "1");

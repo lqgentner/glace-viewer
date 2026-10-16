@@ -424,8 +424,9 @@ function legendNote(text) {
   for (const id of ["legend-bar", "legend-labels", "legend-channels", "legend-edit", "cmap"]) {
     el(id).hidden = true;
   }
-  el("legend-note").textContent = text;
+  // Shown before it changes, so the live region announces the new text.
   el("legend-note").hidden = false;
+  el("legend-note").textContent = text;
 }
 
 function updateLegend(layer) {
