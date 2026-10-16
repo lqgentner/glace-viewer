@@ -117,14 +117,14 @@ test("UTM zone declines rather than guessing", () => {
 
 test("the description says what the product is and how it was composited", () => {
   assert.deepEqual(layerDetail(layer()), [
-    "Composite Coherence",
+    "Coherence composite",
     "12-day baseline",
-    "Local resolution weighted median",
+    "Local resolution weighted",
   ]);
   assert.deepEqual(layerDetail(layer({ product: "RTC" })), [
-    "Composite Backscatter",
+    "Backscatter composite",
     "Radiometrically terrain corrected",
-    "Local resolution weighted median",
+    "Local resolution weighted",
   ]);
 });
 
@@ -165,6 +165,6 @@ test("a QA raster describes itself rather than the product it sits beside", () =
 test("an unknown product still describes itself rather than going blank", () => {
   assert.deepEqual(layerDetail(layer({ product: "COH6" })), [
     "COH6 composite",
-    "Local resolution weighted median",
+    "Local resolution weighted",
   ]);
 });

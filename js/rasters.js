@@ -22,11 +22,11 @@ const productLabel = (product) => PRODUCT_LABELS[product] ?? product;
 
 /* Split product and qualifier to fit the panel width. */
 const PRODUCT_DETAIL = {
-  COH12: ["Composite Coherence", "12-day baseline"],
-  RTC: ["Composite Backscatter", "Radiometrically terrain corrected"],
+  COH12: ["Coherence composite", "12-day baseline"],
+  RTC: ["Backscatter composite", "Radiometrically terrain corrected"],
 };
 
-const COMPOSITING_DETAIL = "Local resolution weighted median";
+const COMPOSITING_DETAIL = "Local resolution weighted";
 
 /*
  * Panel order and allowlist after removing QA suffixes. Unsupported polarizations
