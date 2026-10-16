@@ -71,6 +71,9 @@ html, body {
   /* HSL channels let the tint alpha vary independently. */
   --glass-tint: 222 31% 10%;
   --glass-alpha: 0.62;
+  /* The panel's band is lighter than the controls under it. */
+  --glass-alpha-nav: 0.42;
+  --glass-alpha-body: 0.82;
   /* Overhang by two blur radii to provide neighboring pixels at the panel edges. */
   --glass-reach: calc(var(--glass-blur) * 2);
 }
@@ -113,16 +116,15 @@ html, body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding: 16px;
   border: 1px solid var(--border);
   border-radius: var(--surface-radius);
-  /* Opaque fallback for browsers without backdrop-filter. */
-  background: var(--panel);
+  /* The band and the body paint their own tints over the shell's glass. */
+  background: transparent;
 }
 
 /*
  * The scale editor's and the about dialog's sheets take the panel's surface.
- * Declared before the glass tint below, which overrides it.
+ * Declared before the glass tint further down, which overrides it.
  */
 #scale-editor .sheet,
 #about .sheet {
@@ -132,26 +134,13 @@ html, body {
   background: var(--panel);
 }
 
-@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
-  #panel-glass,
-  #scale-editor .glass,
-  #about .glass {
-    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
-      brightness(var(--glass-brightness));
-    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
-      brightness(var(--glass-brightness));
-  }
-  #panel,
-  #scale-editor .sheet,
-  #about .sheet {
-    background: hsl(var(--glass-tint) / var(--glass-alpha));
-    border-color: rgba(255, 255, 255, 0.14);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09);
-  }
-}
-
 /* The navigation band: the handle on phones, the legend and the tabs. */
-#panel-nav { flex: none; }
+#panel-nav {
+  flex: none;
+  padding: 16px 16px 0;
+  /* Opaque fallback for browsers without backdrop-filter. */
+  background: #1c2331;
+}
 #sheet-handle { display: none; }
 
 /* The legend's title line is the selection; Edit sits at its right. */
@@ -198,16 +187,18 @@ html, body {
   #tabs [role="tab"]:hover { color: var(--text); }
 }
 /*
- * Extend the body to place the native scrollbar inside the panel padding. A stable
- * gutter prevents reflow; left padding preserves focus rings. Firefox uses the
- * standard thin scrollbar with the remaining space supplied by padding.
+ * The body spans the panel, so its native scrollbar sits inside the panel's
+ * edge. A stable gutter prevents reflow; left padding preserves focus rings.
+ * Firefox uses the standard thin scrollbar with the remaining space supplied by
+ * padding.
  */
 #panel-body {
   min-height: 0;
   overflow-y: auto;
-  margin: 14px -16px 0;
-  padding-left: 16px;
-  padding-right: 5px;
+  padding: 14px 5px 16px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  /* Opaque fallback for browsers without backdrop-filter. */
+  background: var(--panel);
   scrollbar-gutter: stable;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.28) transparent;
@@ -235,6 +226,34 @@ html, body {
   #panel-body::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.45);
     background-clip: content-box;
+  }
+}
+
+/* The glass tints replace the opaque fallbacks above. */
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  #panel-glass,
+  #scale-editor .glass,
+  #about .glass {
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
+      brightness(var(--glass-brightness));
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
+      brightness(var(--glass-brightness));
+  }
+  #scale-editor .sheet,
+  #about .sheet {
+    background: hsl(var(--glass-tint) / var(--glass-alpha));
+    border-color: rgba(255, 255, 255, 0.14);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09);
+  }
+  #panel {
+    border-color: rgba(255, 255, 255, 0.14);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09);
+  }
+  #panel-nav {
+    background: hsl(var(--glass-tint) / var(--glass-alpha-nav));
+  }
+  #panel-body {
+    background: hsl(var(--glass-tint) / var(--glass-alpha-body));
   }
 }
 
@@ -682,6 +701,7 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   /* Collapse before scripts run; expanded overrides this default. */
   #panel:not(.expanded) #panel-body { display: none; }
   #panel:not(.expanded) #tabs { display: none; }
+  #panel:not(.expanded) #panel-nav { padding-bottom: 16px; }
   /* A bar atop the band; js/app.js labels it. */
   #sheet-handle {
     display: block;

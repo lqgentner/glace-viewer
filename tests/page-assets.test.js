@@ -235,3 +235,19 @@ test("the wordmark floats over the map and lets drags through", () => {
   const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
   assert.match(css, /#title \{[^}]*pointer-events: none/);
 });
+
+test("the panel's band and body tint one glass pane separately", () => {
+  const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+  const start = css.indexOf("@supports (backdrop-filter");
+  const block = css.slice(start, css.indexOf("\n}\n", start));
+  assert.match(
+    block,
+    /#panel-nav \{[^}]*background: hsl\(var\(--glass-tint\) \/ var\(--glass-alpha-nav\)\)/,
+  );
+  assert.match(
+    block,
+    /#panel-body \{[^}]*background: hsl\(var\(--glass-tint\) \/ var\(--glass-alpha-body\)\)/,
+  );
+  assert.doesNotMatch(block, /#panel,[^{]*\{[^}]*--glass-alpha\b/);
+  assert.doesNotMatch(block, /#panel \{[^}]*background: hsl/);
+});
