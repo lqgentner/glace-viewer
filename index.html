@@ -73,28 +73,54 @@
     <div id="panel-shell">
       <div id="panel-glass" aria-hidden="true"></div>
       <aside id="panel">
-        <header>
-          <p id="selection-summary">Loading layers…</p>
+        <!-- The navigation band: the handle (phones only), the legend, the tabs. -->
+        <div id="panel-nav">
+          <button type="button" id="sheet-handle" aria-controls="panel-body"
+                  aria-expanded="false"></button>
 
-          <div class="header-actions">
-            <button type="button" id="about-open" aria-haspopup="dialog"
-                    aria-controls="about">About</button>
-            <button type="button" id="panel-toggle" aria-expanded="true" aria-controls="panel-body">
-              <span class="chevron" aria-hidden="true"
-                    ><svg viewBox="0 0 12 12" width="12" height="12" fill="none"
-                          stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
-                          stroke-linejoin="round"><path d="M2.5 4.5 6 8 9.5 4.5" /></svg
-                  ></span>
-            </button>
+          <!-- Placeholders under the loading title hold the loaded legend's size.
+               js/rasters.js fills it in, or puts a one-line note in the ramp's
+               place. -->
+          <section id="legend" aria-busy="true">
+            <div class="control-head">
+              <span id="selection-summary">Loading layers…</span>
+              <span id="cmap" class="visually-hidden"></span>
+              <!-- Opens the scale editor; a click anywhere on the legend presses
+                   this button. -->
+              <button type="button" id="legend-edit" aria-label="Edit the scale"
+                      aria-controls="scale-editor" aria-expanded="false">Edit</button>
+            </div>
+            <!-- One height for the ramp with its limits, the channel row, or the note. -->
+            <div id="legend-slot">
+              <div id="legend-bar"></div>
+              <div id="legend-labels">
+                <span class="limit"><span id="legend-min">&nbsp;</span><span class="unit"></span
+                  ><span class="visually-hidden" hidden> (custom)</span></span>
+                <span class="limit"><span id="legend-max"></span><span class="unit"></span
+                  ><span class="visually-hidden" hidden> (custom)</span></span>
+              </div>
+              <!-- False-color channel legend, shown in place of the color ramp. -->
+              <div id="legend-channels" hidden></div>
+              <p id="legend-note" hidden></p>
+            </div>
+          </section>
+
+          <div id="tabs" role="tablist" aria-label="Controls">
+            <button type="button" role="tab" id="tab-layers" aria-controls="raster-controls"
+                    aria-selected="true">Layers</button>
+            <button type="button" role="tab" id="tab-inventories"
+                    aria-controls="inventories-section" aria-selected="false">Inventories</button>
+            <button type="button" role="tab" id="tab-map" aria-controls="extras"
+                    aria-selected="false">Map</button>
           </div>
-        </header>
+        </div>
 
         <div id="panel-body">
 
           <!-- While the catalog loads, the controls are invisible placeholders the size
                of the loaded ones, under a loading line, so the panel keeps its size.
-               js/rasters.js fills them in, or hides them all if the catalog fails. -->
-          <div id="raster-controls" aria-busy="true">
+               js/rasters.js fills them in, or hides their tab if the catalog fails. -->
+          <div id="raster-controls" role="tabpanel" aria-labelledby="tab-layers" aria-busy="true">
             <p id="raster-loading">Loading layers…</p>
 
             <section class="control">
@@ -127,81 +153,46 @@
               <input type="range" id="opacity" min="0" max="100" value="100" step="1" />
             </section>
 
-            <section id="legend" class="control">
-              <div class="control-head">
-                <span class="label">Scale <span id="cmap"></span></span>
-                <!-- Opens the scale editor below; a click anywhere on the legend
-                     presses this button. -->
-                <button type="button" id="legend-edit" aria-label="Edit the scale"
-                        aria-controls="scale-editor" aria-expanded="false">Edit</button>
-              </div>
-              <div id="legend-bar"></div>
-              <div id="legend-labels">
-                <span class="limit"><span id="legend-min">&nbsp;</span><span class="unit"></span
-                  ><span class="visually-hidden" hidden> (custom)</span></span>
-                <span class="limit"><span id="legend-max"></span><span class="unit"></span
-                  ><span class="visually-hidden" hidden> (custom)</span></span>
-              </div>
-              <!-- False-color channel legend, shown in place of the color ramp. -->
-              <div id="legend-channels" hidden></div>
-            </section>
-
             <!-- The default layer's four lines: product, detail, method, dates. -->
             <p id="layer-info">&nbsp;<br />&nbsp;<br />&nbsp;<br />&nbsp;</p>
           </div>
 
-          <hr />
-
-          <!-- Hidden if the inventory index cannot be read or lists none. -->
-          <details class="control" id="inventories-section">
-            <summary id="inventories-toggle">
-              <span>Glacier inventories</span><span class="chevron" aria-hidden="true"
-                    ><svg viewBox="0 0 12 12" width="12" height="12" fill="none"
-                          stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
-                          stroke-linejoin="round"><path d="M2.5 4.5 6 8 9.5 4.5" /></svg
-                  ></span>
-            </summary>
+          <!-- Its tab hides if the inventory index cannot be read or lists none. -->
+          <section id="inventories-section" role="tabpanel" aria-labelledby="tab-inventories"
+                   hidden>
             <div id="inventories"><p class="loading">Loading inventories…</p></div>
-          </details>
+          </section>
 
-          <!-- Hide this separator with empty inventories. -->
-          <hr id="inventories-rule" />
+          <section id="extras" role="tabpanel" aria-labelledby="tab-map" hidden>
+            <section class="control">
+              <div id="basemap-style" class="segmented" role="radiogroup" aria-label="Basemap"></div>
+            </section>
 
-          <details class="control" id="extras-section">
-            <summary id="extras-toggle">
-              <span>Map options</span><span class="chevron" aria-hidden="true"
-                    ><svg viewBox="0 0 12 12" width="12" height="12" fill="none"
-                          stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
-                          stroke-linejoin="round"><path d="M2.5 4.5 6 8 9.5 4.5" /></svg
-                  ></span>
-            </summary>
-            <div id="extras">
-              <section class="control">
-                <div id="basemap-style" class="segmented" role="radiogroup" aria-label="Basemap"></div>
-              </section>
+            <section class="control checkbox">
+              <input type="checkbox" id="basemap" checked />
+              <label for="basemap">Basemap labels</label>
+            </section>
 
-              <section class="control checkbox">
-                <input type="checkbox" id="basemap" checked />
-                <label for="basemap">Basemap labels</label>
-              </section>
+            <section class="control checkbox" id="hillshade-row">
+              <input type="checkbox" id="hillshade" />
+              <label for="hillshade">Terrain shading</label>
+            </section>
+            <section class="control" id="hillshade-strength-row" hidden>
+              <label for="hillshade-strength">
+                Shading strength <output id="hillshade-strength-value">55%</output>
+              </label>
+              <input type="range" id="hillshade-strength" min="0" max="100" value="55" step="1" />
+            </section>
 
-              <section class="control checkbox" id="hillshade-row">
-                <input type="checkbox" id="hillshade" />
-                <label for="hillshade">Terrain shading</label>
-              </section>
-              <section class="control" id="hillshade-strength-row" hidden>
-                <label for="hillshade-strength">
-                  Shading strength <output id="hillshade-strength-value">55%</output>
-                </label>
-                <input type="range" id="hillshade-strength" min="0" max="100" value="55" step="1" />
-              </section>
+            <section class="control checkbox" id="grid-row">
+              <input type="checkbox" id="grid" />
+              <label for="grid">Catalog tile grid</label>
+            </section>
+          </section>
 
-              <section class="control checkbox" id="grid-row">
-                <input type="checkbox" id="grid" />
-                <label for="grid">Catalog tile grid</label>
-              </section>
-            </div>
-          </details>
+          <!-- Ends the scrolling content, after whichever tab is open. -->
+          <button type="button" id="about-open" aria-haspopup="dialog"
+                  aria-controls="about">About this map</button>
         </div>
       </aside>
     </div>

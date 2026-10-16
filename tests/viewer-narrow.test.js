@@ -31,7 +31,7 @@ test("a narrow screen is collapsed by the stylesheet, before any script runs", (
 });
 
 /* On a viewport too short for the controls, whichever box scrolls decides
- * whether the collapse button can be reached at all. Stylesheet again, because
+ * whether the handle can be reached at all. Stylesheet again, because
  * jsdom lays nothing out. */
 test("the controls scroll under the header rather than taking it with them", () => {
   const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
@@ -56,26 +56,17 @@ test("a narrow viewport opens with the panel collapsed", async () => {
   await settle();
 
   assert.ok(el("panel").classList.contains("collapsed"), "the controls do not cover the map");
-  assert.equal(el("panel-toggle").getAttribute("aria-expanded"), "false");
-  assert.match(el("panel-toggle").getAttribute("aria-label"), /show/i);
+  assert.equal(el("sheet-handle").getAttribute("aria-expanded"), "false");
+  assert.match(el("sheet-handle").getAttribute("aria-label"), /show/i);
 
-  // The title bar is what is left, so the reader can still see what this is
-  // and get the controls back. The heading is the wordmark, so what names the
-  // page here is the image's alt text.
+  // The wordmark is what names the page, through the image's alt text.
   assert.equal(el("title").querySelector("img").alt, "GLACE");
 
-  el("panel-toggle").click();
+  el("sheet-handle").click();
   assert.ok(el("panel").classList.contains("expanded"), "and a tap brings them back");
-  assert.match(el("panel-toggle").getAttribute("aria-label"), /hide/i);
+  assert.equal(el("sheet-handle").getAttribute("aria-expanded"), "true");
+  assert.match(el("sheet-handle").getAttribute("aria-label"), /hide/i);
 
-  // The collapsed header is one large target; open, it leaves the text alone.
-  el("panel-toggle").click();
-  el("selection-summary").click();
-  assert.ok(el("panel").classList.contains("expanded"), "a tap on the summary opens it");
-  assert.equal(el("panel-toggle").getAttribute("aria-expanded"), "true");
-
-  el("panel-toggle").click();
-  el("about-open").click();
-  assert.ok(el("panel").classList.contains("collapsed"), "About opens only its dialog");
-  assert.equal(el("about").open, true);
+  el("sheet-handle").click();
+  assert.ok(el("panel").classList.contains("collapsed"), "and hides them again");
 });

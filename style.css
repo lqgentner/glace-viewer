@@ -108,10 +108,7 @@ html, body {
 #panel {
   /* Position the panel above its glass sibling. */
   position: relative;
-  /*
-   * Allow flex shrinking; only panel-body scrolls so the collapse button stays
-   * reachable.
-   */
+  /* Allow flex shrinking; only panel-body scrolls, so the band stays in view. */
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -153,16 +150,52 @@ html, body {
   }
 }
 
+/* The navigation band: the handle on phones, the legend and the tabs. */
+#panel-nav { flex: none; }
+#sheet-handle { display: none; }
+
+/* The legend's title line is the selection; Edit sits at its right. */
+#selection-summary {
+  flex: 1;
+  min-width: 0;
+  font-size: calc(13px * var(--text-scale));
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+/* One height for the ramp with its limits, the channel row, or the note. */
+#legend-slot { min-height: calc(13px + 11px * 1.45 * var(--text-scale)); }
+#legend-note {
+  margin: 0;
+  font-size: calc(12px * var(--text-scale));
+  color: var(--muted);
+}
+/* While the catalog loads, the title says so over invisible placeholders. */
+#legend[aria-busy="true"] :is(#legend-slot, #legend-edit) { visibility: hidden; }
+
 /*
- * The summary and the header buttons share the first row.
- * Bottom spacing is in the collapsible body, so the closed panel fits its title.
+ * Pills as wide as their labels, spread across the band. Only the selected one
+ * is outlined; the transparent border keeps the others the same size.
  */
-#panel header {
+#tabs {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 12px;
+}
+#tabs [role="tab"] {
   flex: none;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: start;
-  column-gap: 8px;
+  padding: 3px 14px;
+  font: inherit;
+  font-size: calc(12px * var(--text-scale));
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 0.14s ease;
+}
+#tabs [aria-selected="true"] { color: var(--text); border-color: var(--accent); }
+@media (hover: hover) {
+  #tabs [role="tab"]:hover { color: var(--text); }
 }
 /*
  * Extend the body to place the native scrollbar inside the panel padding. A stable
@@ -206,13 +239,6 @@ html, body {
 }
 
 /*
- * CSS supplies the collapsed mobile state before deferred scripts run, preventing a
- * flash of the full panel.
- */
-#panel.collapsed #panel-body { display: none; }
-/* js/app.js opens the panel on a click anywhere on its collapsed header. */
-#panel.collapsed header { cursor: pointer; }
-/*
  * The wordmark floats over the map. Its viewBox pads the outline, so the img is
  * taller than the 18px glyphs; drags pass through to the map.
  */
@@ -231,28 +257,11 @@ html, body {
     bottom: auto;
   }
 }
-#panel #selection-summary {
-  grid-area: 1 / 1;
-  margin: 6px 0 0;
-  font-size: calc(12px * var(--text-scale));
-  color: var(--muted);
-}
-#panel #selection-summary { color: var(--text); font-variant-numeric: tabular-nums; }
-#panel:not(.collapsed) #selection-summary { display: none; }
-
 /*
- * The panel's header buttons and the dialogs' close buttons: boxed, in each
- * surface's top right corner 10px from its edges, so they read above the
- * headings beside them. The panel's padding is 16px, the dialogs' 10px by 16px.
+ * The dialogs' close buttons: boxed, in each surface's top right corner 10px
+ * from its edges, so they read above the headings beside them. The dialogs'
+ * padding is 10px by 16px.
  */
-.header-actions {
-  grid-area: 1 / 2;
-  display: flex;
-  gap: 6px;
-  margin: -6px -6px 0 0;
-}
-#panel-toggle,
-#about-open,
 :is(#scale-editor, #about) .close {
   flex: none;
   display: flex;
@@ -272,19 +281,25 @@ html, body {
     background-color 0.14s ease,
     border-color 0.14s ease;
 }
-#panel-toggle,
-#about-open { margin: 0; }
-/* Outlined without fill, so the panel toggle beside it reads as the stronger. */
+/* Outlined without fill, across the end of the scrolling content. */
 #about-open {
-  width: auto;
-  padding: 0 9px;
+  display: block;
+  width: 100%;
+  margin: 16px 0 0;
+  padding: 6px 12px;
   font: inherit;
   font-size: calc(12px * var(--text-scale));
+  color: var(--text);
   background-color: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  cursor: pointer;
+  transition:
+    background-color 0.14s ease,
+    border-color 0.14s ease;
 }
-:is(#panel-toggle, #scale-editor .close, #about .close) svg { width: 14px; height: 14px; }
+:is(#scale-editor, #about) .close svg { width: 14px; height: 14px; }
 @media (hover: hover) {
-  #panel-toggle:hover,
   #about-open:hover,
   :is(#scale-editor, #about) .close:hover {
     color: #fff;
@@ -294,9 +309,7 @@ html, body {
 }
 
 .control { margin-bottom: 14px; }
-.control > label,
-.control-head > label,
-.control-head > .label {
+.control > label {
   display: block;
   margin-bottom: 6px;
   font-size: calc(11px * var(--text-scale));
@@ -306,15 +319,13 @@ html, body {
 }
 .control output { color: var(--text); font-variant-numeric: tabular-nums; }
 
-/* Keep section labels and adjacent credit buttons on one baseline. */
+/* The legend's title and its Edit button on one line. */
 .control-head {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-bottom: 6px;
 }
-
-.control-head > :is(label, .label) { flex: 1; margin-bottom: 0; }
 
 .control.checkbox { display: flex; align-items: center; gap: 8px; }
 .control.checkbox > label {
@@ -402,6 +413,8 @@ input[type="checkbox"]:checked {
 
 input[type="checkbox"]:focus-visible,
 #legend-edit:focus-visible,
+#sheet-handle:focus-visible,
+#tabs [role="tab"]:focus-visible,
 .inventory .swatch:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
@@ -411,22 +424,6 @@ input[type="checkbox"]:focus-visible,
 /* Remove the native margin so the full-width slider fits its column. */
 input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
 
-/* Shared collapse chevron: down while closed, up while open. */
-.chevron { display: flex; transition: transform 0.15s ease; }
-.chevron.up,
-details[open] > summary .chevron { transform: rotate(180deg); }
-
-/*
- * Use a translucent separator over bright or dark rasters. The first declaration is
- * the fallback for browsers without color-mix().
- */
-#panel hr {
-  height: 0;
-  margin: 20px 0 18px;
-  border: 0;
-  border-top: 1px solid var(--border);
-  border-top-color: color-mix(in srgb, var(--muted) 45%, transparent);
-}
 /*
  * While the catalog loads, the raster controls are invisible placeholders that keep
  * the panel's size, under a loading line.
@@ -441,10 +438,6 @@ details[open] > summary .chevron { transform: rotate(180deg); }
   color: var(--muted);
 }
 #inventories .loading { margin: 0; }
-
-/* Hide the separators under hidden sections to avoid leading or adjacent rules. */
-#raster-controls[hidden] + hr,
-#inventories-section[hidden] + #inventories-rule { display: none; }
 
 #hillshade-strength-row { margin-top: -6px; padding-left: 22px; }
 
@@ -577,24 +570,16 @@ details[open] > summary .chevron { transform: rotate(180deg); }
   font-variant-numeric: tabular-nums;
 }
 
-/* The scale's name reads as a value after its label. */
-#cmap {
-  margin-left: 4px;
-  text-transform: none;
-  letter-spacing: 0;
-  color: var(--text);
-}
 #legend-labels .limit { display: inline-flex; align-items: baseline; }
 #legend-labels .unit { margin-left: 4px; }
 /* A changed limit takes the accent. */
-#legend-labels .modified,
-#legend-channels .modified { color: var(--accent); }
+#legend-labels .modified { color: var(--accent); }
 
+/* One line of channels; their limits are only spoken. */
 #legend-channels {
-  display: grid;
-  grid-template-columns: auto auto auto 1fr;
-  gap: 2px 7px;
+  display: flex;
   align-items: center;
+  gap: 5px;
   font-size: calc(11px * var(--text-scale));
   color: var(--muted);
   font-variant-numeric: tabular-nums;
@@ -609,7 +594,7 @@ details[open] > summary .chevron { transform: rotate(180deg); }
   color: var(--text);
 }
 #legend-channels .channel { font-weight: 600; }
-#legend-channels .range { text-align: right; }
+#legend-channels .swatch:not(:first-child) { margin-left: 9px; }
 
 /* Tabular dates prevent jitter when switching years. */
 #layer-info {
@@ -694,14 +679,29 @@ details[open] > summary .chevron { transform: rotate(180deg); }
     width: auto;
     max-height: 46%;
   }
-  /*
-   * Collapse before scripts run; expanded overrides this default. The summary line
-   * shows with it, or the header grows when the scripts run.
-   */
+  /* Collapse before scripts run; expanded overrides this default. */
   #panel:not(.expanded) #panel-body { display: none; }
-  #panel:not(.expanded) #selection-summary { display: block; }
+  #panel:not(.expanded) #tabs { display: none; }
+  /* A bar atop the band; js/app.js labels it. */
+  #sheet-handle {
+    display: block;
+    position: relative;
+    width: 36px;
+    height: 4px;
+    margin: -6px auto 12px;
+    padding: 0;
+    background: rgba(255, 255, 255, 0.35);
+    border: 0;
+    border-radius: 2px;
+    cursor: pointer;
+  }
+  #sheet-handle::after {
+    content: "";
+    position: absolute;
+    inset: -10px -20px;
+  }
 
-  /* Above the scale bar and attribution, clear of the panel toggle. */
+  /* Above the scale bar and attribution. */
   #notices {
     top: auto;
     bottom: 64px;
@@ -880,33 +880,7 @@ details[open] > summary .chevron { transform: rotate(180deg); }
   color: var(--text);
 }
 
-/* Section summaries: the chevron replaces the disclosure marker. */
-#inventories-toggle,
-#extras-toggle {
-  display: flex;
-  list-style: none;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  font-size: calc(11px * var(--text-scale));
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--muted);
-  cursor: pointer;
-}
-/* Space the header from its content only while open. Closed, it sits midway
- * between the rules: 18px under the rule above, as the rule below keeps. */
-details[open] > :is(#inventories-toggle, #extras-toggle) { margin-bottom: 8px; }
-#panel details:not([open]) + hr { margin-top: 18px; }
-#inventories-toggle::-webkit-details-marker,
-#extras-toggle::-webkit-details-marker { display: none; }
-@media (hover: hover) {
-  #inventories-toggle:hover,
-  #extras-toggle:hover { color: var(--text); }
-}
-
 #extras .control:last-child { margin-bottom: 0; }
-#extras-section { margin-bottom: 0; }
 
 .maplibregl-popup-content hr {
   height: 0;
@@ -1258,34 +1232,26 @@ details[open] > :is(#inventories-toggle, #extras-toggle) { margin-bottom: 8px; }
 @media (pointer: coarse) {
   :root { --text-scale: 1.15; --box: 20px; --ctrl-radius: var(--surface-radius); }
 
-  #panel-toggle,
-  #about-open,
   :is(#scale-editor, #about) .close,
   .credit,
   .inventory .swatch,
-  #inventories-toggle,
-  #extras-toggle { position: relative; }
-  #panel-toggle::after,
-  #about-open::after,
+  #tabs [role="tab"] { position: relative; }
   :is(#scale-editor, #about) .close::after,
   .credit::after,
   .inventory .swatch::after,
-  #inventories-toggle::after,
-  #extras-toggle::after {
+  #tabs [role="tab"]::after {
     content: "";
     position: absolute;
     inset: -11px;
   }
-  /* The gap keeps the two header buttons' tap areas apart. */
-  .header-actions { gap: 10px; }
-  #about-open::after { inset: -11px 0 -11px -11px; }
   .credit { width: 24px; height: 24px; }
   .credit svg { width: 18px; height: 18px; }
   .credit::after { inset: -10px; }
   .inventory .swatch::after { inset: -8px; }
-  /* Stop short of the first control below the open summary's 8px margin. */
-  #inventories-toggle::after,
-  #extras-toggle::after { inset: -12px 0 -8px; }
+  /* Taller, not wider, so neighboring pills keep apart. */
+  #tabs [role="tab"]::after { inset: -9px 0; }
+  #sheet-handle::after { inset: -16px -40px; }
+  #about-open { padding-block: 11px; }
 
   .segmented button { padding-block: 10px; }
 

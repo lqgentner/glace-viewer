@@ -1,6 +1,7 @@
 /*
- * Map-independent DOM helpers, status messages, controls, and popovers. External
- * metadata must enter through nodes or textContent, never HTML interpolation.
+ * Map-independent DOM helpers, status messages, controls, tabs, and popovers.
+ * External metadata must enter through nodes or textContent, never HTML
+ * interpolation.
  */
 
 /* Match the CSS breakpoint in style.css. */
@@ -135,13 +136,58 @@ export function buildSegmented(node, entries, onSelect) {
   rove(node);
 }
 
-/** Make the checked choice, or else the first enabled one, the group's tab stop. */
+/**
+ * Make the checked or selected choice, or else the first enabled one, the
+ * group's tab stop. Hidden choices are skipped.
+ */
 export function rove(node) {
-  const buttons = [...node.children];
-  const stop =
-    buttons.find((button) => button.getAttribute("aria-checked") === "true") ??
-    buttons.find((button) => !button.disabled);
-  for (const button of buttons) button.tabIndex = button === stop ? 0 : -1;
+  const buttons = [...node.children].filter((button) => !button.hidden);
+  const on = (button) =>
+    button.getAttribute("aria-checked") === "true" || button.getAttribute("aria-selected") === "true";
+  const stop = buttons.find(on) ?? buttons.find((button) => !button.disabled);
+  for (const button of node.children) button.tabIndex = button === stop ? 0 : -1;
+}
+
+/* ---------- tabs ---------- */
+
+/*
+ * A tab list whose tabs name their panels with aria-controls. The left and right
+ * arrow keys select the next visible tab, and Tab stops at the selected one.
+ */
+export function buildTabs(list) {
+  for (const tab of list.children) tab.addEventListener("click", () => selectTab(tab));
+  list.addEventListener("keydown", (event) => {
+    const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
+    if (!step) return;
+    event.preventDefault();
+    const tabs = [...list.children].filter((tab) => !tab.hidden);
+    const at = tabs.indexOf(document.activeElement);
+    const next = tabs[(at + step + tabs.length) % tabs.length];
+    selectTab(next);
+    next.focus();
+  });
+  rove(list);
+}
+
+/** Select `tab` and show its panel alone. */
+export function selectTab(tab) {
+  for (const other of tab.parentElement.children) {
+    const selected = other === tab;
+    other.setAttribute("aria-selected", String(selected));
+    el(other.getAttribute("aria-controls")).hidden = !selected;
+  }
+  rove(tab.parentElement);
+}
+
+/** Hide or show a tab; hiding the selected one selects the first still shown. */
+export function hideTab(tab, hidden) {
+  tab.hidden = hidden;
+  if (hidden && tab.getAttribute("aria-selected") === "true") {
+    const first = [...tab.parentElement.children].find((other) => !other.hidden);
+    if (first) selectTab(first);
+  } else {
+    rove(tab.parentElement);
+  }
 }
 
 /* ---------- popovers ---------- */

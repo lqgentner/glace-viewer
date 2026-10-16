@@ -59,8 +59,9 @@ const pick = async (row, value) => {
   await settle();
 };
 
-test("the legend shows its color map and limits as text, with one edit button", () => {
+test("the legend names its color map and shows its limits as text, with one edit button", () => {
   assert.equal(el("cmap").textContent, "lipari");
+  assert.ok(el("cmap").classList.contains("visually-hidden"), "the scale editor shows it");
   assert.deepEqual(legend(), ["0.10", "0.75"]);
   assert.equal(el("legend-edit").hidden, false);
   assert.equal(el("legend").querySelector("input"), null, "nothing is edited in place");
@@ -398,6 +399,7 @@ test("false color edits its three channels, and the presets fit all three", asyn
   const cells = [...el("legend-channels").children].map((node) => node.textContent);
   assert.equal(cells[11], "0.80 to 2.00 (custom)", "the legend shows the new limit, and says it is changed");
   assert.ok(el("legend-channels").querySelector(".modified"), "marked as changed");
+  assert.ok(el("legend-channels").querySelector(".modified").closest(".visually-hidden"), "for screen readers");
   assert.equal(off("range-reset"), false);
 
   // The ratio's limits stay on its axis.

@@ -116,11 +116,19 @@ test("a missing combination does not keep the previous layer's legend", async ()
   await pick("pol", "VH");
   input(el("year"), "0");
   await settle();
-  assert.equal(el("status").textContent, "No Backscatter VH layer for 2022");
-  assert.equal(el("legend").hidden, true, "no legend for a layer that is not drawn");
+  // The legend keeps its title and says so in the ramp's place, at the same height.
+  assert.equal(el("legend").hidden, false, "the band keeps its legend");
+  assert.equal(el("legend-bar").hidden, true, "no ramp for a layer that is not drawn");
+  assert.equal(el("legend-labels").hidden, true);
+  assert.equal(el("legend-note").hidden, false);
+  assert.equal(el("legend-note").textContent, "No Backscatter VH layer for 2022");
+  assert.equal(el("legend-edit").hidden, true, "nothing to edit");
+  assert.equal(el("status").hidden, true, "the status line does not repeat it");
   input(el("year"), "1");
   await settle();
-  assert.equal(el("legend").hidden, false, "and it returns with the layer");
+  assert.equal(el("legend-note").hidden, true, "and the ramp returns with the layer");
+  assert.equal(el("legend-bar").hidden, false);
+  assert.equal(el("legend-edit").hidden, false);
   await pick("product", "COH12");
   await pick("pol", "VV");
 });

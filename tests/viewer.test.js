@@ -38,10 +38,11 @@ test("the viewer", async (t) => {
   await load("js/app.js");
   const { map } = page;
   // While the catalog loads, the panel says so in place of its controls, whose
-  // placeholders keep it at its loaded size; the collapsed panel's summary says
-  // so too. Nothing over the map repeats it.
+  // placeholders keep it at its loaded size; the legend's title says so too.
+  // Nothing over the map repeats it.
   const busy = () => el("raster-controls").getAttribute("aria-busy") === "true";
   assert.equal(busy(), true, "loading before the catalog");
+  assert.equal(el("legend").getAttribute("aria-busy"), "true", "and so is the legend");
   assert.equal(el("raster-controls").hidden, false, "the placeholders hold the space");
   assert.equal(el("raster-loading").textContent, "Loading layers…");
   assert.equal(el("selection-summary").textContent, "Loading layers…");
@@ -49,23 +50,27 @@ test("the viewer", async (t) => {
   assert.equal(el("quantity-row").hidden, false, "QA rows are expected until known absent");
   await settle();
   assert.equal(busy(), false, "the controls once it has loaded");
+  assert.equal(el("legend").hasAttribute("aria-busy"), false);
 
   await t.test("a wide viewport opens with the panel expanded", async () => {
-    const collapsed = () => el("panel").classList.contains("collapsed");
-    assert.equal(collapsed(), false);
+    assert.equal(el("panel").classList.contains("collapsed"), false);
     assert.equal(el("panel").classList.contains("expanded"), true);
-    assert.equal(el("panel-toggle").getAttribute("aria-expanded"), "true");
+    assert.equal(el("sheet-handle").getAttribute("aria-expanded"), "true");
+  });
 
-    el("panel-toggle").click();
-    assert.equal(collapsed(), true, "and can still be collapsed by hand");
-    assert.equal(el("panel").classList.contains("expanded"), false);
-    assert.equal(el("panel-toggle").getAttribute("aria-expanded"), "false");
-    const up = () => el("panel-toggle").querySelector(".chevron").classList.contains("up");
-    assert.equal(up(), false, "the chevron points down to the hidden controls");
+  await t.test("the controls are three tabs, Layers first", async () => {
+    const selected = (id) => el(id).getAttribute("aria-selected") === "true";
+    assert.equal(selected("tab-layers"), true);
+    assert.equal(el("raster-controls").hidden, false);
+    assert.equal(el("inventories-section").hidden, true);
+    assert.equal(el("extras").hidden, true);
+    assert.equal(el("panel").querySelectorAll("details").length, 0, "nothing collapses any more");
 
-    el("panel-toggle").click();
-    assert.equal(collapsed(), false);
-    assert.equal(up(), true);
+    el("tab-map").click();
+    assert.equal(selected("tab-map"), true);
+    assert.equal(el("extras").hidden, false);
+    assert.equal(el("raster-controls").hidden, true);
+    el("tab-layers").click();
   });
 
   await t.test("the scale bar sits above the expanded credit at the bottom right", () => {
@@ -136,7 +141,7 @@ test("the viewer", async (t) => {
     assert.deepEqual(glaceLayers(map), ["glace-coh12_vv-2023"]);
     assert.ok(visible(map, "glace-coh12_vv-2023"));
     assert.equal(el("year-value").textContent, "2023");
-    assert.equal(el("selection-summary").textContent, "Coherence · VV · 2023", "for the collapsed panel");
+    assert.equal(el("selection-summary").textContent, "Coherence · VV · 2023", "the legend's title");
     assert.equal(el("year").getAttribute("aria-valuetext"), "2023", "the slider speaks the year, not its index");
   });
 
@@ -184,16 +189,12 @@ test("the viewer", async (t) => {
     assert.equal(el("legend-credit"), null);
   });
 
-  await t.test("the additional layers start collapsed", async () => {
-    assert.equal(el("extras-section").open, false);
+  await t.test("the map options live in the Map tab", async () => {
     // The toggles moved inside it, and still work from there.
     assert.ok(el("extras").contains(el("hillshade-row")));
     assert.ok(el("extras").contains(el("grid")));
     assert.ok(el("extras").contains(el("basemap")));
     assert.ok(el("extras").contains(el("basemap-style")));
-
-    el("extras-toggle").click();
-    assert.equal(el("extras-section").open, true);
   });
 
   await t.test("the dark flavor's labels are lifted through the flavor, not patched after", async () => {
@@ -315,6 +316,8 @@ test("the viewer", async (t) => {
     assert.equal(el("about-years").textContent, "from 2022 to 2023");
     // The Copernicus notice for modified data names the years it covers.
     assert.equal(el("about-credit-years").textContent, "2022–2023");
+    // One button ends the scrolling controls, after whichever tab is open.
+    assert.equal(el("panel-body").lastElementChild, el("about-open"));
     el("about-open").click();
     assert.equal(about.open, true);
     assert.equal(page.window.document.activeElement, about.querySelector(".close"));
@@ -371,7 +374,8 @@ test("the viewer", async (t) => {
     await settle();
 
     assert.equal(el("year-value").textContent, "2022");
-    assert.equal(el("status").textContent, "No Backscatter VH layer for 2022");
+    assert.equal(el("legend-note").textContent, "No Backscatter VH layer for 2022");
+    assert.equal(el("legend-note").hidden, false);
     assert.equal(el("layer-info").textContent, "");
     assert.equal(
       glaceLayers(map).filter((id) => visible(map, id)).length,
@@ -444,7 +448,7 @@ test("the viewer", async (t) => {
 
   await t.test("the inventory list is built from the index", async () => {
     assert.equal(el("inventories").children.length, 5);
-    assert.equal(el("inventories-section").hidden, false);
+    assert.equal(el("tab-inventories").hidden, false);
     assert.ok(el("inv-sgi2023"), "each row is keyed by inventory id");
   });
 

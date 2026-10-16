@@ -146,6 +146,7 @@ test("a QA raster brings its own color map and stretch", async () => {
   assert.deepEqual([el("legend-min").textContent, el("legend-max").textContent], ["0.0", "80.0"]);
   assert.deepEqual(units(), ["", ""]);
   assert.equal(el("cmap").textContent, "glasgow", "the QA layer's own map");
+  assert.ok(el("cmap").classList.contains("visually-hidden"), "named for screen readers only");
   assert.deepEqual(
     [...el("layer-info").children].map((line) => line.textContent),
     ["Number of contributing observations", "2025-06-24 to 2025-09-22"],
@@ -226,6 +227,15 @@ test("false color is composed, names its channels, and credits the data", async 
     "VV / VH",
     "0.80 to 2.60",
   ]);
+  // One line names the channels; their limits are for screen readers, the
+  // scale editor shows them.
+  const shown = (selector) =>
+    [...el("legend-channels").querySelectorAll(selector)].filter((node) => !node.closest(".visually-hidden"));
+  assert.equal(shown(".swatch").length, 3);
+  assert.deepEqual(shown(".channel").map((node) => node.textContent), ["R", "G", "B"]);
+  assert.deepEqual(shown(".band").map((node) => node.textContent), ["VV", "VH", "VV / VH"]);
+  assert.equal(shown(".range").length, 0);
+  assert.equal(el("legend-channels").querySelectorAll(".visually-hidden > .range").length, 3);
   const source = page.map.getSource("glace-coh12_rgb-2025");
   assert.equal(source.type, "raster");
   assert.deepEqual(source.tiles, ["glace-rgb://glace-coh12_rgb-2025/{z}/{x}/{y}"]);

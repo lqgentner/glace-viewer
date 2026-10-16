@@ -8,7 +8,7 @@ import { addStacked, map, styleReady } from "./map.js";
 import { isNonEmptyString } from "./store.js";
 import { valuesAt } from "./rasters.js";
 import { loadTileGrid } from "./tile-grid.js";
-import { attachPicker, clearStatus, creditButton, el, h, setStatus } from "./ui.js";
+import { attachPicker, clearStatus, creditButton, el, h, hideTab, setStatus } from "./ui.js";
 
 /* ---------- the shared lazy-source lifecycle ---------- */
 
@@ -218,7 +218,7 @@ export async function loadInventories() {
     index = validateInventoryIndex(await response.json());
   } catch {
     // Overlays are optional; the page works without them.
-    el("inventories-section").hidden = true;
+    hideTab(el("tab-inventories"), true);
     return;
   }
 
@@ -248,7 +248,7 @@ export async function loadInventories() {
       ),
     );
   }
-  el("inventories-section").hidden = index.length === 0;
+  hideTab(el("tab-inventories"), index.length === 0);
 }
 
 /* ---------- catalog tile grid ---------- */

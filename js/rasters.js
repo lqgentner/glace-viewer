@@ -10,7 +10,7 @@ import { archive } from "./archive.js";
 import { FALSE_COLOUR, channelValues, compositeLayers, compositeTiles, restretch } from "./composite.js";
 import { isNonEmptyString, readStore } from "./store.js";
 import { COLOR_MAPS } from "./colormaps.js";
-import { buildSegmented, clearStatus, el, h, rove, setStatus, setUrlParams, urlParam } from "./ui.js";
+import { buildSegmented, clearStatus, el, h, hideTab, rove, setStatus, setUrlParams, urlParam } from "./ui.js";
 import { decodePixel, step } from "./values.js";
 import { codeAt, codeRange, compositeCounts, histogramPath, pixelAt, viewCounts } from "./histogram.js";
 
@@ -327,7 +327,6 @@ function selectionName() {
 /* Update controls immediately; map rendering waits for the parsed style. */
 function render() {
   const active = selected();
-  el("legend").hidden = !active;
   if (active) {
     updateLegend(active);
     const failure = failures.get(active.id);
@@ -335,7 +334,8 @@ function render() {
     else clearStatus(STATUS_KEY);
   } else {
     el("layer-info").replaceChildren();
-    setStatus(STATUS_KEY, `No ${selectionName()} for ${state.year}`, "info");
+    legendNote(`No ${selectionName()} for ${state.year}`);
+    clearStatus(STATUS_KEY);
   }
   syncControls();
   followSelection(active);
@@ -419,8 +419,18 @@ const unitSuffix = (layer) =>
 const decimals = (span) => (Math.abs(span) < 5 ? 2 : 1);
 const round = (value, span) => value.toFixed(decimals(span));
 
+/* A one-line message in the ramp's place, so the band keeps its height. */
+function legendNote(text) {
+  for (const id of ["legend-bar", "legend-labels", "legend-channels", "legend-edit", "cmap"]) {
+    el(id).hidden = true;
+  }
+  el("legend-note").textContent = text;
+  el("legend-note").hidden = false;
+}
+
 function updateLegend(layer) {
   const falseColour = layer.polarization === FALSE_COLOUR;
+  el("legend-note").hidden = true;
   el("legend-bar").hidden = falseColour;
   el("legend-labels").hidden = falseColour;
   el("legend-channels").hidden = !falseColour;
@@ -466,7 +476,12 @@ function updateChannelLegend(layer) {
         h("span", { class: "swatch", style: { background: CHANNEL_SWATCHES[at] } }),
         h("span", { class: "channel", style: { color: CHANNEL_SWATCHES[at] }, textContent: "RGB"[at] }),
         h("span", { class: "band", textContent: band.band }),
-        h("span", { class: "range" }, limit("vmin", vmin), " to ", limit("vmax", vmax), unitSuffix(band)),
+        // The limits are spoken; the scale editor shows them.
+        h(
+          "span",
+          { class: "visually-hidden" },
+          h("span", { class: "range" }, limit("vmin", vmin), " to ", limit("vmax", vmax), unitSuffix(band)),
+        ),
       ];
     }),
   );
@@ -1069,12 +1084,14 @@ function initControls(axes) {
 /* ---------- boot ---------- */
 
 /*
- * Hide the raster controls and their placeholders while keeping the independent
+ * Hide the Layers tab and say so in the legend, while keeping the independent
  * map and overlays usable.
  */
 function noRasters(reason) {
-  el("raster-controls").hidden = true;
+  hideTab(el("tab-layers"), true);
   el("selection-summary").hidden = true;
+  el("legend").removeAttribute("aria-busy");
+  legendNote("The GLACE layers could not be loaded.");
   console.warn("rasters:", reason);
   setStatus(
     STATUS_KEY,
@@ -1122,5 +1139,6 @@ export async function loadRasters() {
   initLegend();
   render();
   el("raster-controls").removeAttribute("aria-busy");
+  el("legend").removeAttribute("aria-busy");
   return axes;
 }

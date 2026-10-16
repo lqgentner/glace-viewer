@@ -249,3 +249,49 @@ test("popovers: the button says whether its popover is open, and focus moves in"
   button.click();
   assert.equal(button.getAttribute("aria-expanded"), "false");
 });
+
+test("tabs: a click or the arrow keys select a tab and show only its panel", async () => {
+  const { page, ui } = await loadUi();
+  const { document, KeyboardEvent } = page.window;
+  const list = document.createElement("div");
+  const panels = ["a", "b", "c"].map((id, at) => {
+    const tab = document.createElement("button");
+    tab.id = `tab-${id}`;
+    tab.setAttribute("role", "tab");
+    tab.setAttribute("aria-controls", `panel-${id}`);
+    tab.setAttribute("aria-selected", String(at === 0));
+    list.append(tab);
+    const panel = document.createElement("section");
+    panel.id = `panel-${id}`;
+    panel.hidden = at !== 0;
+    return panel;
+  });
+  document.body.append(list, ...panels);
+  ui.buildTabs(list);
+  const tabs = [...list.children];
+  const selected = () => tabs.filter((tab) => tab.getAttribute("aria-selected") === "true");
+  const shown = () => panels.filter((panel) => !panel.hidden);
+  const stops = () => tabs.map((tab) => tab.tabIndex);
+  assert.deepEqual(stops(), [0, -1, -1], "Tab stops at the selected tab");
+
+  tabs[1].click();
+  assert.deepEqual(selected(), [tabs[1]]);
+  assert.deepEqual(shown(), [panels[1]], "its panel shows, the others hide");
+  assert.deepEqual(stops(), [-1, 0, -1]);
+
+  tabs[2].click();
+  tabs[2].focus();
+  tabs[2].dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+  assert.deepEqual(selected(), [tabs[0]], "from the last round to the first");
+  assert.deepEqual(shown(), [panels[0]]);
+  assert.equal(document.activeElement, tabs[0]);
+
+  ui.hideTab(tabs[0], true);
+  assert.equal(tabs[0].hidden, true);
+  assert.deepEqual(selected(), [tabs[1]], "hiding the selected tab selects the first visible one");
+  assert.deepEqual(shown(), [panels[1]]);
+  assert.deepEqual(stops(), [-1, 0, -1]);
+  tabs[1].focus();
+  tabs[1].dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }));
+  assert.deepEqual(selected(), [tabs[2]], "the arrow keys skip a hidden tab");
+});

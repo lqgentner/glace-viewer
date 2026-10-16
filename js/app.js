@@ -15,6 +15,7 @@ import { grid, loadInventories } from "./overlays.js";
 import { loadRasters } from "./rasters.js";
 import {
   buildSegmented,
+  buildTabs,
   creditButton,
   el,
   NARROW_VIEWPORT,
@@ -41,13 +42,11 @@ function setPanelOpen(open) {
   // Set both classes to override the CSS default on either side of the breakpoint.
   el("panel").classList.toggle("expanded", open);
   el("panel").classList.toggle("collapsed", !open);
-  const toggle = el("panel-toggle");
-  toggle.setAttribute("aria-expanded", String(open));
+  const handle = el("sheet-handle");
+  handle.setAttribute("aria-expanded", String(open));
   const action = open ? "Hide the controls" : "Show the controls";
-  toggle.title = action;
-  toggle.setAttribute("aria-label", action);
-  // The chevron points up while the panel is open.
-  toggle.querySelector(".chevron").classList.toggle("up", open);
+  handle.title = action;
+  handle.setAttribute("aria-label", action);
 }
 
 /*
@@ -83,13 +82,9 @@ function showAboutYears(years) {
 
 function initControls() {
   initAbout();
-  el("panel-toggle").addEventListener("click", (event) => {
+  buildTabs(el("tabs"));
+  el("sheet-handle").addEventListener("click", (event) => {
     setPanelOpen(event.currentTarget.getAttribute("aria-expanded") !== "true");
-  });
-  // A tap anywhere on the collapsed header opens the panel; its buttons keep their own.
-  el("panel").querySelector("header").addEventListener("click", (event) => {
-    if (event.target.closest("button")) return;
-    if (el("panel").classList.contains("collapsed")) setPanelOpen(true);
   });
   NARROW_VIEWPORT.addEventListener("change", (event) => setPanelOpen(!event.matches));
   setPanelOpen(!NARROW_VIEWPORT.matches);
