@@ -78,6 +78,7 @@ class FakeMap {
     this.calls = [];
     this.controlNodes = [];
     this.controls = [];
+    this.positions = new Map();
     this.terrain = null;
     this.pitch = initialPitch;
     this.center = { lng: options.center[0], lat: options.center[1] };
@@ -91,13 +92,19 @@ class FakeMap {
   /* Custom controls are built rather than ignored: the 3D button is DOM the
    * page owns, so a test has to be able to press it. MapLibre's own controls
    * are stubs with no `onAdd` and contribute nothing. */
-  addControl(control) {
+  addControl(control, position) {
     // Deliberately not recorded in `calls`: that log is what the tests read to
     // assert nothing has been added to the *map* yet, and controls are attached
     // at construction time rather than in response to anything a reader did.
     // `controls` is separate, and holds what each was constructed with.
     this.controls.push(control);
+    this.positions.set(control, position);
     if (typeof control.onAdd === "function") this.controlNodes.push(control.onAdd(this));
+  }
+
+  removeControl(control) {
+    this.controls = this.controls.filter((c) => c !== control);
+    this.positions.delete(control);
   }
 
   setTerrain(spec) {

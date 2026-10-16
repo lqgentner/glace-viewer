@@ -15,7 +15,7 @@ import {
 import { protocol } from "./archive.js";
 import { compositeProtocol } from "./composite.js";
 import { installSky } from "./sky.js";
-import { el, setStatus } from "./ui.js";
+import { el, NARROW_VIEWPORT, setStatus } from "./ui.js";
 
 /* Raster archives are read through the shared, cached readers of js/archive.js. */
 maplibregl.addProtocol("pmtiles", protocol.tile);
@@ -109,16 +109,24 @@ export const map = createMap();
 
 installSky(map, map.getContainer());
 map.addControl(new maplibregl.NavigationControl({ visualizePitch: false }), "top-right");
-// Keep scale-bar placement aligned with the panel clearance in style.css.
-map.addControl(new maplibregl.ScaleControl({ maxWidth: 120, unit: "metric" }), "bottom-left");
 map.addControl(
   new maplibregl.AttributionControl({
-    compact: true,
     /* Keep the renderer credit visible even if the basemap TileJSON fails. */
     customAttribution: '<a href="https://maplibre.org">MapLibre</a>',
   }),
   "bottom-right",
 );
+
+/* Bottom left on phones, where the sheet takes the right; above the credit on desktop. */
+const scaleBar = new maplibregl.ScaleControl({ maxWidth: 120, unit: "metric" });
+let scaleBarPlaced = false;
+function placeScaleBar(narrow) {
+  if (scaleBarPlaced) map.removeControl(scaleBar);
+  map.addControl(scaleBar, narrow ? "bottom-left" : "bottom-right");
+  scaleBarPlaced = true;
+}
+placeScaleBar(NARROW_VIEWPORT.matches);
+NARROW_VIEWPORT.addEventListener("change", (event) => placeScaleBar(event.matches));
 
 map.on("error", (event) => {
   if (event.error) console.warn("maplibre:", event.error.message);

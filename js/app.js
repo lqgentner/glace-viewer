@@ -13,7 +13,15 @@ import {
 } from "./map.js";
 import { grid, loadInventories } from "./overlays.js";
 import { loadRasters } from "./rasters.js";
-import { buildSegmented, creditButton, el, rove, setUrlParams, urlParam } from "./ui.js";
+import {
+  buildSegmented,
+  creditButton,
+  el,
+  NARROW_VIEWPORT,
+  rove,
+  setUrlParams,
+  urlParam,
+} from "./ui.js";
 
 /* What the tile grid shows, in its info popover. */
 const GRID_INFO = {
@@ -28,12 +36,6 @@ const GRID_INFO = {
     },
   ],
 };
-
-/*
- * Match the CSS breakpoint. Crossing it resets the panel to the default for the new
- * viewport width.
- */
-const NARROW_VIEWPORT = window.matchMedia("(max-width: 640px)");
 
 function setPanelOpen(open) {
   // Set both classes to override the CSS default on either side of the breakpoint.

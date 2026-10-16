@@ -68,6 +68,15 @@ test("the viewer", async (t) => {
     assert.equal(up(), true);
   });
 
+  await t.test("the scale bar sits above the expanded credit at the bottom right", () => {
+    const isA = (cls) => (c) => c instanceof globalThis.maplibregl[cls];
+    const scale = map.controls.find(isA("ScaleControl"));
+    const credit = map.controls.find(isA("AttributionControl"));
+    assert.equal(map.positions.get(scale), "bottom-right");
+    assert.ok(map.controls.indexOf(scale) > map.controls.indexOf(credit), "added later, so drawn above");
+    assert.equal(credit.options.compact, undefined, "MapLibre collapses it only on narrow maps");
+  });
+
   await t.test("rotating onto a narrow screen collapses it again", async () => {
     page.setNarrow(true);
     assert.ok(el("panel").classList.contains("collapsed"), "the new width's default wins");

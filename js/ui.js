@@ -3,6 +3,9 @@
  * metadata must enter through nodes or textContent, never HTML interpolation.
  */
 
+/* Match the CSS breakpoint in style.css. */
+export const NARROW_VIEWPORT = window.matchMedia("(max-width: 640px)");
+
 export const el = (id) => document.getElementById(id);
 
 /* ---------- safe DOM construction ---------- */
