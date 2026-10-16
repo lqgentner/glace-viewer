@@ -247,8 +247,8 @@ pressed.
 The panel is a band over three tabs (Layers, Inventories, Map) and an About
 button. The band holds the legend and, on phones, the handle; it stays visible
 when the content is hidden. The 640 px breakpoint is `NARROW_VIEWPORT` in
-`js/ui.js`, which `js/app.js`, `js/map.js` and `js/sheet.js` share; `style.css`
-repeats the query and must agree. Above it the panel is always open and cannot
+`js/ui.js`, which `js/map.js`, `js/rasters.js` and `js/sheet.js` share;
+`style.css` repeats the query and must agree. Above it the panel is always open and cannot
 be minimized. Below it the panel docks to the bottom as a sheet with two
 heights, compact (the band) and open. CSS provides the compact state before
 scripts run, so the page loads without a flash of the open sheet. `js/sheet.js`
@@ -269,16 +269,19 @@ every font size as a multiple of it and text grows uniformly on touch screens.
 On phones the scale bar moves to the bottom left and, with the credit, rides
 the sheet's top edge and fades as it opens. `#notices` rides above them and
 moves to the top, under the wordmark, while the scale editor is open. The
-wordmark sits at the bottom left on desktop and the top left on phones. The
-attribution is expanded on desktop and collapses on narrow maps; the OSMF
-attribution guidelines allow that. A tap that opens a popup in the lower half of
+wordmark sits at the bottom left on desktop and the top left on phones; its
+glyphs carry a uniform semi-transparent white SVG stroke drawn behind the fill,
+not a blurred shadow, and the viewBox is padded so the stroke is not clipped.
+The attribution is expanded on desktop and collapses on narrow maps by
+MapLibre's own compact mode, with no option set; the OSMF attribution
+guidelines allow that. A tap that opens a popup in the lower half of
 the map above the sheet anchors it upward, so it stays in view.
 
 The legend only displays. Its Edit button's `::after` covers the whole legend,
 so a click anywhere on it toggles `#scale-editor`, a non-modal `<dialog>`:
 beside the panel, or docked to the bottom below 640 px, where it replaces the
-sheet and stays above the keyboard. The map stays live, and
-the close button or Escape closes it. It holds one block per band from
+sheet, hides the scale bar and credit, and stays above the keyboard. The map
+stays live, and the close button or Escape closes it. It holds one block per band from
 `#band-template`: one for a value-encoded layer, three for false color, whose
 ratio channel has a fixed axis of 255 steps. Each histogram counts the band in
 the view at the zoom MapLibre draws, coarser past a tile budget sized to the
