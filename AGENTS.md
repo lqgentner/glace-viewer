@@ -59,11 +59,12 @@ A gitignored `tiles` symlink to the catalog root also works. The root is above
 
 | Location | Responsibility |
 | --- | --- |
-| `index.html`, `style.css` | Page structure, initial control values, responsive panel, sky appearance |
+| `index.html`, `style.css` | Page structure, initial control values, responsive panel and sheet, sky appearance |
 | `js/app.js` | Startup and control event wiring |
 | `js/config.js`, `site-config.js` | Resolved settings and deployment overrides |
 | `js/map.js` | Map singleton, style readiness, draw order, basemap, labels, terrain |
 | `js/store.js` | Catalog/style/item reads and validation; one record per raster archive |
+| `js/sheet.js` | The panel as a bottom sheet on phones: drag, snap, the properties CSS reads, popup anchor |
 | `js/rasters.js` | Raster selection, source creation, panel axes, legend and scale editing |
 | `js/composite.js` | False color composed from VV and VH archives via `glace-rgb://` |
 | `js/archive.js` | Shared PMTiles readers, their byte cache, the `pmtiles://` protocol |
@@ -131,10 +132,13 @@ Incomplete layers are skipped with a warning. A failed collection or nominated
 style prevents raster startup; an unreadable item removes that year's layers.
 While the catalog loads, `#raster-controls` is `aria-busy`: its markup holds
 invisible placeholders the size of the default layer's controls under a loading
-line, and the collapsed panel's summary reads "Loading layers…", so the panel
-does not resize when the catalog arrives. Keep the placeholders matched to the
-loaded controls. With no drawable rasters, the controls and the summary hide
-and the status line reports the problem. Inventories and basemap controls initialize independently.
+line, and the band's legend reads "Loading layers…", so the panel and the
+compact sheet do not resize when the catalog arrives. Keep the placeholders
+matched to the loaded controls. A year without the selected combination puts
+"No <layer> for <year>" in the legend's place. With no drawable rasters, the
+Layers tab hides, another is selected, the legend reads that the layers could
+not load, and the status line reports the problem. Inventories and basemap
+controls initialize independently.
 
 PMTiles metadata supplies bounds and attribution through
 `pmtiles.Protocol({ metadata: true })`. Do not override those on raster sources.
@@ -240,12 +244,21 @@ or Escape closes it. A click waits 250 ms for a second one, so a double-click
 zooms without opening a popup. The map shows the arrow cursor, and the move cursor while
 pressed.
 
-The panel's 640 px breakpoint must agree in `js/app.js` and `style.css`. CSS
-provides the collapsed mobile state before scripts run; once they have, a click
-anywhere on the collapsed header outside its buttons opens the panel. Preserve the panel's
-clearance for map controls and the scale bar. Initial opacity and hillshade
-strength in `index.html` must agree with their module defaults. Popovers live
-outside the scrolling panel.
+The panel is a band over three tabs (Layers, Inventories, Map) and an About
+button. The band holds the legend and, on phones, the handle; it stays visible
+when the content is hidden. The 640 px breakpoint is `NARROW_VIEWPORT` in
+`js/ui.js`, which `js/app.js`, `js/map.js` and `js/sheet.js` share; `style.css`
+repeats the query and must agree. Above it the panel is always open and cannot
+be minimized. Below it the panel docks to the bottom as a sheet with two
+heights, compact (the band) and open. CSS provides the compact state before
+scripts run, so the page loads without a flash of the open sheet. `js/sheet.js`
+only writes `--sheet-progress`, `--sheet-travel` and `--sheet-visible` on the
+root and toggles `inert` on the hidden tabs and content; CSS places the sheet
+and the map's furniture from them. Crossing the breakpoint clears them. A
+vertical swipe on a range input belongs to the input, and the content scrolls
+only while the sheet is open. Initial opacity and hillshade strength in
+`index.html` must agree with their module defaults. Popovers live outside the
+scrolling panel.
 
 One layout serves mouse and touch. Popovers open on click only: a tap fires
 `mouseenter` before its click, so opening on hover made the click close them.
@@ -253,13 +266,18 @@ Hover styles sit under `@media (hover: hover)`. The `(pointer: coarse)` block
 at the end of `style.css` holds the touch sizes, mostly as invisible `::after`
 tap areas that leave the layout alone. It also raises `--text-scale`, so write
 every font size as a multiple of it and text grows uniformly on touch screens.
-Below 640 px the status message sits above the scale bar, clear of the panel
-toggle. The expanded attribution may cover the scale bar until MapLibre
-collapses it on the first drag, which the OSMF attribution guidelines allow.
+On phones the scale bar moves to the bottom left and, with the credit, rides
+the sheet's top edge and fades as it opens. `#notices` rides above them and
+moves to the top, under the wordmark, while the scale editor is open. The
+wordmark sits at the bottom left on desktop and the top left on phones. The
+attribution is expanded on desktop and collapses on narrow maps; the OSMF
+attribution guidelines allow that. A tap that opens a popup in the lower half of
+the map above the sheet anchors it upward, so it stays in view.
 
 The legend only displays. Its Edit button's `::after` covers the whole legend,
 so a click anywhere on it toggles `#scale-editor`, a non-modal `<dialog>`:
-beside the panel, or in the panel's place below 640 px. The map stays live, and
+beside the panel, or docked to the bottom below 640 px, where it replaces the
+sheet and stays above the keyboard. The map stays live, and
 the close button or Escape closes it. It holds one block per band from
 `#band-template`: one for a value-encoded layer, three for false color, whose
 ratio channel has a fixed axis of 255 steps. Each histogram counts the band in
@@ -326,11 +344,12 @@ Use the relevant suites when changing behavior:
 
 | Change | Tests |
 | --- | --- |
-| Settings, catalog joins, selection and legends | `config`, `store`, `layers`, `store-catalog`, `store-local`, `legend`, `viewer`, `stale-state` |
+| Settings, catalog joins, selection and legends | `config`, `store`, `layers`, `store-catalog`, `store-local`, `legend`, `legend-narrow`, `viewer`, `stale-state` |
 | False color, tile decoding and caching | `composite`, `encoded`, `archive`, `histogram` |
-| Overlay loading, retries, popups, the value under a click | `viewer`, `tile-grid`, `ui`, `stale-state`, `readout` |
+| Overlay loading, retries, popups, the value under a click | `viewer`, `tile-grid`, `ui`, `stale-state`, `readout`, `readout-narrow` |
 | Choices in the URL | `url-state`, `url-state-invalid` |
-| Startup failures, viewport, camera, labels | `viewer-degraded`, `viewer-no-webgl`, `viewer-narrow`, `viewer-3d-restore`, `viewer-light-flavor` |
+| The sheet and tabs | `sheet`, `legend-narrow` |
+| Startup failures, viewport, camera, labels | `viewer-degraded`, `viewer-degraded-bare`, `viewer-no-webgl`, `viewer-narrow`, `viewer-narrow-scale`, `viewer-3d-restore`, `viewer-light-flavor` |
 | Globe calculations | `sky` |
 | Static assets, libraries, CSP, preloads, staging | `page-assets`, `stage-libraries` |
 | Server or inventory build | `test_serve.py`, `test_build_tiles.py` |
