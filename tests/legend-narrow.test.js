@@ -81,3 +81,43 @@ test("the stylesheet docks the editor and clears the map's corners", () => {
   assert.match(notices, /top: calc\(.*env\(safe-area-inset-top\).*\)/);
   assert.match(notices, /bottom: auto/);
 });
+
+test("Escape returns focus to the legend's Edit button", () => {
+  el("legend-edit").click();
+  editor.querySelector("input").focus();
+  editor.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Escape" }));
+  assert.ok(!editor.open);
+  assert.equal(window.document.activeElement, el("legend-edit"));
+});
+
+test("moving between fields leaves one pending reveal, and closing drops it", () => {
+  const inputs = [...editor.querySelectorAll("input")];
+  let scrolls = 0;
+  for (const input of inputs) input.scrollIntoView = () => scrolls++;
+  el("legend-edit").click();
+  inputs[0].focus();
+  inputs[1].focus();
+  viewport.dispatchEvent(new window.Event("resize"));
+  assert.equal(scrolls, 1);
+  inputs[0].focus();
+  editor.close();
+  viewport.dispatchEvent(new window.Event("resize"));
+  assert.equal(scrolls, 1);
+});
+
+test("a selection with no layer closes the editor without taking focus", async () => {
+  // The fixture has no VH layer for RTC in 2022.
+  for (const [group, value] of [["product", "RTC"], ["pol", "VH"]]) {
+    el(group).querySelector(`[data-value="${value}"]`).click();
+  }
+  await settle();
+  el("legend-edit").click();
+  assert.ok(editor.open);
+  el("year").focus();
+  el("year").value = "0";
+  el("year").dispatchEvent(new window.Event("input"));
+  await settle();
+  assert.ok(!editor.open);
+  assert.equal(el("legend-edit").hidden, true);
+  assert.equal(window.document.activeElement, el("year"));
+});

@@ -941,15 +941,27 @@ function keepAboveKeyboard(editor) {
     root.setProperty("--keyboard-inset", `${inset}px`);
   };
   // The keyboard's resize follows the focus; reveal the field once it has.
+  let pending = null;
+  const settled = () => {
+    viewport.removeEventListener("resize", pending);
+    pending = null;
+  };
   const reveal = (event) => {
     if (!event.target.matches("input")) return;
-    viewport.addEventListener("resize", () => event.target.scrollIntoView({ block: "nearest" }), { once: true });
+    if (pending) settled();
+    const field = event.target;
+    pending = () => {
+      settled();
+      field.scrollIntoView({ block: "nearest" });
+    };
+    viewport.addEventListener("resize", pending);
   };
   place();
   viewport.addEventListener("resize", place);
   viewport.addEventListener("scroll", place);
   editor.addEventListener("focusin", reveal);
   return () => {
+    if (pending) settled();
     viewport.removeEventListener("resize", place);
     viewport.removeEventListener("scroll", place);
     editor.removeEventListener("focusin", reveal);
@@ -987,12 +999,16 @@ function initLegend() {
     release();
     release = () => {};
     el("legend-edit").setAttribute("aria-expanded", "false");
-    el("legend-edit").focus();
   });
-  editor.querySelector(".close").addEventListener("click", () => editor.close());
+  // A closing the user asked for returns to the button that opened the editor.
+  const dismiss = () => {
+    editor.close();
+    el("legend-edit").focus();
+  };
+  editor.querySelector(".close").addEventListener("click", dismiss);
   // A non-modal dialog has no close request of its own.
   editor.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") editor.close();
+    if (event.key === "Escape") dismiss();
   });
   map.on("moveend", () => {
     const layer = editing();
