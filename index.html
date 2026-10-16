@@ -63,21 +63,18 @@
   <body>
     <div id="map"></div>
 
+    <!-- Outlined glyphs need no webfont. -->
+    <h1 id="title">
+      <img src="assets/glace-wordmark.svg" alt="GLACE" width="2154" height="499" />
+    </h1>
+
     <!-- The shell clips the oversized glass pane; a sibling pane stays fixed behind
          the scrolling panel. -->
     <div id="panel-shell">
       <div id="panel-glass" aria-hidden="true"></div>
       <aside id="panel">
         <header>
-          <div class="header-text">
-            <!-- Outlined glyphs need no webfont. -->
-            <h1 id="title">
-              <img src="assets/glace-wordmark.svg" alt="GLACE" width="2074" height="419" />
-            </h1>
-            <p id="subtitle">Sentinel-1 coherence and backscatter composites of the European Alps</p>
-            <!-- Below the subtitle while the panel is collapsed. -->
-            <p id="selection-summary">Loading layers…</p>
-          </div>
+          <p id="selection-summary">Loading layers…</p>
 
           <div class="header-actions">
             <button type="button" id="about-open" aria-haspopup="dialog"

@@ -154,8 +154,7 @@ html, body {
 }
 
 /*
- * The wordmark and the header buttons share the first row; the subtitle below
- * spans the panel's full width. .header-text only groups them in the markup.
+ * The summary and the header buttons share the first row.
  * Bottom spacing is in the collapsible body, so the closed panel fits its title.
  */
 #panel header {
@@ -165,7 +164,6 @@ html, body {
   align-items: start;
   column-gap: 8px;
 }
-#panel .header-text { display: contents; }
 /*
  * Extend the body to place the native scrollbar inside the panel padding. A stable
  * gutter prevents reflow; left padding preserves focus rings. Firefox uses the
@@ -215,13 +213,26 @@ html, body {
 /* js/app.js opens the panel on a click anywhere on its collapsed header. */
 #panel.collapsed header { cursor: pointer; }
 /*
- * The outlined wordmark has an ink-cropped viewBox, so height sets its cap height.
- * Raised 3px to center it on the 26px header buttons, which rise 6px.
+ * The wordmark floats over the map. Its viewBox pads the outline, so the img is
+ * taller than the 18px glyphs; drags pass through to the map.
  */
-#panel h1 { margin: -3px 0 0; grid-area: 1 / 1; }
-#panel h1 img { display: block; height: 20px; width: auto; }
-#panel :is(#subtitle, #selection-summary) {
-  grid-column: 1 / -1;
+#title {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  margin: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+#title img { display: block; height: calc(18px * 498.9 / 418.9); width: auto; }
+@media (max-width: 640px) {
+  #title {
+    top: calc(12px + env(safe-area-inset-top));
+    bottom: auto;
+  }
+}
+#panel #selection-summary {
+  grid-area: 1 / 1;
   margin: 6px 0 0;
   font-size: calc(12px * var(--text-scale));
   color: var(--muted);

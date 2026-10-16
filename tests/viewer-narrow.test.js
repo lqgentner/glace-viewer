@@ -73,8 +73,6 @@ test("a narrow viewport opens with the panel collapsed", async () => {
   el("selection-summary").click();
   assert.ok(el("panel").classList.contains("expanded"), "a tap on the summary opens it");
   assert.equal(el("panel-toggle").getAttribute("aria-expanded"), "true");
-  el("subtitle").click();
-  assert.ok(el("panel").classList.contains("expanded"), "and does not close it again");
 
   el("panel-toggle").click();
   el("about-open").click();

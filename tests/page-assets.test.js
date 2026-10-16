@@ -217,3 +217,21 @@ test("every link in the About dialog opens in a new tab", () => {
     assert.match(link.getAttribute("rel") ?? "", /\bnoopener\b/, link.getAttribute("href"));
   }
 });
+
+test("the wordmark has a uniform, semi-transparent outline, not a glow", () => {
+  const svg = fs.readFileSync(path.join(REPO, "assets/glace-wordmark.svg"), "utf8");
+  assert.match(svg, /stroke="#fff"/);
+  assert.match(svg, /stroke-opacity="0\.6"/);
+  assert.match(svg, /paint-order="stroke"/);
+  assert.match(svg, /stroke-linejoin="round"/);
+  const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+  assert.doesNotMatch(css, /#title[^{]*\{[^}]*drop-shadow/);
+});
+
+test("the wordmark floats over the map and lets drags through", () => {
+  const doc = page();
+  assert.equal(doc.getElementById("title").parentElement, doc.body);
+  assert.equal(doc.getElementById("subtitle"), null);
+  const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+  assert.match(css, /#title \{[^}]*pointer-events: none/);
+});
