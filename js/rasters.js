@@ -10,7 +10,7 @@ import { archive } from "./archive.js";
 import { FALSE_COLOUR, channelValues, compositeLayers, compositeTiles, restretch } from "./composite.js";
 import { isNonEmptyString, readStore } from "./store.js";
 import { COLOR_MAPS } from "./colormaps.js";
-import { buildSegmented, clearStatus, el, h, hideTab, rove, setStatus, setUrlParams, urlParam } from "./ui.js";
+import { NARROW_VIEWPORT, buildSegmented, clearStatus, el, h, hideTab, rove, setStatus, setUrlParams, urlParam } from "./ui.js";
 import { decodePixel, step } from "./values.js";
 import { codeAt, codeRange, compositeCounts, histogramPath, pixelAt, viewCounts } from "./histogram.js";
 
@@ -927,8 +927,39 @@ function initField(input, at, which) {
   });
 }
 
+/*
+ * On a phone the editor is docked to the bottom and rises above the keyboard:
+ * the visual viewport shrinks by the keyboard's height, and the editor's
+ * offset follows through --keyboard-inset.
+ */
+function keepAboveKeyboard(editor) {
+  const viewport = window.visualViewport;
+  if (!NARROW_VIEWPORT.matches || !viewport) return () => {};
+  const root = document.documentElement.style;
+  const place = () => {
+    const inset = Math.max(0, window.innerHeight - (viewport.height + viewport.offsetTop));
+    root.setProperty("--keyboard-inset", `${inset}px`);
+  };
+  // The keyboard's resize follows the focus; reveal the field once it has.
+  const reveal = (event) => {
+    if (!event.target.matches("input")) return;
+    viewport.addEventListener("resize", () => event.target.scrollIntoView({ block: "nearest" }), { once: true });
+  };
+  place();
+  viewport.addEventListener("resize", place);
+  viewport.addEventListener("scroll", place);
+  editor.addEventListener("focusin", reveal);
+  return () => {
+    viewport.removeEventListener("resize", place);
+    viewport.removeEventListener("scroll", place);
+    editor.removeEventListener("focusin", reveal);
+    root.removeProperty("--keyboard-inset");
+  };
+}
+
 function initLegend() {
   const editor = el("scale-editor");
+  let release = () => {};
 
   /*
    * Not modal: the map stays live behind the editor, which recounts the view
@@ -942,6 +973,8 @@ function initLegend() {
     }
     syncEditor(layer, { force: true });
     editor.show();
+    release();
+    release = keepAboveKeyboard(editor);
     el("legend-edit").setAttribute("aria-expanded", "true");
     showHistogram(layer);
   });
@@ -951,7 +984,10 @@ function initLegend() {
     viewed = null;
     recounting = false;
     queued = null;
+    release();
+    release = () => {};
     el("legend-edit").setAttribute("aria-expanded", "false");
+    el("legend-edit").focus();
   });
   editor.querySelector(".close").addEventListener("click", () => editor.close());
   // A non-modal dialog has no close request of its own.

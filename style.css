@@ -1274,14 +1274,41 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
 }
 
 @media (max-width: 640px) {
-  /* The panel's place, clear of the map controls; the panel returns on close. */
+  /*
+   * Docked to the bottom like the panel's sheet, above the keyboard while a
+   * field has focus (js/rasters.js sets --keyboard-inset). The panel returns
+   * on close, and the map's corners and the status line make room.
+   */
   #scale-editor {
-    inset: 12px 64px auto 12px;
+    bottom: var(--keyboard-inset, 0px);
+    top: auto;
+    left: 0;
+    right: 0;
     width: auto;
     max-width: none;
     max-height: 60dvh;
+    padding-bottom: env(safe-area-inset-bottom);
+    border-radius: var(--surface-radius) var(--surface-radius) 0 0;
+  }
+  #scale-editor .sheet { border-radius: inherit; }
+  /* The header is the band: the nav's tint over the same glass, edge to edge. */
+  #scale-editor header {
+    margin: -10px -16px 8px;
+    padding: 10px 16px;
+  }
+  @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+    #scale-editor header { background: hsl(var(--glass-tint) / var(--glass-alpha-nav)); }
   }
   body:has(#scale-editor[open]) #panel-shell { display: none; }
+  body:has(#scale-editor[open]) #map :is(.maplibregl-ctrl-scale, .maplibregl-ctrl-attrib) {
+    visibility: hidden;
+  }
+  /* The status line moves to the top, just below the wordmark. */
+  body:has(#scale-editor[open]) #notices {
+    top: calc(12px + env(safe-area-inset-top) + 32px);
+    bottom: auto;
+    transition: none;
+  }
   /* Three columns keep the editor low, so more of the map shows below it. */
   #cmap-options { grid-template-columns: repeat(3, 1fr); }
   .cmap-option { grid-template-columns: 36px auto; gap: 6px; }
