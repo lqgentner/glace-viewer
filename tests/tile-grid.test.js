@@ -1,6 +1,6 @@
 /*
- * Inject fake-hyparquet.mjs through hyparquetUrl to test column selection,
- * footprint deduplication, and overlay failure handling without network access.
+ * The catalog's tile grid: one vector PMTiles archive under the catalog root,
+ * drawn through the pmtiles:// protocol like the inventories.
  */
 
 import assert from "node:assert/strict";
@@ -9,13 +9,10 @@ import test from "node:test";
 
 import { captureWarnings, installBrowser, load, REPO, settle } from "./helpers/browser.js";
 
-const READER = new URL("./fixtures/fake-hyparquet.mjs", import.meta.url).href;
-
 const page = installBrowser({
   files: {
     "data/inventories.json": path.join(REPO, "data", "inventories.json"),
   },
-  site: { hyparquetUrl: READER },
 });
 const { el, change } = page;
 
@@ -24,55 +21,18 @@ const { map } = page;
 map.fire("style.load");
 await settle();
 
-const { loadTileGrid } = await load("js/tile-grid.js");
-const fake = await import(READER);
-
-test("only the columns the overlay draws are read", async () => {
-  fake.reads.length = 0;
-  await loadTileGrid();
-  assert.deepEqual(fake.reads, [
-    "tiles/tiles/items.parquet",
-    "geometry,glace:mgrs_tile,glace:glacier_fraction,glace:glacier_fraction_buffered",
-  ]);
-});
-
-test("one Item per year becomes one footprint per tile", async () => {
-  const grid = await loadTileGrid();
-  assert.equal(grid.type, "FeatureCollection");
-  // Four usable rows over two years, and two rows that describe no footprint.
-  assert.deepEqual(
-    grid.features.map((feature) => feature.properties.tile),
-    ["32TLR48", "32TMS12"],
-  );
-  assert.equal(grid.features[0].geometry.type, "Polygon");
-});
-
-test("the properties keep the names the paint and the popup use", async () => {
-  const [first] = (await loadTileGrid()).features;
-  assert.deepEqual(first.properties, {
-    tile: "32TLR48",
-    glacier_fraction: 0.456,
-    glacier_fraction_buffered: 0.932,
-  });
-});
-
-test("a row that describes no polygon is dropped rather than drawn", async () => {
-  const grid = await loadTileGrid();
-  // The fixture holds an unnamed row with no geometry and a named Point.
-  assert.equal(grid.features.length, 2);
-  assert.ok(grid.features.every((feature) => feature.geometry.type === "Polygon"));
-});
-
-test("the overlay draws it, and the source is data rather than a URL", async () => {
+test("the overlay reads the catalog's grid archive and its mgrs layer", async () => {
   change(el("grid"), true);
   await settle();
 
-  assert.ok(map.getLayer("grid-fill") && map.getLayer("grid-line"));
   const source = map.getSource("grid");
-  assert.equal(source.type, "geojson");
-  assert.equal(source.data.features.length, 2, "already read, not left to MapLibre to fetch");
-  // A GeoJSON source has no source-layer, and naming one would draw nothing.
-  assert.equal(map.getLayer("grid-fill")["source-layer"], undefined);
+  assert.equal(source.type, "vector");
+  assert.equal(source.url, "pmtiles://tiles/tiles/grid.pmtiles", "under the catalog root");
+  // A wrong source-layer draws nothing and reports no error.
+  for (const id of ["grid-fill", "grid-line"]) assert.equal(map.getLayer(id)["source-layer"], "mgrs");
+  map.settle();
+  await settle();
+  assert.doesNotMatch(el("status").textContent, /tile grid/, "nothing left to report once it loads");
 });
 
 test("the grid sits above the relief and under the basemap labels", () => {
@@ -80,23 +40,34 @@ test("the grid sits above the relief and under the basemap labels", () => {
   assert.ok(map.indexOf("grid-line") < map.indexOf("places"));
 });
 
-test("an unreadable index unticks the box and logs why", async () => {
+test("ticking it off and on again keeps the one source", async () => {
   change(el("grid"), false);
   await settle();
-  map.removeLayer("grid-fill");
-  map.removeLayer("grid-line");
-  map.removeSource("grid");
-  const { grid } = await load("js/overlays.js");
-  grid.loaded = false;
+  assert.equal(map.getLayer("grid-fill").layout.visibility, "none");
+  change(el("grid"), true);
+  await settle();
+  assert.equal(map.getLayer("grid-fill").layout.visibility, "visible");
+});
 
-  fake.failWith(new Error("unsupported codec ZSTD"));
+test("an unreadable archive unticks the box and logs why", async () => {
+  const { grid } = await load("js/overlays.js");
+  grid.remove();
+  change(el("grid"), false);
+  change(el("grid"), true);
+  await settle();
+
   const warnings = await captureWarnings(async () => {
-    change(el("grid"), true);
+    map.fire("error", { sourceId: "grid", error: new Error("HTTP 404") });
     await settle();
   });
 
   assert.equal(el("grid").checked, false, "re-ticking is a fresh attempt, not a no-op");
   assert.equal(el("status").textContent, "Error loading the tile grid. Tick it again to retry.");
-  assert.ok(warnings.some((line) => line.includes("unsupported codec ZSTD")), "the detail goes to the console");
+  assert.ok(warnings.some((line) => line.includes("HTTP 404")), "the detail goes to the console");
   assert.equal(map.getLayer("grid-fill"), undefined, "nothing half-added is left behind");
+  assert.equal(map.getSource("grid"), undefined);
+
+  change(el("grid"), true);
+  await settle();
+  assert.ok(map.getSource("grid"), "the second attempt is a fresh load");
 });

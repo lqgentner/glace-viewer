@@ -6,7 +6,7 @@
     <!-- Hashes allow the two inline scripts below; page-assets.test.js checks them.
          MapLibre may run its worker from a blob, and stores may live on any HTTPS host. -->
     <meta http-equiv="Content-Security-Policy"
-          content="default-src 'self'; script-src 'self' 'sha256-5yRwLI7ss0pzmDfBgqhU9kAmRrUIJ5xdTDNio0+e37k=' 'sha256-6h8qqahDQjUTtzvmhn+n6/MoNHltOJxupIIfNqSXRTI='; style-src 'self'; img-src 'self' data: blob:; connect-src 'self' https: data: blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'none'" />
+          content="default-src 'self'; script-src 'self' 'sha256-EBRYpeG+TsgwtWv/EwAQ7BaYsLCLRLfz/4X/WfuUKd8=' 'sha256-6h8qqahDQjUTtzvmhn+n6/MoNHltOJxupIIfNqSXRTI='; style-src 'self'; img-src 'self' data: blob:; connect-src 'self' https: data: blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'none'" />
     <title>GLACE — Sentinel-1 composites, European Alps</title>
     <meta name="description"
           content="Explore annual Sentinel-1 coherence and backscatter composites of the European Alps, with glacier inventories, hillshade and 3D terrain." />
@@ -29,16 +29,14 @@
 
     <!-- Parse the import map before any module fetch. npm installs the libraries,
          and scripts/stage-libraries.mjs copies each target's directory for Pages.
-         PMTiles needs the bare fflate mapping; tile-grid.js imports hyparquet on
-         demand. -->
+         PMTiles needs the bare fflate mapping. -->
     <script type="importmap">
       {
         "imports": {
           "maplibre-gl": "./node_modules/maplibre-gl/dist/maplibre-gl.mjs",
           "pmtiles": "./node_modules/pmtiles/dist/esm/index.js",
           "fflate": "./node_modules/fflate/esm/browser.js",
-          "@protomaps/basemaps": "./node_modules/@protomaps/basemaps/dist/esm/index.js",
-          "hyparquet": "./node_modules/hyparquet/src/index.js"
+          "@protomaps/basemaps": "./node_modules/@protomaps/basemaps/dist/esm/index.js"
         }
       }
     </script>
@@ -56,7 +54,6 @@
     <link rel="modulepreload" href="js/composite.js" />
     <link rel="modulepreload" href="js/sky.js" />
     <link rel="modulepreload" href="js/store.js" />
-    <link rel="modulepreload" href="js/tile-grid.js" />
     <link rel="modulepreload" href="js/values.js" />
     <link rel="modulepreload" href="js/histogram.js" />
     <link rel="modulepreload" href="js/colormaps.js" />
@@ -328,8 +325,6 @@
               target="_blank" rel="noopener">OpenStreetMap</a> data</li>
             <li><a href="https://mapterhorn.com" target="_blank" rel="noopener">Mapterhorn</a>:
               digital elevation model tiles</li>
-            <li><a href="https://github.com/hyparam/hyparquet" target="_blank"
-              rel="noopener">hyparquet</a>: GeoParquet reading for the catalog's tile grid</li>
           </ul>
           <p>Their licenses are in
             <a href="assets/third-party-licenses.txt" target="_blank"

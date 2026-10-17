@@ -65,7 +65,7 @@ test("every import-map address is a relative URL", () => {
 test("every library the page loads is a runtime dependency in package.json", () => {
   const manifest = JSON.parse(fs.readFileSync(path.join(REPO, "package.json"), "utf8"));
   const names = [...new Set(libraries().map(packageName))].sort();
-  assert.deepEqual(names, ["@protomaps/basemaps", "fflate", "hyparquet", "maplibre-gl", "pmtiles"]);
+  assert.deepEqual(names, ["@protomaps/basemaps", "fflate", "maplibre-gl", "pmtiles"]);
   for (const name of names) {
     assert.ok(manifest.dependencies?.[name], `package.json does not depend on ${name}`);
   }
@@ -88,7 +88,6 @@ test("the libraries export what the viewer calls", async () => {
     "maplibre-gl": used("maplibregl"),
     pmtiles: used("pmtiles"),
     "@protomaps/basemaps": used("basemaps"),
-    hyparquet: ["asyncBufferFromUrl", "parquetReadObjects"],
   };
   assert.ok(expected.pmtiles.includes("Protocol"), "the scan found the viewer's calls");
   for (const [name, members] of Object.entries(expected)) {

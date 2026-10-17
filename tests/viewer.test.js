@@ -27,12 +27,7 @@ const glaceLayers = (map) => [...map.layers.keys()].filter((id) => id.startsWith
 const visible = (map, id) => map.getLayer(id)?.layout?.visibility === "visible";
 
 test("the viewer", async (t) => {
-  const page = installBrowser({
-    files: CATALOG,
-    // The tile grid imports its parquet reader; this is the same seam a
-    // deployment would use to pin a different CDN. See tile-grid.test.js.
-    site: { hyparquetUrl: new URL("./fixtures/fake-hyparquet.mjs", import.meta.url).href },
-  });
+  const page = installBrowser({ files: CATALOG });
   const { el, change, input } = page;
 
   await load("js/app.js");
@@ -528,7 +523,7 @@ test("the viewer", async (t) => {
   await t.test("a popup reports every overlay under the pointer", async () => {
     map.hits = [
       { layer: { id: "inv-line-sgi2023" }, properties: { name: "Aletschgletscher", year: 2023 } },
-      { layer: { id: "grid-fill" }, properties: { tile: "32TMS", glacier_fraction: 0.42 } },
+      { layer: { id: "grid-fill" }, properties: { mgrs_tile: "32TMS", glacier_fraction: 0.42 } },
     ];
     // Escape closes the last popup, which this click would otherwise only close.
     page.window.document.dispatchEvent(new page.window.KeyboardEvent("keydown", { key: "Escape" }));

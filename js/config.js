@@ -4,7 +4,7 @@
  */
 
 const DEFAULTS = {
-  /* Catalog root for raster metadata and the tile-grid index. */
+  /* Catalog root for raster metadata and the tile grid. */
   tilesBase: "tiles",
   /* Generated inventory archives, served alongside the page. */
   inventoryBase: "data",
@@ -12,11 +12,8 @@ const DEFAULTS = {
   /* Raster inventory and style links, relative to tilesBase. */
   mosaicCollection: "mosaics/collection.json",
 
-  /* GeoParquet tile-grid index, relative to tilesBase. */
-  gridIndex: "tiles/items.parquet",
-
-  /* Loaded on demand for the tile grid, through the import map. Keep executable library URLs out of query parameters. */
-  hyparquetUrl: "hyparquet",
+  /* Vector PMTiles of the MGRS tile grid, relative to tilesBase. */
+  gridArchive: "tiles/grid.pmtiles",
 
   /* Protomaps hosted TileJSON. Manage the API key in the Protomaps dashboard. */
   basemapUrl: "https://api.protomaps.com/tiles/v4.json?key=54af1e244a8f1599",
@@ -81,9 +78,7 @@ export const MOSAIC_COLLECTION_URL = `${TILES_BASE}/${settings.mosaicCollection}
 export const INVENTORY_BASE = String(settings.inventoryBase).replace(/\/$/, "");
 export const INVENTORY_INDEX_URL = `${INVENTORY_BASE}/inventories.json`;
 
-export const HYPARQUET_URL = settings.hyparquetUrl;
-
-export const GRID_INDEX_URL = `${TILES_BASE}/${settings.gridIndex}`;
+export const GRID_ARCHIVE_URL = `${TILES_BASE}/${settings.gridArchive}`;
 
 export const BASEMAP_URL = settings.basemapUrl;
 export const BASEMAP_FLAVOR = settings.basemapFlavor;

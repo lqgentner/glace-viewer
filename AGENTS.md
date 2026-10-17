@@ -71,7 +71,6 @@ A gitignored `tiles` symlink to the catalog root also works. The root is above
 | `js/values.js` | Tile decoding for false-color composites and histograms |
 | `js/histogram.js` | Archive codes or composite channels counted over the view, drawn as the scale editor's bars; the pixel under a click |
 | `js/overlays.js` | Inventory controls, overlay lifecycle, grid layers, popups with the raster's value |
-| `js/tile-grid.js` | GeoParquet index to deduplicated tile footprints |
 | `js/ui.js` | DOM helpers, status messages, choices in the URL, segmented controls, popovers, pickers |
 | `js/sky.js` | Globe silhouette measurements for CSS |
 | `sw.js` | Service worker: stale-while-revalidate for JSON reads |
@@ -100,7 +99,7 @@ mosaics/collection.json
 mosaics/styles/{year}.json
 mosaics/{year}/item.json
 mosaics/{year}/*_viz.pmtiles
-tiles/items.parquet
+tiles/grid.pmtiles
 ```
 
 `js/store.js` combines three inputs:
@@ -318,20 +317,20 @@ change and retain its citation and license. A wrong `source_layer` can produce
 an empty overlay without an error. Force a full rebuild after a tippecanoe
 upgrade; `--skip-existing` compares only source and index timestamps.
 
-Inventories load on first activation. `LazyOverlay` runs one load at a time and
-ends it showing the latest tick. It removes failed layers and sources, unticks the
+Inventories and the tile grid load on first activation. `LazyOverlay` adds the
+source once and ends showing the latest tick; MapLibre fetches the tiles. It removes failed layers and sources, unticks the
 control, and permits retry. Preserve that recovery path.
 Popup properties can be absent: tippecanoe drops nulls, including missing names.
 Respect `has_names` and the inventory's identifier fields.
 
 ### The tile grid
 
-`tiles/items.parquet` supplies geometry, MGRS tile ID, and two glacier-fraction
-columns. `js/tile-grid.js` imports hyparquet on demand and collapses repeated
-(tile, year) rows to one feature per tile. It passes GeoJSON to MapLibre;
-there is no separate grid archive to build. Column projection reduces decoding
-work but does not guarantee a smaller download. The current reader handles
-SNAPPY; a ZSTD index would require additional decompressor support.
+The catalog publishes `tiles/grid.pmtiles`, one vector archive for all years,
+under the catalog root; the viewer builds nothing for it. Its `mgrs` layer has
+one polygon per MGRS tile with `mgrs_tile`, `glacier_fraction` and
+`glacier_fraction_buffered`. `js/overlays.js` draws it through `pmtiles://` with
+its own paint, not the catalog's `tiles/styles/grid.json`, and the popup reads
+those property names.
 
 ## Tests and deployment
 

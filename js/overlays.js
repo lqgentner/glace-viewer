@@ -1,14 +1,13 @@
 /*
- * Lazy inventory PMTiles and catalog-grid overlays. Failed loads remove their
+ * Lazy inventory and catalog-grid PMTiles overlays. Failed loads remove their
  * layers and source so the control can retry.
  */
 
-import { INVENTORY_BASE, INVENTORY_INDEX_URL } from "./config.js";
+import { GRID_ARCHIVE_URL, INVENTORY_BASE, INVENTORY_INDEX_URL } from "./config.js";
 import { addStacked, map, styleReady } from "./map.js";
 import { isNonEmptyString } from "./store.js";
 import { valuesAt } from "./rasters.js";
 import { popupPadding } from "./sheet.js";
-import { loadTileGrid } from "./tile-grid.js";
 import { attachPicker, clearStatus, creditButton, el, h, hideTab, setStatus } from "./ui.js";
 
 /* ---------- the shared lazy-source lifecycle ---------- */
@@ -26,13 +25,12 @@ class LazyOverlay {
   constructor(spec) {
     Object.assign(this, spec);
     this.loaded = false;
-    this.loading = false;
     this.wanted = false;
   }
 
   /*
-   * Wait for the style before creating or toggling layers. One load runs at a time
-   * and ends showing the latest choice.
+   * Wait for the style before creating or toggling layers. MapLibre loads the
+   * tiles; the source is added once and ends showing the latest choice.
    */
   async setEnabled(on) {
     this.wanted = on;
@@ -41,20 +39,13 @@ class LazyOverlay {
       this.show();
       return;
     }
-    if (!on || this.loading) return;
-    this.loading = true;
+    if (!on) return;
     setStatus(this.sourceId, `Loading ${this.label}…`);
-    /*
-     * The grid reads its data here; PMTiles sources load through MapLibre. Both
-     * paths share rollback handling.
-     */
     try {
-      await this.add();
+      this.add();
     } catch (error) {
       this.fail(error);
       return;
-    } finally {
-      this.loading = false;
     }
     this.loaded = true;
     this.show();
@@ -255,6 +246,8 @@ export async function loadInventories() {
 /* ---------- catalog tile grid ---------- */
 
 const GRID_LAYER = "grid-fill";
+/* The catalog's one vector layer in tiles/grid.pmtiles. */
+const GRID_SOURCE_LAYER = "mgrs";
 
 export const grid = new LazyOverlay({
   sourceId: "grid",
@@ -262,13 +255,13 @@ export const grid = new LazyOverlay({
   label: "tile grid",
   checkbox: () => el("grid"),
   failure: "Error loading the tile grid. Tick it again to retry.",
-  async add() {
-    /* The decoded footprints are small enough to supply as one GeoJSON source. */
-    map.addSource(this.sourceId, { type: "geojson", data: await loadTileGrid() });
+  add() {
+    map.addSource(this.sourceId, { type: "vector", url: `pmtiles://${GRID_ARCHIVE_URL}` });
     addStacked("overlay", {
       id: GRID_LAYER,
       type: "fill",
       source: this.sourceId,
+      "source-layer": GRID_SOURCE_LAYER,
       paint: {
         // Shade by glacier fraction in neutral white for contrast with raster colors.
         "fill-color": [
@@ -284,6 +277,7 @@ export const grid = new LazyOverlay({
       id: "grid-line",
       type: "line",
       source: this.sourceId,
+      "source-layer": GRID_SOURCE_LAYER,
       paint: { "line-color": "#ffffff", "line-width": 0.6, "line-opacity": 0.7 },
     });
   },
@@ -339,10 +333,9 @@ export function utmZone(tile) {
 function gridRow(feature) {
   const props = feature.properties;
   return popupSection("MGRS tile", [
-    ["Tile identifier", props.tile],
-    ["UTM zone", utmZone(props.tile)],
+    ["Tile identifier", props.mgrs_tile],
+    ["UTM zone", utmZone(props.mgrs_tile)],
     ["Glacier fraction", percent(props.glacier_fraction)],
-
     ["Glacier fraction, 250 m buffer", percent(props.glacier_fraction_buffered)],
   ]);
 }

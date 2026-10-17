@@ -1,8 +1,8 @@
 /*
  * State that outlives what it describes: a raster failure the panel forgets, a
  * legend for a layer that is not drawn, presets fitted to the view the map has
- * left, and a grid untick made while the grid is still loading. A separate
- * process gives it a fresh map and a grid that has never loaded.
+ * left, and a grid untick made before the grid is added. A separate process
+ * gives it a fresh map and a grid that has never loaded.
  */
 
 import assert from "node:assert/strict";
@@ -10,21 +10,6 @@ import path from "node:path";
 import test from "node:test";
 
 import { captureWarnings, installBrowser, load, REPO, settle } from "./helpers/browser.js";
-
-/* A hyparquet stand-in whose read waits for the test to release it. */
-const gate = [];
-globalThis.releaseGrid = () => gate.splice(0).forEach((resolve) => resolve());
-const SLOW_HYPARQUET = `data:text/javascript,${encodeURIComponent(`
-  export const asyncBufferFromUrl = async ({ url }) => ({ url });
-  export async function parquetReadObjects() {
-    await new Promise((resolve) => globalThis.gridGate(resolve));
-    return [{
-      "glace:mgrs_tile": "32TLR48",
-      geometry: { type: "Polygon", coordinates: [[[7, 46], [7.1, 46], [7.1, 46.1], [7, 46]]] },
-    }];
-  }
-`)}`;
-globalThis.gridGate = (resolve) => gate.push(resolve);
 
 const fixture = (name) => path.join(REPO, "tests", "fixtures", "two-years", name);
 const page = installBrowser({
@@ -35,7 +20,6 @@ const page = installBrowser({
     "http://localhost/tiles/mosaics/2023/item.json": fixture("item-2023.json"),
     "data/inventories.json": path.join(REPO, "data", "inventories.json"),
   },
-  site: { hyparquetUrl: SLOW_HYPARQUET },
 });
 const { el, change, input } = page;
 await load("js/app.js");
@@ -135,34 +119,25 @@ test("a missing combination does not keep the previous layer's legend", async ()
   await pick("pol", "VV");
 });
 
-test("unticking the grid while it loads keeps it off", async () => {
+test("unticking the grid before it is added keeps it off", async () => {
+  // Both changes land while the first still waits for the style.
   change(el("grid"), true);
-  await settle();
-  assert.equal(gate.length, 1, "the index read is pending");
   change(el("grid"), false);
-  await settle();
-
-  globalThis.releaseGrid();
   await settle();
   // A layer without a visibility is drawn.
   const layer = map.getLayer("grid-fill");
   assert.ok(!layer || layer.layout?.visibility === "none", "the grid is not drawn with its box unticked");
 });
 
-test("ticking the grid off and on while it loads leaves it on", async () => {
+test("ticking the grid off and on before it is added leaves it on", async () => {
   // Start again from an unloaded grid.
   const { grid } = await load("js/overlays.js");
   grid.remove();
   change(el("grid"), false);
 
   change(el("grid"), true);
-  await settle();
   change(el("grid"), false);
-  await settle();
   change(el("grid"), true);
-  await settle();
-
-  globalThis.releaseGrid();
   await settle();
   assert.equal(el("grid").checked, true, `the box stays ticked; status: ${el("status").textContent}`);
   assert.equal(map.getLayer("grid-fill")?.layout?.visibility, "visible", "and the grid is drawn");

@@ -1,8 +1,7 @@
 /*
  * Optional deployment overrides, loaded before app.js. Defaults and supported keys
  * live in js/config.js; ?tiles=, ?basemap=, and ?flavor= override this file.
- * initialView, overview and terrainCredit merge by field. Library URLs are deployment-only
- * because they execute code.
+ * initialView, overview and terrainCredit merge by field.
  */
 
 window.GLACE_CONFIG = {
