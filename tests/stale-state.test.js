@@ -1,8 +1,8 @@
 /*
  * State that outlives what it describes: a raster failure the panel forgets, a
  * legend for a layer that is not drawn, presets fitted to the view the map has
- * left, and a grid untick made before the grid is added. A separate process
- * gives it a fresh map and a grid that has never loaded.
+ * left, and a grid unticked before it is added or while MapLibre reads it. A
+ * separate process gives it a fresh map and a grid that has never loaded.
  */
 
 import assert from "node:assert/strict";
@@ -142,4 +142,46 @@ test("ticking the grid off and on before it is added leaves it on", async () => 
   assert.equal(el("grid").checked, true, `the box stays ticked; status: ${el("status").textContent}`);
   assert.equal(map.getLayer("grid-fill")?.layout?.visibility, "visible", "and the grid is drawn");
   assert.doesNotMatch(el("status").textContent, /Error loading the tile grid/);
+});
+
+test("unticking the grid while MapLibre reads it drops its loading message", async () => {
+  // VV's failure from the first test would outrank everything the grid reports.
+  await pick("pol", "VH");
+  // And the previous test left the grid loading.
+  map.settle();
+  await settle();
+  assert.equal(el("status").hidden, true, el("status").textContent);
+  const { grid } = await load("js/overlays.js");
+  grid.remove();
+  change(el("grid"), false);
+  change(el("grid"), true);
+  await settle();
+  assert.ok(map.getSource("grid"), "added, and its header not yet read");
+
+  change(el("grid"), false);
+  await settle();
+  assert.doesNotMatch(el("status").textContent, /Loading tile grid/, "nothing is loading that was asked for");
+
+  change(el("grid"), true);
+  await settle();
+  assert.match(el("status").textContent, /Loading tile grid/, "ticked again, it is");
+});
+
+test("a grid that fails after it is unticked is rolled back without a report", async () => {
+  change(el("grid"), false);
+  await settle();
+  const warnings = await captureWarnings(async () => {
+    map.fire("error", { sourceId: "grid", error: new Error("HTTP 404") });
+    await settle();
+  });
+  assert.doesNotMatch(el("status").textContent, /tile grid/, "no error for an overlay that is off");
+  assert.ok(warnings.some((line) => line.includes("HTTP 404")), "the detail still goes to the console");
+  assert.equal(map.getSource("grid"), undefined, "nothing half-added is left behind");
+
+  change(el("grid"), true);
+  await settle();
+  assert.ok(map.getSource("grid"), "the next tick is a fresh load");
+  map.settle();
+  await settle();
+  await pick("pol", "VV");
 });

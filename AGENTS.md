@@ -318,8 +318,10 @@ an empty overlay without an error. Force a full rebuild after a tippecanoe
 upgrade; `--skip-existing` compares only source and index timestamps.
 
 Inventories and the tile grid load on first activation. `LazyOverlay` adds the
-source once and ends showing the latest tick; MapLibre fetches the tiles. It removes failed layers and sources, unticks the
-control, and permits retry. Preserve that recovery path.
+source once and ends showing the latest tick; MapLibre fetches the tiles. It
+removes failed layers and sources, unticks the control, and permits retry.
+Preserve that recovery path. Unticked while loading, an overlay drops its
+loading message, and a failure then goes only to the console.
 Popup properties can be absent: tippecanoe drops nulls, including missing names.
 Respect `has_names` and the inventory's identifier fields.
 

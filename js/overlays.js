@@ -26,6 +26,7 @@ class LazyOverlay {
     Object.assign(this, spec);
     this.loaded = false;
     this.wanted = false;
+    this.watching = false;
   }
 
   /*
@@ -40,7 +41,6 @@ class LazyOverlay {
       return;
     }
     if (!on) return;
-    setStatus(this.sourceId, `Loading ${this.label}…`);
     try {
       this.add();
     } catch (error) {
@@ -48,8 +48,8 @@ class LazyOverlay {
       return;
     }
     this.loaded = true;
-    this.show();
     this.watch();
+    this.show();
   }
 
   show() {
@@ -57,12 +57,19 @@ class LazyOverlay {
     for (const id of this.layerIds) {
       if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", visibility);
     }
+    // MapLibre reads the archive even with the layers hidden; the message follows the box.
+    if (this.watching) setStatus(this.sourceId, this.wanted ? `Loading ${this.label}…` : "");
   }
 
   /* Remove failed state so the next activation can retry. */
   fail(error) {
     console.warn(`${this.sourceId}:`, error?.message ?? "load failed");
     this.remove();
+    // Nothing to report for an overlay that is off; its next tick retries.
+    if (!this.wanted) {
+      clearStatus(this.sourceId);
+      return;
+    }
     const box = this.checkbox();
     if (box) box.checked = false;
     setStatus(this.sourceId, this.failure, "error");
@@ -79,6 +86,7 @@ class LazyOverlay {
   /* Watch initial source loading only; remove listeners after success or failure. */
   watch() {
     const stop = () => {
+      this.watching = false;
       map.off("sourcedata", onData);
       map.off("error", onError);
     };
@@ -92,6 +100,7 @@ class LazyOverlay {
       stop();
       this.fail(event.error);
     };
+    this.watching = true;
     map.on("sourcedata", onData);
     map.on("error", onError);
   }
