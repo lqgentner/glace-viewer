@@ -254,11 +254,13 @@ side panel, which suits a mouse, and its scale editor covers the panel.
 Elsewhere the panel is always open and cannot be minimized. On phones the panel
 docks to the bottom as a sheet with two heights, compact (the band) and open.
 CSS provides the compact state before scripts run, so the page loads without a
-flash of the open sheet. `js/sheet.js` only writes `--sheet-progress`,
-`--sheet-travel` and `--sheet-visible` on the root, toggles `inert` on the
-hidden tabs and content and the `.expanded` and `.dragging` classes on
-`#panel-shell`, and sets the handle's `aria-expanded` and label; CSS places the
-sheet and the map's furniture from the properties. Leaving the phone layout
+flash of the open sheet. On the compact sheet the handle's tap area covers the
+band, so a tap anywhere opens it, and Edit fades in only as the sheet opens.
+`js/sheet.js` only writes `--sheet-progress`, `--sheet-travel` and
+`--sheet-visible` on the root, toggles `inert` on the hidden tabs and content
+and the `.expanded` and `.dragging` classes on `#panel-shell`, and sets the
+handle's `aria-expanded` and label; CSS places the sheet and the map's
+furniture from the properties. Leaving the phone layout
 clears the properties, `inert` and `.dragging`. A vertical swipe on a range
 input belongs to the input, and the content scrolls only while the sheet is
 open. Initial opacity and hillshade strength in `index.html` must agree with
@@ -278,10 +280,9 @@ attribution guidelines allow that. MapLibre anchors the value popup, so it
 shifts sideways near an edge; on phones its `padding` is the sheet's visible
 height, so near the sheet it opens upward.
 
-The legend only displays. Its Edit button's `::after` covers the whole legend,
-so a click anywhere on it toggles `#scale-editor`, a non-modal `<dialog>`:
-beside the panel, or docked to the bottom on phones, where it stays above the
-keyboard and hides the scale bar and credit. There it slides up as the panel's
+The legend only displays. Its Edit button toggles `#scale-editor`, a non-modal
+`<dialog>`: beside the panel, or docked to the bottom on phones, where it stays
+above the keyboard and hides the scale bar and credit. There it slides up as the panel's
 sheet slides out, and back down as the sheet returns at the height it had. The
 sheet stays laid out, hidden by `visibility`, so it keeps its measured height;
 the editor keeps `flex-direction` while closed, because `display` lingers for

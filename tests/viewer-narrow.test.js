@@ -80,6 +80,13 @@ test("a narrow screen starts with the sheet compact, before any script runs", ()
     /body:has\(#panel-shell\.expanded:not\(\.dragging\)\) #map :is\([^)]*\) \{[^}]*visibility: hidden/,
     "and are hidden once it is open",
   );
+
+  // A tap anywhere on the compact band opens the sheet; Edit waits for it.
+  assert.match(rule("#panel-shell:not(.expanded) #sheet-handle"), /position: static/);
+  assert.match(rule("#panel-shell:not(.expanded) #sheet-handle::after"), /inset: 0;/);
+  assert.match(rule("#panel-nav"), /position: relative/);
+  assert.match(rule("#legend-edit"), /opacity: var\(--sheet-progress, 0\)/);
+  assert.match(rule("#panel-shell:not(.expanded):not(.dragging) #legend-edit"), /visibility: hidden/);
 });
 
 /* On a viewport too short for the controls, whichever box scrolls decides

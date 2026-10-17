@@ -147,7 +147,7 @@ function swallowNextClick() {
 
 /*
  * The band and the compact sheet drag on pointer events. A gesture that never
- * locks is a tap and clicks as usual, which opens the editor from the legend.
+ * locks is a tap and clicks as usual; on the compact sheet it clicks the handle.
  */
 function wireBand(nav) {
   nav.addEventListener("pointerdown", (event) => {

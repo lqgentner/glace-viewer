@@ -70,10 +70,10 @@ html, body {
   --glass-brightness: 78%;
   /* HSL channels let the tint alpha vary independently. */
   --glass-tint: 222 31% 10%;
-  --glass-alpha: 0.62;
-  /* The panel's band is lighter than the controls under it. */
-  --glass-alpha-nav: 0.42;
-  --glass-alpha-body: 0.82;
+  --glass-alpha: 0.8;
+  /* The panel's band is lighter than the controls under it, which match the dialogs. */
+  --glass-alpha-nav: 0.55;
+  --glass-alpha-body: var(--glass-alpha);
   /* Overhang by two blur radii to provide neighboring pixels at the panel edges. */
   --glass-reach: calc(var(--glass-blur) * 2);
 }
@@ -187,7 +187,7 @@ html, body {
   cursor: pointer;
   transition: color 0.14s ease;
 }
-#tabs [aria-selected="true"] { color: var(--text); border-color: var(--accent); }
+#tabs [aria-selected="true"] { color: var(--text); font-weight: 600; border-color: var(--accent); }
 @media (hover: hover) {
   #tabs [role="tab"]:hover { color: var(--text); }
 }
@@ -704,6 +704,7 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   #panel { height: 100%; border-radius: inherit; }
   /* The band drags the sheet; the content scrolls, and at its top a pull drags it. */
   #panel-nav {
+    position: relative;
     touch-action: none;
     /* A long press drags, not selects. */
     user-select: none;
@@ -717,14 +718,10 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
     touch-action: pan-y pinch-zoom;
     overscroll-behavior-y: contain;
   }
-  /*
-   * A bar atop the band; js/sheet.js labels it. Above the legend, so its tap
-   * area wins where the two overlap.
-   */
+  /* A bar atop the band; js/sheet.js labels it. */
   #sheet-handle {
     display: block;
     position: relative;
-    z-index: 1;
     width: 36px;
     height: 4px;
     margin: -4px auto 12px;
@@ -740,6 +737,12 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
     position: absolute;
     inset: -12px -20px -8px;
   }
+  /* On the compact sheet the handle's tap area is the band, so a tap anywhere opens it. */
+  #panel-shell:not(.expanded) #sheet-handle { position: static; }
+  #panel-shell:not(.expanded) #sheet-handle::after { inset: 0; z-index: 1; }
+  /* Edit shows as the sheet opens. */
+  #legend-edit { opacity: var(--sheet-progress, 0); }
+  #panel-shell:not(.expanded):not(.dragging) #legend-edit { visibility: hidden; }
 
   /* The map's bottom corners and the notices ride the sheet's top edge. */
   #map .maplibregl-ctrl-bottom-left,
@@ -826,11 +829,7 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   .credit:hover { color: var(--accent); }
 }
 
-/*
- * The scale's edit button. Its ::after covers the whole legend, so a click
- * anywhere on it opens the editor, and hovering the legend hovers the button.
- */
-#legend { position: relative; }
+/* The scale's edit button opens the editor. */
 #legend-edit {
   flex: none;
   padding: 0 7px;
@@ -841,11 +840,6 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   /* Outlined without fill, as About is. */
   background-color: transparent;
   border-radius: 4px;
-}
-#legend-edit::after {
-  content: "";
-  position: absolute;
-  inset: -4px;
 }
 /* While the editor or the color picker is open, its button keeps its hover look. */
 #legend-edit[aria-expanded="true"] {
@@ -1343,10 +1337,12 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   :root { --text-scale: 1.15; --box: 20px; --ctrl-radius: var(--surface-radius); }
 
   :is(#scale-editor, #about) .close,
+  #legend-edit,
   .credit,
   .inventory .swatch,
   #tabs [role="tab"] { position: relative; }
   :is(#scale-editor, #about) .close::after,
+  #legend-edit::after,
   .credit::after,
   .inventory .swatch::after,
   #tabs [role="tab"]::after {
