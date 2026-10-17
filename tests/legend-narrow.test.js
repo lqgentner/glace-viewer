@@ -46,6 +46,15 @@ test("closing the editor leaves the sheet compact and focuses the legend's Edit 
   assert.equal(window.document.activeElement, el("legend-edit"));
 });
 
+test("an open sheet is still open when the editor closes", () => {
+  el("sheet-handle").click();
+  assert.ok(el("panel-shell").classList.contains("expanded"));
+  el("legend-edit").click();
+  editor.querySelector(".close").click();
+  assert.ok(el("panel-shell").classList.contains("expanded"), "it slides back open");
+  el("sheet-handle").click();
+});
+
 test("the editor rises above the keyboard and settles on close", async () => {
   el("legend-edit").click();
   editor.querySelector("input").focus();
@@ -63,7 +72,7 @@ test("the editor rises above the keyboard and settles on close", async () => {
 
 test("the stylesheet docks the editor and clears the map's corners", () => {
   const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
-  const narrow = css.slice(css.lastIndexOf("@media (max-width: 640px)"));
+  const narrow = css.slice(css.lastIndexOf("@media (pointer: coarse) and (max-width: 640px)"));
   const block = (selector) => {
     const start = narrow.indexOf(`${selector} {`);
     assert.notEqual(start, -1, selector);
@@ -76,9 +85,16 @@ test("the stylesheet docks the editor and clears the map's corners", () => {
     "left: 0",
     "right: 0",
     "max-height: min(60dvh, calc(100dvh - var(--keyboard-inset, 0px) - 24px))",
+    "transition: translate 220ms ease-out, display 220ms",
+    "transition-behavior: allow-discrete",
   ]) assert.ok(dock.includes(rule), rule);
-  assert.match(block("#scale-editor header"), /position: sticky;\s*top: 0;/, "the header stays as the editor scrolls");
-  assert.match(block("body:has(#scale-editor[open]) #panel-shell"), /display: none/);
+  assert.match(block("#scale-editor:not([open])"), /translate: 0 100%/, "it slides out the bottom");
+  assert.match(css, /@starting-style \{\s*#scale-editor\[open\] \{ translate: 0 100%; \}/, "and in from it");
+  // Kept laid out, so the sheet slides back to its height rather than appearing.
+  const sheet = block("body:has(#scale-editor[open]) #panel-shell");
+  assert.match(sheet, /transform: translateY\(100%\)/);
+  assert.match(sheet, /visibility: hidden/);
+  assert.doesNotMatch(sheet, /display/);
   assert.match(block("body:has(#scale-editor[open]) #map :is(.maplibregl-ctrl-scale, .maplibregl-ctrl-attrib)"), /visibility: hidden/);
   const notices = block("body:has(#scale-editor[open]) #notices");
   assert.match(notices, /top: calc\(.*env\(safe-area-inset-top\).*\)/);

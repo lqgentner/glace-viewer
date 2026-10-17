@@ -137,11 +137,15 @@ html, body {
 /* The navigation band: the handle on phones, the legend and the tabs. */
 #panel-nav {
   flex: none;
-  padding: 16px 16px 0;
+  padding: 16px 16px 12px;
   /* Opaque fallback for browsers without backdrop-filter. */
   background: #1c2331;
 }
 #sheet-handle { display: none; }
+
+/* The outlined wordmark has an ink-cropped viewBox, so height sets its cap height. */
+#title { margin: 0 0 14px; }
+#title img { display: block; height: 20px; width: auto; }
 
 /* The legend's title line is the selection; Edit sits at its right. */
 #selection-summary {
@@ -258,25 +262,6 @@ html, body {
   }
 }
 
-/*
- * The wordmark floats over the map. Its viewBox pads the outline, so the img is
- * taller than the 18px glyphs; drags pass through to the map.
- */
-#title {
-  position: absolute;
-  left: 12px;
-  bottom: 12px;
-  margin: 0;
-  z-index: 1;
-  pointer-events: none;
-}
-#title img { display: block; height: calc(18px * 498.9 / 418.9); width: auto; }
-@media (max-width: 640px) {
-  #title {
-    top: calc(12px + env(safe-area-inset-top));
-    bottom: auto;
-  }
-}
 /*
  * The dialogs' close buttons: boxed, in each surface's top right corner 10px
  * from its edges, so they read above the headings beside them. The dialogs'
@@ -471,8 +456,6 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
 #map .maplibregl-ctrl-bottom-left .maplibregl-ctrl { margin: 0 0 12px 12px; }
 /* The left margin keeps the expanded attribution off the edge of a narrow screen. */
 #map .maplibregl-ctrl-bottom-right .maplibregl-ctrl { margin: 0 12px 12px; }
-/* Above the credit, the scale bar pairs with it. */
-#map .maplibregl-ctrl-bottom-right .maplibregl-ctrl-scale { margin-bottom: 6px; }
 #map :is(.maplibregl-ctrl-group, .maplibregl-ctrl-attrib, .maplibregl-ctrl-scale) {
   color: var(--text);
   background-color: var(--panel);
@@ -692,7 +675,7 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
 #map .maplibregl-popup-anchor-left .maplibregl-popup-tip { border-right-color: #fff; }
 #map .maplibregl-popup-anchor-right .maplibregl-popup-tip { border-left-color: #fff; }
 
-@media (max-width: 640px) {
+@media (pointer: coarse) and (max-width: 640px) {
   /*
    * A sheet docked to the bottom, open or compact; js/sheet.js drags it between
    * the two through --sheet-progress. The glass moves with it.
@@ -708,14 +691,14 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
     border-radius: var(--surface-radius) var(--surface-radius) 0 0;
     padding-bottom: env(safe-area-inset-bottom);
     transform: translateY(calc(var(--sheet-travel, 0px) * (1 - var(--sheet-progress, 0))));
-    transition: transform 220ms ease-out;
+    transition: transform 220ms ease-out, visibility 220ms;
   }
   /*
-   * Compact before scripts run: only the band above the pills shows. 99px is its
+   * Compact before scripts run: only the band above the pills shows. 133px is its
    * loaded height on a touch screen; js/sheet.js measures it.
    */
   #panel-shell:not(.expanded) {
-    transform: translateY(calc(66dvh - var(--sheet-visible, 99px)));
+    transform: translateY(calc(66dvh - var(--sheet-visible, 133px)));
   }
   #panel-shell.dragging { transition: none; }
   #panel { height: 100%; border-radius: inherit; }
@@ -760,7 +743,7 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
 
   /* The map's bottom corners and the notices ride the sheet's top edge. */
   #map .maplibregl-ctrl-bottom-left,
-  #map .maplibregl-ctrl-bottom-right { bottom: var(--sheet-visible, 99px); }
+  #map .maplibregl-ctrl-bottom-right { bottom: var(--sheet-visible, 133px); }
   /* The scale bar and the credit fade as the sheet opens, and hide once it is open. */
   #map :is(.maplibregl-ctrl-scale, .maplibregl-ctrl-attrib) {
     opacity: calc(1 - var(--sheet-progress, 0));
@@ -771,7 +754,7 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   #notices {
     top: auto;
     /* Above the scale bar and the credit, which fade out as the sheet opens. */
-    bottom: calc(var(--sheet-visible, 99px) + 12px + 36px * (1 - var(--sheet-progress, 0)));
+    bottom: calc(var(--sheet-visible, 133px) + 12px + 36px * (1 - var(--sheet-progress, 0)));
     left: 12px;
     right: 12px;
     transition: bottom 220ms ease-out;
@@ -817,7 +800,9 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   .inventory .swatch:hover { border-color: rgba(255, 255, 255, 0.6); }
 }
 
+/* On a line of its own, so every row has the same two lines however wide the panel. */
 .inventory .span {
+  display: block;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -1059,8 +1044,8 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
 }
 
 /*
- * The scale editor, a non-modal dialog: beside the panel on wide screens, in
- * its place on narrow ones. The map stays live around it.
+ * The scale editor, a non-modal dialog: beside the panel, over it in a narrow
+ * window, and in its place on phones. The map stays live around it.
  */
 #scale-editor {
   position: fixed;
@@ -1081,19 +1066,31 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   border-radius: var(--surface-radius);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
 }
-#scale-editor[open] { display: flex; flex-direction: column; }
+/* The direction stays on the closed editor, which keeps its display while it slides out. */
+#scale-editor { flex-direction: column; }
+#scale-editor[open] { display: flex; }
+/* The header stays in place; only the body below it scrolls. */
 #scale-editor .sheet {
   position: relative;
   min-height: 0;
-  /* Hidden across, so the close button's touch area cannot add a scrollbar. */
-  overflow: hidden auto;
-  padding: 10px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 #scale-editor header {
+  flex: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  padding: 10px 16px 8px;
+}
+#scale-editor .body {
+  min-height: 0;
+  /* Hidden across, so the handles at the axis ends cannot add a scrollbar. */
+  overflow: hidden auto;
+  padding: 0 16px 16px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.28) transparent;
 }
 #scale-editor h2,
 #scale-editor h3 {
@@ -1282,7 +1279,15 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   .cmap-option:hover:not([aria-pressed="true"]) { border-color: rgba(255, 255, 255, 0.3); }
 }
 
-@media (max-width: 640px) {
+/* A window too narrow for both puts the editor over the panel. */
+@media (max-width: 680px) {
+  #scale-editor {
+    left: 12px;
+    max-width: calc(100vw - 12px - 64px);
+  }
+}
+
+@media (pointer: coarse) and (max-width: 640px) {
   /*
    * Docked to the bottom like the panel's sheet, above the keyboard while a
    * field has focus (js/rasters.js sets --keyboard-inset). The panel returns
@@ -1299,31 +1304,29 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
     max-height: min(60dvh, calc(100dvh - var(--keyboard-inset, 0px) - 24px));
     padding-bottom: env(safe-area-inset-bottom);
     border-radius: var(--surface-radius) var(--surface-radius) 0 0;
+    /* Slides up from the bottom edge and back down; display waits for the slide. */
+    transition: translate 220ms ease-out, display 220ms;
+    transition-behavior: allow-discrete;
+  }
+  #scale-editor:not([open]) { translate: 0 100%; }
+  @starting-style {
+    #scale-editor[open] { translate: 0 100%; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #scale-editor { transition: none; }
   }
   #scale-editor .sheet { border-radius: inherit; }
-  /*
-   * The header is the band: the nav's tint over the same glass, edge to edge.
-   * It stays at the top while the editor scrolls.
-   */
-  #scale-editor header {
-    position: sticky;
-    top: 0;
-    z-index: 1;
-    margin: -10px -16px 8px;
-    padding: 10px 16px;
-    /* Opaque fallback for browsers without backdrop-filter. */
-    background: #1c2331;
+  /* The panel's sheet slides out under the editor and back, compact or open. */
+  body:has(#scale-editor[open]) #panel-shell {
+    transform: translateY(100%);
+    visibility: hidden;
   }
-  @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
-    #scale-editor header { background: hsl(var(--glass-tint) / var(--glass-alpha-nav)); }
-  }
-  body:has(#scale-editor[open]) #panel-shell { display: none; }
   body:has(#scale-editor[open]) #map :is(.maplibregl-ctrl-scale, .maplibregl-ctrl-attrib) {
     visibility: hidden;
   }
-  /* The status line moves to the top, just below the wordmark. */
+  /* The status line moves to the top. */
   body:has(#scale-editor[open]) #notices {
-    top: calc(12px + env(safe-area-inset-top) + 32px);
+    top: calc(12px + env(safe-area-inset-top));
     bottom: auto;
     transition: none;
   }

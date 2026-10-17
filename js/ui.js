@@ -4,8 +4,11 @@
  * interpolation.
  */
 
-/* Match the CSS breakpoint in style.css. */
-export const NARROW_VIEWPORT = window.matchMedia("(max-width: 640px)");
+/*
+ * A phone: a touch screen at most 640px wide. Match the query in style.css. A
+ * narrow desktop window keeps the side panel, which suits a mouse.
+ */
+export const PHONE = window.matchMedia("(pointer: coarse) and (max-width: 640px)");
 
 export const el = (id) => document.getElementById(id);
 

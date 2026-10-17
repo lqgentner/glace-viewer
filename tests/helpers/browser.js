@@ -340,8 +340,8 @@ export function installBrowser({
 
   /* jsdom has no matchMedia, and the page asks for one at boot to decide
    * whether the panel starts collapsed. The page only ever asks the one
-   * question — is this viewport narrow — so the stub answers every query the
-   * same way rather than parsing them. */
+   * question — is this a phone — so the stub answers every query the same way
+   * rather than parsing them. */
   const mediaListeners = new Set();
   let narrowViewport = narrow;
   window.matchMedia = (media) => ({

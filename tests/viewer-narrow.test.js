@@ -15,7 +15,7 @@ import { installBrowser, load, REPO, settle } from "./helpers/browser.js";
 /* Every rule of the narrow media blocks, as one string. */
 function narrowRules(css) {
   const blocks = [];
-  for (let at = css.indexOf("@media (max-width: 640px) {"); at !== -1; ) {
+  for (let at = css.indexOf("@media (pointer: coarse) and (max-width: 640px) {"); at !== -1; ) {
     let depth = 0;
     let end = css.indexOf("{", at);
     do {
@@ -24,7 +24,7 @@ function narrowRules(css) {
       end += 1;
     } while (depth > 0);
     blocks.push(css.slice(at, end));
-    at = css.indexOf("@media (max-width: 640px) {", end);
+    at = css.indexOf("@media (pointer: coarse) and (max-width: 640px) {", end);
   }
   return blocks.join("\n");
 }
@@ -67,7 +67,7 @@ test("a narrow screen starts with the sheet compact, before any script runs", ()
   );
   assert.match(
     rule("#notices"),
-    /bottom: calc\(var\(--sheet-visible, 99px\) \+ 12px \+ 36px \* \(1 - var\(--sheet-progress, 0\)\)\)/,
+    /bottom: calc\(var\(--sheet-visible, 133px\) \+ 12px \+ 36px \* \(1 - var\(--sheet-progress, 0\)\)\)/,
     "the notices clear the scale bar and the credit on the compact sheet",
   );
   assert.match(

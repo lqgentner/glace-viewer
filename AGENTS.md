@@ -245,22 +245,24 @@ zooms without opening a popup. The map shows the arrow cursor, and the move curs
 pressed.
 
 The panel is a band over three tabs (Layers, Inventories, Map) and an About
-button. The band holds the legend and, on phones, the handle; it stays visible
-when the content is hidden. The 640 px breakpoint is `NARROW_VIEWPORT` in
-`js/ui.js`, which `js/map.js`, `js/rasters.js` and `js/sheet.js` share;
-`style.css` repeats the query and must agree. Above it the panel is always open and cannot
-be minimized. Below it the panel docks to the bottom as a sheet with two
-heights, compact (the band) and open. CSS provides the compact state before
-scripts run, so the page loads without a flash of the open sheet. `js/sheet.js`
-only writes `--sheet-progress`, `--sheet-travel` and `--sheet-visible` on the
-root, toggles `inert` on the hidden tabs and content and the `.expanded` and
-`.dragging` classes on `#panel-shell`, and sets the handle's `aria-expanded`
-and label; CSS places the sheet and the map's furniture from the properties.
-Crossing the breakpoint clears the properties, `inert` and `.dragging`. A
-vertical swipe on a range input belongs to the input, and the content scrolls
-only while the sheet is open. Initial opacity and hillshade strength in
-`index.html` must agree with their module defaults. Popovers live outside the
-scrolling panel.
+button. The band holds the wordmark, the legend and, on phones, the handle; it
+stays visible when the content is hidden. Phones are `PHONE` in `js/ui.js`, a
+coarse pointer at most 640 px wide, which `js/rasters.js` and `js/sheet.js`
+share; `style.css` repeats the query and must agree, and `page-assets.test.js`
+checks it. The width alone is not enough: a narrow desktop window keeps the
+side panel, which suits a mouse, and its scale editor covers the panel.
+Elsewhere the panel is always open and cannot be minimized. On phones the panel
+docks to the bottom as a sheet with two heights, compact (the band) and open.
+CSS provides the compact state before scripts run, so the page loads without a
+flash of the open sheet. `js/sheet.js` only writes `--sheet-progress`,
+`--sheet-travel` and `--sheet-visible` on the root, toggles `inert` on the
+hidden tabs and content and the `.expanded` and `.dragging` classes on
+`#panel-shell`, and sets the handle's `aria-expanded` and label; CSS places the
+sheet and the map's furniture from the properties. Leaving the phone layout
+clears the properties, `inert` and `.dragging`. A vertical swipe on a range
+input belongs to the input, and the content scrolls only while the sheet is
+open. Initial opacity and hillshade strength in `index.html` must agree with
+their module defaults. Popovers live outside the scrolling panel.
 
 One layout serves mouse and touch. Popovers open on click only: a tap fires
 `mouseenter` before its click, so opening on hover made the click close them.
@@ -268,43 +270,43 @@ Hover styles sit under `@media (hover: hover)`. The `(pointer: coarse)` block
 at the end of `style.css` holds the touch sizes, mostly as invisible `::after`
 tap areas that leave the layout alone. It also raises `--text-scale`, so write
 every font size as a multiple of it and text grows uniformly on touch screens.
-On phones the scale bar moves to the bottom left and, with the credit, rides
-the sheet's top edge and fades as it opens. `#notices` rides above them and
-moves to the top, under the wordmark, while the scale editor is open. The
-wordmark sits at the bottom left on desktop and the top left on phones; its
-glyphs carry a uniform semi-transparent white SVG stroke drawn behind the fill,
-not a blurred shadow, and the viewBox is padded so the stroke is not clipped.
-The attribution is expanded on desktop and collapses on narrow maps by
-MapLibre's own compact mode, with no option set; the OSMF attribution
-guidelines allow that. MapLibre anchors the value popup, so it shifts
-sideways near an edge; on phones its `padding` is the sheet's visible height,
-so near the sheet it opens upward.
+The scale bar sits at the bottom left and the credit at the bottom right. On
+phones both ride the sheet's top edge and fade as it opens. `#notices` rides
+above them and moves to the top while the scale editor is open. The attribution
+is compact on every screen, as MapLibre makes it on narrow maps; the OSMF
+attribution guidelines allow that. MapLibre anchors the value popup, so it
+shifts sideways near an edge; on phones its `padding` is the sheet's visible
+height, so near the sheet it opens upward.
 
 The legend only displays. Its Edit button's `::after` covers the whole legend,
 so a click anywhere on it toggles `#scale-editor`, a non-modal `<dialog>`:
-beside the panel, or docked to the bottom below 640 px, where it replaces the
-sheet, hides the scale bar and credit, and stays above the keyboard. The map
-stays live, and the close button or Escape closes it. It holds one block per band from
-`#band-template`: one for a value-encoded layer, three for false color, whose
-ratio channel has a fixed axis of 255 steps. Each histogram counts the band in
-the view at the zoom MapLibre draws, coarser past a tile budget sized to the
-viewport, again after each `moveend`; a recount keeps the old bars until it is
-ready. The presets stay available meanwhile, so they do not flicker; one pressed
-during a recount applies to the new counts. Bars span three codes and average
-the codes counted, because lossy WebP never produces about one code in seven. The open editor follows the selection
-and closes when the selection has no layer. The axis spans codes 1-255, and the
-limits are handles on it: a press moves the nearer one. A touch moves it only
-once it travels across, or as a tap, so a vertical swipe scrolls the editor.
-2–98%, Min/Max and Reset act on every band; the presets fit the limits to the
-counts. Limits apply as they are typed or dragged, and render never overwrites
-the field being typed in. A refused value flags its field and shows why below
-the presets. Leaving a field shows what is drawn, which discards invalid text
-and the reason. A color map applies on click and the dialog stays open; false
-color has none. Choices are kept per layer stem, and Reset restores the default
-limits only. Limits outside the archive's codes 1-255 are refused: below, the
-ramp falls into the nodata stop; above, MapLibre's packed ramp wraps around.
-The ratio's limits stay on its axis. Keep the dialog's fields at 16 px or more
-on touch screens, or iOS zooms into them.
+beside the panel, or docked to the bottom on phones, where it stays above the
+keyboard and hides the scale bar and credit. There it slides up as the panel's
+sheet slides out, and back down as the sheet returns at the height it had. The
+sheet stays laid out, hidden by `visibility`, so it keeps its measured height;
+the editor keeps `flex-direction` while closed, because `display` lingers for
+the exit slide. The map stays live, and the close button or Escape closes it.
+It holds one block per band from `#band-template`: one for a value-encoded
+layer, three for false color, whose ratio channel has a fixed axis of 255
+steps. Each histogram counts the band in the view at the zoom MapLibre draws,
+coarser past a tile budget sized to the viewport, again after each `moveend`; a
+recount keeps the old bars until it is ready. The presets stay available
+meanwhile, so they do not flicker; one pressed during a recount applies to the
+new counts. Bars span three codes and average the codes counted, because lossy
+WebP never produces about one code in seven. The open editor follows the
+selection and closes when the selection has no layer. The axis spans codes
+1-255, and the limits are handles on it: a press moves the nearer one. A touch
+moves it only once it travels across, or as a tap, so a vertical swipe scrolls
+the editor. 2–98%, Min/Max and Reset act on every band; the presets fit the
+limits to the counts. Limits apply as they are typed or dragged, and render
+never overwrites the field being typed in. A refused value flags its field and
+shows why below the presets. Leaving a field shows what is drawn, which
+discards invalid text and the reason. A color map applies on click and the
+dialog stays open; false color has none. Choices are kept per layer stem, and
+Reset restores the default limits only. Limits outside the archive's codes
+1-255 are refused: below, the ramp falls into the nodata stop; above,
+MapLibre's packed ramp wraps around. The ratio's limits stay on its axis. Keep
+the dialog's fields at 16 px or more on touch screens, or iOS zooms into them.
 
 ## Inventories and the tile grid
 
@@ -355,7 +357,7 @@ Use the relevant suites when changing behavior:
 | Overlay loading, retries, popups, the value under a click | `viewer`, `tile-grid`, `ui`, `stale-state`, `readout`, `readout-narrow` |
 | Choices in the URL | `url-state`, `url-state-invalid` |
 | The sheet and tabs | `sheet`, `legend-narrow` |
-| Startup failures, viewport, camera, labels | `viewer-degraded`, `viewer-degraded-bare`, `viewer-no-webgl`, `viewer-narrow`, `viewer-narrow-scale`, `viewer-3d-restore`, `viewer-light-flavor` |
+| Startup failures, viewport, camera, labels | `viewer-degraded`, `viewer-degraded-bare`, `viewer-no-webgl`, `viewer-narrow`, `viewer-3d-restore`, `viewer-light-flavor` |
 | Globe calculations | `sky` |
 | Static assets, libraries, CSP, preloads, staging | `page-assets`, `stage-libraries` |
 | Server or inventory build | `test_serve.py`, `test_build_tiles.py` |

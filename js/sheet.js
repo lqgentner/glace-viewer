@@ -6,7 +6,7 @@
  * transitions.
  */
 
-import { el, NARROW_VIEWPORT } from "./ui.js";
+import { el, PHONE } from "./ui.js";
 
 /** Movement in px before a gesture counts as vertical or horizontal. */
 export const LOCK_PX = 8;
@@ -47,7 +47,7 @@ let visible = 0;
 let gesture = null;
 
 function measure() {
-  band = el("panel-nav").offsetHeight - el("tabs").offsetHeight;
+  band = el("tabs").offsetTop;
   travel = Math.max(0, el("panel-shell").offsetHeight - band);
 }
 
@@ -68,7 +68,7 @@ export function setSheetOpen(open) {
   const action = open ? "Hide the controls" : "Show the controls";
   handle.title = action;
   handle.setAttribute("aria-label", action);
-  if (!NARROW_VIEWPORT.matches) return;
+  if (!PHONE.matches) return;
   // The pills and the content sit below the compact sheet's edge.
   for (const id of ["tabs", "panel-body"]) el(id).toggleAttribute("inert", !open);
   measure();
@@ -86,7 +86,7 @@ function toWide() {
 
 /** On phones, the popup's padding that keeps it clear of the sheet's visible part. */
 export function popupPadding() {
-  return NARROW_VIEWPORT.matches ? { bottom: visible } : undefined;
+  return PHONE.matches ? { bottom: visible } : undefined;
 }
 
 const startsOnRange = (target) => target.closest?.('input[type="range"]') != null;
@@ -151,7 +151,7 @@ function swallowNextClick() {
  */
 function wireBand(nav) {
   nav.addEventListener("pointerdown", (event) => {
-    if (!NARROW_VIEWPORT.matches || !event.isPrimary || event.button !== 0) return;
+    if (!PHONE.matches || !event.isPrimary || event.button !== 0) return;
     if (startsOnRange(event.target)) return;
     begin(event.clientX, event.clientY, event.timeStamp);
     gesture.pointerId = event.pointerId;
@@ -192,7 +192,7 @@ function wireContent(body) {
       // A second finger leaves the gesture under way alone.
       if (event.touches.length > 1 || onBand()) return;
       gesture = null;
-      if (!NARROW_VIEWPORT.matches || startsOnRange(event.target)) return;
+      if (!PHONE.matches || startsOnRange(event.target)) return;
       const [{ clientX, clientY }] = event.touches;
       begin(clientX, clientY, event.timeStamp);
     },
@@ -235,7 +235,7 @@ export function initSheet() {
   // The band's height changes with the legend; the sheet's with the viewport.
   if (typeof ResizeObserver === "function") {
     const observer = new ResizeObserver(() => {
-      if (!NARROW_VIEWPORT.matches || gesture?.axis === "y") return;
+      if (!PHONE.matches || gesture?.axis === "y") return;
       measure();
       show(isOpen ? 1 : 0);
     });
@@ -243,10 +243,10 @@ export function initSheet() {
     observer.observe(el("panel-shell"));
   }
 
-  NARROW_VIEWPORT.addEventListener("change", (event) => {
+  PHONE.addEventListener("change", (event) => {
     if (event.matches) setSheetOpen(false);
     else toWide();
   });
-  if (NARROW_VIEWPORT.matches) setSheetOpen(false);
+  if (PHONE.matches) setSheetOpen(false);
   else toWide();
 }

@@ -10,7 +10,7 @@ import { archive } from "./archive.js";
 import { FALSE_COLOUR, channelValues, compositeLayers, compositeTiles, restretch } from "./composite.js";
 import { isNonEmptyString, readStore } from "./store.js";
 import { COLOR_MAPS } from "./colormaps.js";
-import { NARROW_VIEWPORT, buildSegmented, clearStatus, el, h, hideTab, rove, setStatus, setUrlParams, urlParam } from "./ui.js";
+import { PHONE, buildSegmented, clearStatus, el, h, hideTab, rove, setStatus, setUrlParams, urlParam } from "./ui.js";
 import { decodePixel, step } from "./values.js";
 import { codeAt, codeRange, compositeCounts, histogramPath, pixelAt, viewCounts } from "./histogram.js";
 
@@ -933,7 +933,7 @@ function initField(input, at, which) {
  */
 function keepAboveKeyboard(editor) {
   const viewport = window.visualViewport;
-  if (!NARROW_VIEWPORT.matches || !viewport) return () => {};
+  if (!PHONE.matches || !viewport) return () => {};
   const root = document.documentElement.style;
   const place = () => {
     const layout = document.documentElement.clientHeight;

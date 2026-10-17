@@ -16,11 +16,11 @@ const page = installBrowser({
 });
 const { el, window } = page;
 
-// jsdom lays nothing out: the sheet is 500 px tall and its band 90 px above the pills.
+// jsdom lays nothing out: the sheet is 500 px tall and its pills 90 px from its top.
 const stub = (node, name, value) =>
   Object.defineProperty(node, name, { configurable: true, writable: true, value });
 stub(el("panel-shell"), "offsetHeight", 500);
-stub(el("panel-nav"), "offsetHeight", 90);
+stub(el("tabs"), "offsetTop", 90);
 stub(el("panel-body"), "scrollTop", 0);
 
 // The catalog is not served; only the sheet matters here.

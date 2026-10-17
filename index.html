@@ -64,20 +64,21 @@
   <body>
     <div id="map"></div>
 
-    <!-- Outlined glyphs need no webfont. -->
-    <h1 id="title">
-      <img src="assets/glace-wordmark.svg" alt="GLACE" width="2154" height="499" />
-    </h1>
-
     <!-- The shell clips the oversized glass pane; a sibling pane stays fixed behind
          the scrolling panel. -->
     <div id="panel-shell">
       <div id="panel-glass" aria-hidden="true"></div>
       <aside id="panel">
-        <!-- The navigation band: the handle (phones only), the legend, the tabs. -->
+        <!-- The navigation band: the handle (phones only), the wordmark, the legend,
+             the tabs. -->
         <div id="panel-nav">
           <button type="button" id="sheet-handle" aria-controls="panel-body"
                   aria-expanded="false"></button>
+
+          <!-- Outlined glyphs need no webfont. -->
+          <h1 id="title">
+            <img src="assets/glace-wordmark.svg" alt="GLACE" width="2074" height="419" />
+          </h1>
 
           <!-- Placeholders under the loading title hold the loaded legend's size.
                js/rasters.js fills it in, or puts a one-line note in the ramp's
@@ -227,30 +228,33 @@
           ></button>
         </header>
 
-        <!-- One block per band, from #band-template: a value-encoded layer has one,
-             false color three. -->
-        <div id="bands"></div>
+        <!-- Only this scrolls; the header and its close button stay. -->
+        <div class="body">
+          <!-- One block per band, from #band-template: a value-encoded layer has one,
+               false color three. -->
+          <div id="bands"></div>
 
-        <!-- These act on every band at once. -->
-        <div class="presets">
-          <button type="button" id="range-percentile"
-                  title="Limits at the 2nd and 98th percentiles of the values in view">2–98%</button>
-          <button type="button" id="range-extent"
-                  title="Limits at the lowest and highest values in view">Min/Max</button>
-          <button type="button" id="range-reset"
-                  title="Reset to the default limits; the color map stays"
-            ><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor"
-                  stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"
-                  aria-hidden="true"
-              ><path d="M3.5 8a4.5 4.5 0 1 0 1.3-3.2" /><path d="M4.5 2.3v2.8h2.8" /></svg
-            >Reset</button>
-        </div>
-        <!-- Shown only while a typed limit is refused, to say why. -->
-        <p id="limits-hint" role="status"></p>
+          <!-- These act on every band at once. -->
+          <div class="presets">
+            <button type="button" id="range-percentile"
+                    title="Limits at the 2nd and 98th percentiles of the values in view">2–98%</button>
+            <button type="button" id="range-extent"
+                    title="Limits at the lowest and highest values in view">Min/Max</button>
+            <button type="button" id="range-reset"
+                    title="Reset to the default limits; the color map stays"
+              ><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor"
+                    stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"
+                    aria-hidden="true"
+                ><path d="M3.5 8a4.5 4.5 0 1 0 1.3-3.2" /><path d="M4.5 2.3v2.8h2.8" /></svg
+              >Reset</button>
+          </div>
+          <!-- Shown only while a typed limit is refused, to say why. -->
+          <p id="limits-hint" role="status"></p>
 
-        <div id="cmap-section">
-          <h3 id="cmap-options-title">Color map</h3>
-          <div id="cmap-options" role="group" aria-labelledby="cmap-options-title"></div>
+          <div id="cmap-section">
+            <h3 id="cmap-options-title">Color map</h3>
+            <div id="cmap-options" role="group" aria-labelledby="cmap-options-title"></div>
+          </div>
         </div>
       </div>
     </dialog>

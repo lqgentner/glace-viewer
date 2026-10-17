@@ -218,22 +218,22 @@ test("every link in the About dialog opens in a new tab", () => {
   }
 });
 
-test("the wordmark has a uniform, semi-transparent outline, not a glow", () => {
-  const svg = fs.readFileSync(path.join(REPO, "assets/glace-wordmark.svg"), "utf8");
-  assert.match(svg, /stroke="#fff"/);
-  assert.match(svg, /stroke-opacity="0\.6"/);
-  assert.match(svg, /paint-order="stroke"/);
-  assert.match(svg, /stroke-linejoin="round"/);
-  const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
-  assert.doesNotMatch(css, /#title[^{]*\{[^}]*drop-shadow/);
+test("the wordmark heads the panel's band, above the legend", () => {
+  const doc = page();
+  const title = doc.getElementById("title");
+  assert.equal(title.parentElement, doc.getElementById("panel-nav"));
+  assert.equal(title.nextElementSibling, doc.getElementById("legend"));
+  assert.equal(doc.getElementById("subtitle"), null);
 });
 
-test("the wordmark floats over the map and lets drags through", () => {
+test("the scale editor scrolls below its header, on the sheet's one tint", () => {
   const doc = page();
-  assert.equal(doc.getElementById("title").parentElement, doc.body);
-  assert.equal(doc.getElementById("subtitle"), null);
+  const body = doc.querySelector("#scale-editor .body");
+  assert.ok(body.contains(doc.getElementById("bands")));
+  assert.equal(body.previousElementSibling.tagName, "HEADER");
   const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
-  assert.match(css, /#title \{[^}]*pointer-events: none/);
+  assert.match(css, /#scale-editor \.body \{[^}]*overflow: hidden auto/);
+  assert.doesNotMatch(css, /#scale-editor header \{[^}]*background/);
 });
 
 test("the panel's band and body tint one glass pane separately", () => {
@@ -250,4 +250,13 @@ test("the panel's band and body tint one glass pane separately", () => {
   );
   assert.doesNotMatch(block, /#panel,[^{]*\{[^}]*--glass-alpha\b/);
   assert.doesNotMatch(block, /#panel \{[^}]*background: hsl/);
+});
+
+test("the stylesheet's phone blocks use js/ui.js's query, not the width alone", () => {
+  const ui = fs.readFileSync(path.join(REPO, "js/ui.js"), "utf8");
+  const [, query] = ui.match(/PHONE = window\.matchMedia\("([^"]+)"\)/);
+  assert.match(query, /pointer: coarse/);
+  const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+  assert.ok(css.includes(`@media ${query} {`));
+  assert.doesNotMatch(css, /@media \(max-width: 640px\)/);
 });

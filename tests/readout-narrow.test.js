@@ -26,7 +26,7 @@ const { el, popups, window } = page;
 const stub = (node, name, value) =>
   Object.defineProperty(node, name, { configurable: true, writable: true, value });
 stub(el("panel-shell"), "offsetHeight", 500);
-stub(el("panel-nav"), "offsetHeight", 90);
+stub(el("tabs"), "offsetTop", 90);
 
 /* Every tile reads code 101, so any click has a value to show. */
 globalThis.pmtiles.PMTiles = class {
