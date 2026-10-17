@@ -107,6 +107,11 @@ html, body {
   inset: calc(-1 * var(--glass-reach));
   pointer-events: none;
 }
+/*
+ * Stop at the 12px gap to the open scale editor: a backdrop reaching under a
+ * surface drawn above it flickers as parts of the panel repaint.
+ */
+body:has(#scale-editor[open]) #panel-glass { right: -12px; }
 
 #panel {
   /* Position the panel above its glass sibling. */
@@ -116,10 +121,18 @@ html, body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid var(--border);
   border-radius: var(--surface-radius);
   /* The band and the body paint their own tints over the shell's glass. */
   background: transparent;
+}
+/* The outline lies over the band's and the body's tints, as on the dialogs' sheets. */
+#panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--border);
+  border-radius: inherit;
+  pointer-events: none;
 }
 
 /*
@@ -250,7 +263,7 @@ html, body {
     border-color: rgba(255, 255, 255, 0.14);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09);
   }
-  #panel {
+  #panel::after {
     border-color: rgba(255, 255, 255, 0.14);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09);
   }
