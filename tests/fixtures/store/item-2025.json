@@ -645,6 +645,18 @@
       "roles": [
         "visual"
       ]
+    },
+    "style-default": {
+      "href": "./styles/default.json",
+      "type": "application/vnd.mapbox.style+json",
+      "title": "GLACE web-map style (2025)",
+      "description": "Every published web-map layer of 2025, the first visible and the rest hidden. Each archive is a raster-dem source whose custom encoding decodes its values, drawn by a color-relief layer with a default color ramp that a client can change.",
+      "roles": [
+        "style",
+        "default"
+      ],
+      "file:size": 20413,
+      "file:checksum": "1220a6cd4e4fb303e59feeea560df5fe9e2e8e5ffb65bbcf803b397cfdc7aa0167c8"
     }
   },
   "collection": "glace-alps-mosaics"

@@ -7,7 +7,7 @@
   "sources": {
     "src-coh12_vv": {
       "type": "raster-dem",
-      "url": "pmtiles://../2020/coh12_vv_viz.pmtiles",
+      "url": "pmtiles://../coh12_vv_viz.pmtiles",
       "tileSize": 256,
       "minzoom": 5,
       "maxzoom": 13,
@@ -20,7 +20,7 @@
     },
     "src-coh12_vh": {
       "type": "raster-dem",
-      "url": "pmtiles://../2020/coh12_vh_viz.pmtiles",
+      "url": "pmtiles://../coh12_vh_viz.pmtiles",
       "tileSize": 256,
       "minzoom": 5,
       "maxzoom": 13,
@@ -33,7 +33,7 @@
     },
     "src-rtc_vv": {
       "type": "raster-dem",
-      "url": "pmtiles://../2020/rtc_vv_viz.pmtiles",
+      "url": "pmtiles://../rtc_vv_viz.pmtiles",
       "tileSize": 256,
       "minzoom": 5,
       "maxzoom": 13,
@@ -46,7 +46,7 @@
     },
     "src-rtc_vh": {
       "type": "raster-dem",
-      "url": "pmtiles://../2020/rtc_vh_viz.pmtiles",
+      "url": "pmtiles://../rtc_vh_viz.pmtiles",
       "tileSize": 256,
       "minzoom": 5,
       "maxzoom": 13,
@@ -59,7 +59,7 @@
     },
     "src-coh12_vv_qa_num": {
       "type": "raster-dem",
-      "url": "pmtiles://../2020/coh12_vv_qa_num_viz.pmtiles",
+      "url": "pmtiles://../coh12_vv_qa_num_viz.pmtiles",
       "tileSize": 256,
       "minzoom": 5,
       "maxzoom": 13,
@@ -72,7 +72,7 @@
     },
     "src-coh12_vh_qa_num": {
       "type": "raster-dem",
-      "url": "pmtiles://../2020/coh12_vh_qa_num_viz.pmtiles",
+      "url": "pmtiles://../coh12_vh_qa_num_viz.pmtiles",
       "tileSize": 256,
       "minzoom": 5,
       "maxzoom": 13,
@@ -85,7 +85,7 @@
     },
     "src-rtc_vv_qa_num": {
       "type": "raster-dem",
-      "url": "pmtiles://../2020/rtc_vv_qa_num_viz.pmtiles",
+      "url": "pmtiles://../rtc_vv_qa_num_viz.pmtiles",
       "tileSize": 256,
       "minzoom": 5,
       "maxzoom": 13,
@@ -98,7 +98,7 @@
     },
     "src-rtc_vh_qa_num": {
       "type": "raster-dem",
-      "url": "pmtiles://../2020/rtc_vh_qa_num_viz.pmtiles",
+      "url": "pmtiles://../rtc_vh_qa_num_viz.pmtiles",
       "tileSize": 256,
       "minzoom": 5,
       "maxzoom": 13,
@@ -111,7 +111,7 @@
     },
     "src-coh12_vv_qa_cqm": {
       "type": "raster-dem",
-      "url": "pmtiles://../2020/coh12_vv_qa_cqm_viz.pmtiles",
+      "url": "pmtiles://../coh12_vv_qa_cqm_viz.pmtiles",
       "tileSize": 256,
       "minzoom": 5,
       "maxzoom": 13,
@@ -124,7 +124,7 @@
     },
     "src-coh12_vh_qa_cqm": {
       "type": "raster-dem",
-      "url": "pmtiles://../2020/coh12_vh_qa_cqm_viz.pmtiles",
+      "url": "pmtiles://../coh12_vh_qa_cqm_viz.pmtiles",
       "tileSize": 256,
       "minzoom": 5,
       "maxzoom": 13,
@@ -137,7 +137,7 @@
     },
     "src-rtc_vv_qa_cqm": {
       "type": "raster-dem",
-      "url": "pmtiles://../2020/rtc_vv_qa_cqm_viz.pmtiles",
+      "url": "pmtiles://../rtc_vv_qa_cqm_viz.pmtiles",
       "tileSize": 256,
       "minzoom": 5,
       "maxzoom": 13,
@@ -150,7 +150,7 @@
     },
     "src-rtc_vh_qa_cqm": {
       "type": "raster-dem",
-      "url": "pmtiles://../2020/rtc_vh_qa_cqm_viz.pmtiles",
+      "url": "pmtiles://../rtc_vh_qa_cqm_viz.pmtiles",
       "tileSize": 256,
       "minzoom": 5,
       "maxzoom": 13,

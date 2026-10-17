@@ -23,14 +23,18 @@ const items = new Map(
     JSON.parse(fs.readFileSync(path.join(FIXTURES, `item-${year}.json`), "utf8")),
   ]),
 );
-/* Where each document is looked for. The style and the item are reached through
- * the collection's own asset and links, so these URLs are the catalog's to
- * decide rather than this page's. */
+/* Where each document is looked for. Items are reached through the
+ * collection's links and styles through their document's own asset, so these
+ * URLs are the catalog's to decide rather than this page's. */
 const CATALOG = {
   "http://localhost/tiles/mosaics/collection.json": path.join(FIXTURES, "collection.json"),
+  "http://localhost/tiles/mosaics/styles/default.json": path.join(FIXTURES, "style-default.json"),
   ...Object.fromEntries(
     YEARS.flatMap((year) => [
-      [`http://localhost/tiles/mosaics/styles/${year}.json`, path.join(FIXTURES, `style-${year}.json`)],
+      [
+        `http://localhost/tiles/mosaics/${year}/styles/default.json`,
+        path.join(FIXTURES, `style-${year}.json`),
+      ],
       [`http://localhost/tiles/mosaics/${year}/item.json`, path.join(FIXTURES, `item-${year}.json`)],
     ]),
   ),

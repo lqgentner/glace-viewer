@@ -686,94 +686,17 @@
       "file:size": 384130,
       "file:checksum": "1220eda4ec8afce0d77217cd5a2688682fc9f799a4d892727c6d6e85d0827a9f8d83"
     },
-    "style-2015": {
-      "href": "./styles/2015.json",
+    "style-default": {
+      "href": "./styles/default.json",
       "type": "application/vnd.mapbox.style+json",
-      "title": "GLACE web-map style (2015)",
-      "description": "Every published web-map layer of 2015, the first visible and the rest hidden. Each archive is a raster-dem source whose custom encoding decodes its values, drawn by a color-relief layer with a default color ramp that a client can change.",
-      "roles": [
-        "style"
-      ],
-      "file:size": 20395,
-      "file:checksum": "12205d5b4500b4400ad5ce43aa856294f598728d43e562ae0e985183bf8b4ba1d455"
-    },
-    "style-2016": {
-      "href": "./styles/2016.json",
-      "type": "application/vnd.mapbox.style+json",
-      "title": "GLACE web-map style (2016)",
-      "description": "Every published web-map layer of 2016, the first visible and the rest hidden. Each archive is a raster-dem source whose custom encoding decodes its values, drawn by a color-relief layer with a default color ramp that a client can change.",
-      "roles": [
-        "style"
-      ],
-      "file:size": 20395,
-      "file:checksum": "1220ac149541a6993bad806c23ac0d7f53794da8ed99a3a49d8ba6cb8447966d23bf"
-    },
-    "style-2018": {
-      "href": "./styles/2018.json",
-      "type": "application/vnd.mapbox.style+json",
-      "title": "GLACE web-map style (2018)",
-      "description": "Every published web-map layer of 2018, the first visible and the rest hidden. Each archive is a raster-dem source whose custom encoding decodes its values, drawn by a color-relief layer with a default color ramp that a client can change.",
-      "roles": [
-        "style"
-      ],
-      "file:size": 20395,
-      "file:checksum": "1220e92584503637f05cec2914315c7d46cb9e0ed751089386b164af0101a5cc2923"
-    },
-    "style-2020": {
-      "href": "./styles/2020.json",
-      "type": "application/vnd.mapbox.style+json",
-      "title": "GLACE web-map style (2020)",
-      "description": "Every published web-map layer of 2020, the first visible and the rest hidden. Each archive is a raster-dem source whose custom encoding decodes its values, drawn by a color-relief layer with a default color ramp that a client can change.",
-      "roles": [
-        "style"
-      ],
-      "file:size": 20395,
-      "file:checksum": "12204c5bf33b351a2540df7ebf1e27a2846c53ae85328edf58f6cc99bc881a412f00"
-    },
-    "style-2022": {
-      "href": "./styles/2022.json",
-      "type": "application/vnd.mapbox.style+json",
-      "title": "GLACE web-map style (2022)",
-      "description": "Every published web-map layer of 2022, the first visible and the rest hidden. Each archive is a raster-dem source whose custom encoding decodes its values, drawn by a color-relief layer with a default color ramp that a client can change.",
-      "roles": [
-        "style"
-      ],
-      "file:size": 20395,
-      "file:checksum": "1220426534e9ae88131e0d8abf44e410f1681e33d1531e1372339df6bab4bab3ce39"
-    },
-    "style-2023": {
-      "href": "./styles/2023.json",
-      "type": "application/vnd.mapbox.style+json",
-      "title": "GLACE web-map style (2023)",
-      "description": "Every published web-map layer of 2023, the first visible and the rest hidden. Each archive is a raster-dem source whose custom encoding decodes its values, drawn by a color-relief layer with a default color ramp that a client can change.",
-      "roles": [
-        "style"
-      ],
-      "file:size": 20395,
-      "file:checksum": "122086e1b28e1aa7ca597c759fc86de8881e6993fd05ee2b9a05693e99d6fcf3bcc3"
-    },
-    "style-2024": {
-      "href": "./styles/2024.json",
-      "type": "application/vnd.mapbox.style+json",
-      "title": "GLACE web-map style (2024)",
-      "description": "Every published web-map layer of 2024, the first visible and the rest hidden. Each archive is a raster-dem source whose custom encoding decodes its values, drawn by a color-relief layer with a default color ramp that a client can change.",
-      "roles": [
-        "style"
-      ],
-      "file:size": 20395,
-      "file:checksum": "1220a685beb050a6f83d47cc89d0dab41da91c047774ff56e7065b8144610ed3dce8"
-    },
-    "style-2025": {
-      "href": "./styles/2025.json",
-      "type": "application/vnd.mapbox.style+json",
-      "title": "GLACE web-map style (2025)",
-      "description": "Every published web-map layer of 2025, the first visible and the rest hidden. Each archive is a raster-dem source whose custom encoding decodes its values, drawn by a color-relief layer with a default color ramp that a client can change.",
+      "title": "GLACE web-map style",
+      "description": "Every web-map layer of the latest published year, the first visible and the rest hidden. Each year's mosaic item carries the style of its own year, as styles/default.json beside its archives. Each archive is a raster-dem source whose custom encoding decodes its values, drawn by a color-relief layer with a default color ramp that a client can change.",
       "roles": [
         "style",
         "default"
       ],
-      "file:size": 20395,
-      "file:checksum": "1220b3fc62fb31d5fa5848408cfdce27930611c2978bf09fbace40000fcc7518c8cc"
+      "file:size": 20473,
+      "file:checksum": "122037b34ee4416fcf829dc3e966e5344758d1934faf68fb6dde19277c11149b24e2"
     }
   },
   "links": [

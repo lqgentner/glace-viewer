@@ -96,8 +96,9 @@ Relevant paths under the configured catalog root are:
 ```text
 catalog.json
 mosaics/collection.json
-mosaics/styles/{year}.json
+mosaics/styles/default.json
 mosaics/{year}/item.json
+mosaics/{year}/styles/default.json
 mosaics/{year}/*_viz.pmtiles
 tiles/grid.pmtiles
 ```
@@ -113,12 +114,15 @@ tiles/grid.pmtiles
    reads its own archives. The item's `start_datetime` and `end_datetime` give
    the acquisition window, and the asset's `bands[0].unit` the units. The
    collection carries no archive links.
-2. Collection assets with the `style` role decode the archives: each
-   `color-relief` layer draws a `raster-dem` source with a custom encoding.
-   Styles are indexed by year, with a `default` role for fallback. The join
-   checks the year's exact ID, the default's exact ID, then the same stem in
-   the year's and default styles. Enumerate from the items, never from a style:
-   a style can name an archive a partial build never produced.
+2. Styles decode the archives: each `color-relief` layer draws a `raster-dem`
+   source with a custom encoding. Each item's asset with the `style` role is
+   its year's style, resolved against the item; the collection's is the latest
+   year's and the fallback for an item without one. Where a document has
+   several, the one with the `default` role wins; never key on titles. The join
+   checks the year's exact ID, the collection style's exact ID, then the same
+   stem in the year's and the collection's styles. Enumerate from the items,
+   never from a style: a style can name an archive a partial build never
+   produced.
 3. The collection's `renders[<stem>].rescale` gives each layer's default
    stretch.
 
@@ -127,8 +131,9 @@ credit; its ramp is not read. Default color maps and the false-color blue range
 are viewer constants in `js/rasters.js` and `js/composite.js`, because they are
 presentation, not data. Stretches are fixed per layer so years stay comparable.
 
-Incomplete layers are skipped with a warning. A failed collection or nominated
-style prevents raster startup; an unreadable item removes that year's layers.
+Incomplete layers are skipped with a warning. A failed collection or
+collection style prevents raster startup; an unreadable item or item style
+removes that year's layers, since the collection's style credits another year.
 While the catalog loads, `#raster-controls` is `aria-busy`: its markup holds
 invisible placeholders the size of the default layer's controls under a loading
 line, and the band's legend reads "Loading layers…", so the panel and the

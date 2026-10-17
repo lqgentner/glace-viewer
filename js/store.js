@@ -1,7 +1,8 @@
 /*
  * Read one raster record per PMTiles archive. The year items enumerate archives
- * and supply dates and units; styles supply decoding; the collection's renders
- * supply default stretches. Join on the layer ID; see AGENTS.md.
+ * and supply dates, units and their year's style, which supplies decoding; the
+ * collection's style is the fallback, and its renders supply default stretches.
+ * Join on the layer ID; see AGENTS.md.
  */
 
 import { MOSAIC_COLLECTION_URL } from "./config.js";
@@ -61,23 +62,22 @@ function archives(item, itemUrl) {
   return found;
 }
 
-/*
- * Index style assets by year and by the default role, when present.
+/**
+ * The href of a STAC document's style asset, preferring one with the default
+ * role. An item's describes its year; the collection's is the fallback.
  *
- * @param {object} collection  the mosaics collection
- * @returns {Map<number|string, string>}
+ * @param {object} document  a mosaic item or the mosaics collection
+ * @returns {string|null}
  */
-export function styleHrefs(collection) {
-  const out = new Map();
-  for (const [key, asset] of Object.entries(collection?.assets ?? {})) {
+export function styleHref(document) {
+  let found = null;
+  for (const asset of Object.values(document?.assets ?? {})) {
     if (!Array.isArray(asset?.roles) || !asset.roles.includes("style")) continue;
     if (!isNonEmptyString(asset.href)) continue;
-    const year = /(\d{4})(?:\.json)?$/.exec(asset.href) ?? /(\d{4})$/.exec(key);
-    if (year) out.set(Number(year[1]), asset.href);
-    if (asset.roles.includes("default")) out.set("default", asset.href);
+    if (asset.roles.includes("default")) return asset.href;
+    found ??= asset.href;
   }
-  if (out.size === 0) throw new Error("the mosaics collection names no style asset");
-  return out;
+  return found;
 }
 
 /*
@@ -166,31 +166,28 @@ function acquisitionWindow(item) {
 /**
  * Join catalog documents without network access.
  *
- * @param {{item: object, url: string}[]} items  the year items, with the URLs
- *   they were read from for relative hrefs
- * @param {object|Map<number|string, object>} style  the MapLibre style the
- *   collection nominates, or one per year keyed as styleHrefs() keys them
+ * @param {{item: object, url: string, style?: object}[]} items  the year items,
+ *   with the URLs they were read from for relative hrefs and their own styles
+ * @param {object} style  the MapLibre style the collection nominates, for items
+ *   without one
  * @param {object} collection  the mosaics collection, for its renders
  * @returns {object[]}
  */
 export function storeLayers(items, style, collection) {
-  /* A single style document acts as the default for every year. */
-  const styles = style instanceof Map ? style : new Map([["default", style]]);
-  const drawn = new Map([...styles].map(([key, document]) => [key, sources(document)]));
-  const fallback = drawn.get("default");
+  const fallback = sources(style);
   const ranges = stretches(collection);
   const layers = [];
-  const found = (Array.isArray(items) ? items : []).flatMap(({ item, url }) =>
-    archives(item, url).map((archive) => ({ ...archive, ...acquisitionWindow(item) })),
-  );
-  for (const archive of found) {
-    const own = drawn.get(archive.year);
+  const found = (Array.isArray(items) ? items : []).flatMap(({ item, url, style: own }) => {
+    const drawn = sources(own);
+    return archives(item, url).map((archive) => ({ ...archive, ...acquisitionWindow(item), drawn }));
+  });
+  for (const { drawn: own, ...archive } of found) {
     /* Encodings are fixed per layer, so fallback by stem across years is safe. */
     const source =
-      own?.byId.get(archive.id) ??
-      fallback?.byId.get(archive.id) ??
-      own?.byStem.get(archive.stem) ??
-      fallback?.byStem.get(archive.stem);
+      own.byId.get(archive.id) ??
+      fallback.byId.get(archive.id) ??
+      own.byStem.get(archive.stem) ??
+      fallback.byStem.get(archive.stem);
     if (source === undefined) {
       console.warn("store: no style entry describes", archive.id);
       continue;
@@ -218,6 +215,22 @@ export function catalogBounds(collection) {
   return valid ? bbox : null;
 }
 
+/*
+ * Read a year's item and the style it lists. Either failing omits the year;
+ * an item without a style is drawn from the collection's.
+ */
+async function readYear(url) {
+  try {
+    const item = await readJson(url);
+    const href = styleHref(item);
+    const style = href === null ? undefined : await readJson(resolve(href, url));
+    return { item, url, style };
+  } catch (error) {
+    console.warn("store: skipping a year that cannot be read", error.message);
+    return null;
+  }
+}
+
 /**
  * Fetch raster inventory, styles, and optional acquisition dates.
  *
@@ -228,33 +241,16 @@ export async function readStore() {
   const collectionUrl = new URL(MOSAIC_COLLECTION_URL, location.href).href;
   const collection = await readJson(collectionUrl);
 
-  /*
-   * Fetch styles and items concurrently. Style failures are fatal; an item failure
-   * omits that year. Deduplicate style hrefs because a year and default can name
-   * the same file.
-   */
-  const hrefs = styleHrefs(collection);
-  const unique = [...new Set(hrefs.values())];
-  const requests = unique.map((href) => readJson(resolve(href, collectionUrl)));
-
-  const items = (collection?.links ?? [])
+  /* The collection's style failing is fatal; it is read beside the years. */
+  const href = styleHref(collection);
+  if (href === null) throw new Error("the mosaics collection names no style asset");
+  const years = (collection?.links ?? [])
     .filter((link) => link?.rel === "item" && isNonEmptyString(link.href))
-    .map((link) => resolve(link.href, collectionUrl))
-    .map((url) =>
-      readJson(url).then(
-        (item) => ({ item, url }),
-        (error) => {
-          console.warn("store: skipping an unreadable item", error.message);
-          return null;
-        },
-      ),
-    );
-  const answered = await Promise.all([...requests, ...items]);
-  const documents = new Map(unique.map((href, index) => [href, answered[index]]));
-  const drawnAs = new Map([...hrefs].map(([key, href]) => [key, documents.get(href)]));
+    .map((link) => readYear(resolve(link.href, collectionUrl)));
+  const [style, ...items] = await Promise.all([readJson(resolve(href, collectionUrl)), ...years]);
 
   return {
-    layers: storeLayers(answered.slice(unique.length).filter(Boolean), drawnAs, collection),
+    layers: storeLayers(items.filter(Boolean), style, collection),
     bounds: catalogBounds(collection),
   };
 }

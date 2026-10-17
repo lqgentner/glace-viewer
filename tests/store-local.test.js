@@ -23,9 +23,13 @@ const page = installBrowser({
   site: { tilesBase: "https://data.source.coop/giuz/glace-alps" },
   files: {
     "http://localhost/tiles/mosaics/collection.json": path.join(FIXTURES, "collection.json"),
+    "http://localhost/tiles/mosaics/styles/default.json": path.join(FIXTURES, "style-default.json"),
     ...Object.fromEntries(
       YEARS.flatMap((year) => [
-        [`http://localhost/tiles/mosaics/styles/${year}.json`, path.join(FIXTURES, `style-${year}.json`)],
+        [
+          `http://localhost/tiles/mosaics/${year}/styles/default.json`,
+          path.join(FIXTURES, `style-${year}.json`),
+        ],
         [`http://localhost/tiles/mosaics/${year}/item.json`, path.join(FIXTURES, `item-${year}.json`)],
       ]),
     ),
