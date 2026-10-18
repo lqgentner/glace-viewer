@@ -45,10 +45,13 @@ function walk(roots, checkBare) {
 
 test("the staged libraries hold every module the import map reaches", () => {
   const imports = importMap();
-  const seen = walk(Object.values(imports).map(staged), (specifier, from) =>
-    assert.ok(specifier in imports, `${from} imports ${specifier}, which the import map lacks`),
-  );
-  assert.ok(seen.size > Object.keys(imports).length, "the walk followed relative imports");
+  let bare = 0;
+  walk(Object.values(imports).map(staged), (specifier, from) => {
+    bare++;
+    assert.ok(specifier in imports, `${from} imports ${specifier}, which the import map lacks`);
+  });
+  // PMTiles imports fflate; none found means the lexer's API changed under us.
+  assert.ok(bare > 0, "the walk read the libraries' imports");
 });
 
 /* MapLibre builds its worker URL from its own module's URL, and the page's

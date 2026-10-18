@@ -26,6 +26,8 @@ const stub = (node, name, value) =>
   Object.defineProperty(node, name, { configurable: true, writable: true, value });
 const viewport = Object.assign(new window.EventTarget(), { height: 500, offsetTop: 0 });
 stub(window, "visualViewport", viewport);
+// jsdom has no scrollIntoView; a field revealed by a resize calls it.
+stub(window.HTMLElement.prototype, "scrollIntoView", () => {});
 // The layout viewport, which the keyboard does not shrink; innerHeight may differ.
 stub(window.document.documentElement, "clientHeight", 844);
 stub(window, "innerHeight", 900);

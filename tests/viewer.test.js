@@ -465,6 +465,8 @@ test("the viewer", async (t) => {
     const swatch = (id) => el(`inv-${id}`).parentElement.querySelector(".swatch");
     const palette = () => page.window.document.querySelector(".palette-popover");
     const chip = (color) => palette().querySelector(`[data-value="${color}"]`);
+    // A swatch in a hidden tab cannot take focus back.
+    el("tab-inventories").click();
 
     assert.equal(palette(), null);
     swatch("sgi2023").dispatchEvent(new page.window.Event("mouseenter"));
@@ -518,6 +520,7 @@ test("the viewer", async (t) => {
     assert.equal(map.getLayer("inv-line-agi5").paint["line-color"], "#999999");
     change(el("inv-agi5"), false);
     await settle();
+    el("tab-layers").click();
   });
 
   await t.test("a popup reports every overlay under the pointer", async () => {
