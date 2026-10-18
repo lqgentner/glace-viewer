@@ -43,7 +43,7 @@ await settle();
 
 test("a local copy draws its own archives", () => {
   assert.equal(
-    page.map.getSource("glace-coh12_vv-2025").url,
-    "pmtiles://http://localhost/tiles/mosaics/2025/coh12_vv_viz.pmtiles",
+    page.map.getSource("glace-coh12_vv-2026").url,
+    "pmtiles://http://localhost/tiles/mosaics/2026/coh12_vv_viz.pmtiles",
   );
 });

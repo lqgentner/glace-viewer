@@ -7,7 +7,9 @@
     "https://stac-extensions.github.io/raster/v2.0.0/schema.json",
     "https://stac-extensions.github.io/file/v2.1.0/schema.json",
     "https://stac-extensions.github.io/alternate-assets/v1.2.0/schema.json",
-    "https://stac-extensions.github.io/version/v1.2.0/schema.json"
+    "https://stac-extensions.github.io/version/v1.2.0/schema.json",
+    "https://stac-extensions.github.io/table/v1.2.0/schema.json",
+    "https://stac-extensions.github.io/scientific/v1.0.0/schema.json"
   ],
   "id": "glace-alps-mosaics",
   "title": "GLACE mosaics – Sentinel-1 Composites on ETRS89-LAEA (40 m)",
@@ -23,7 +25,9 @@
     "Alps",
     "mosaic"
   ],
-  "version": "0.1",
+  "version": "1.0",
+  "sci:doi": "10.48656/60er-3j55",
+  "sci:citation": "Gentner, L. Q. (2026). GLACE Alps (Version 1.0) [Data set]. LaRS – Language Repository of Switzerland. https://doi.org/10.48656/60er-3j55",
   "providers": [
     {
       "name": "European Space Agency / Copernicus",
@@ -61,7 +65,7 @@
       "interval": [
         [
           "2015-06-16T00:00:00Z",
-          "2025-09-22T00:00:00Z"
+          "2026-10-01T00:00:00Z"
         ]
       ]
     }
@@ -75,7 +79,7 @@
       "rescale": [
         [
           0.1,
-          0.75
+          0.7
         ]
       ],
       "colormap_name": "magma",
@@ -90,7 +94,7 @@
       "rescale": [
         [
           0.0,
-          80.0
+          70.0
         ]
       ],
       "colormap_name": "viridis",
@@ -106,7 +110,7 @@
       "rescale": [
         [
           -2.5,
-          8.0
+          4.0
         ]
       ],
       "colormap_name": "viridis",
@@ -136,7 +140,7 @@
       "rescale": [
         [
           0.0,
-          80.0
+          70.0
         ]
       ],
       "colormap_name": "viridis",
@@ -152,7 +156,7 @@
       "rescale": [
         [
           -2.5,
-          8.0
+          4.0
         ]
       ],
       "colormap_name": "viridis",
@@ -168,7 +172,7 @@
       "rescale": [
         [
           -14.5,
-          -4.5
+          -3.5
         ]
       ],
       "colormap_name": "gray",
@@ -183,7 +187,7 @@
       "rescale": [
         [
           0.0,
-          80.0
+          70.0
         ]
       ],
       "colormap_name": "viridis",
@@ -198,8 +202,8 @@
       "expression": "10*log10(rtc_vv_qa_cqm_b1)",
       "rescale": [
         [
-          -2.5,
-          7.5
+          -3.0,
+          4.0
         ]
       ],
       "colormap_name": "viridis",
@@ -214,8 +218,8 @@
       "expression": "10*log10(rtc_vh_b1)",
       "rescale": [
         [
-          -21.0,
-          -11.0
+          -22.5,
+          -10.5
         ]
       ],
       "colormap_name": "gray",
@@ -230,7 +234,7 @@
       "rescale": [
         [
           0.0,
-          80.0
+          70.0
         ]
       ],
       "colormap_name": "viridis",
@@ -245,8 +249,8 @@
       "expression": "10*log10(rtc_vh_qa_cqm_b1)",
       "rescale": [
         [
-          -2.5,
-          7.5
+          -3.0,
+          4.0
         ]
       ],
       "colormap_name": "viridis",
@@ -494,7 +498,7 @@
     "coh12_vv_qa_cqm_viz": {
       "type": "application/vnd.pmtiles",
       "title": "Coherence VV – Composite Quality Map – PMTiles",
-      "description": "Value-encoded WebP tiles of Coherence VV – Composite Quality Map on WebMercatorQuad z5-z13: an 8-bit code in all three channels, linear over -13 to 19 dB and clipped to it, with code 0 as nodata. Decode with the band's raster:scale and raster:offset; the year's style decodes it as a raster-dem source and colours it with a color-relief layer. Lossy (WebP quality 90): for analysis, read the COGs with the \"data\" role.",
+      "description": "Value-encoded WebP tiles of Coherence VV – Composite Quality Map on WebMercatorQuad z5-z13: an 8-bit code in all three channels, linear over -20 to 14 dB and clipped to it, with code 0 as nodata. Decode with the band's raster:scale and raster:offset; the year's style decodes it as a raster-dem source and colours it with a color-relief layer. Lossy (WebP quality 90): for analysis, read the COGs with the \"data\" role.",
       "roles": [
         "visual"
       ],
@@ -502,8 +506,8 @@
         {
           "data_type": "uint8",
           "nodata": 0,
-          "raster:scale": 0.12598425196850394,
-          "raster:offset": -13.125984251968504,
+          "raster:scale": 0.13385826771653545,
+          "raster:offset": -20.133858267716537,
           "unit": "dB"
         }
       ]
@@ -543,7 +547,7 @@
     "coh12_vh_qa_cqm_viz": {
       "type": "application/vnd.pmtiles",
       "title": "Coherence VH – Composite Quality Map – PMTiles",
-      "description": "Value-encoded WebP tiles of Coherence VH – Composite Quality Map on WebMercatorQuad z5-z13: an 8-bit code in all three channels, linear over -13 to 19 dB and clipped to it, with code 0 as nodata. Decode with the band's raster:scale and raster:offset; the year's style decodes it as a raster-dem source and colours it with a color-relief layer. Lossy (WebP quality 90): for analysis, read the COGs with the \"data\" role.",
+      "description": "Value-encoded WebP tiles of Coherence VH – Composite Quality Map on WebMercatorQuad z5-z13: an 8-bit code in all three channels, linear over -20 to 14 dB and clipped to it, with code 0 as nodata. Decode with the band's raster:scale and raster:offset; the year's style decodes it as a raster-dem source and colours it with a color-relief layer. Lossy (WebP quality 90): for analysis, read the COGs with the \"data\" role.",
       "roles": [
         "visual"
       ],
@@ -551,8 +555,8 @@
         {
           "data_type": "uint8",
           "nodata": 0,
-          "raster:scale": 0.12598425196850394,
-          "raster:offset": -13.125984251968504,
+          "raster:scale": 0.13385826771653545,
+          "raster:offset": -20.133858267716537,
           "unit": "dB"
         }
       ]
@@ -560,7 +564,7 @@
     "rtc_vv_viz": {
       "type": "application/vnd.pmtiles",
       "title": "Backscatter VV – PMTiles",
-      "description": "Value-encoded WebP tiles of Backscatter VV on WebMercatorQuad z5-z13: an 8-bit code in all three channels, linear over -25 to 5 dB and clipped to it, with code 0 as nodata. Decode with the band's raster:scale and raster:offset; the year's style decodes it as a raster-dem source and colours it with a color-relief layer. Lossy (WebP quality 90): for analysis, read the COGs with the \"data\" role.",
+      "description": "Value-encoded WebP tiles of Backscatter VV on WebMercatorQuad z5-z13: an 8-bit code in all three channels, linear over -25 to 10 dB and clipped to it, with code 0 as nodata. Decode with the band's raster:scale and raster:offset; the year's style decodes it as a raster-dem source and colours it with a color-relief layer. Lossy (WebP quality 90): for analysis, read the COGs with the \"data\" role.",
       "roles": [
         "visual"
       ],
@@ -568,8 +572,8 @@
         {
           "data_type": "uint8",
           "nodata": 0,
-          "raster:scale": 0.11811023622047244,
-          "raster:offset": -25.118110236220474,
+          "raster:scale": 0.1377952755905512,
+          "raster:offset": -25.137795275590552,
           "unit": "dB"
         }
       ]
@@ -593,7 +597,7 @@
     "rtc_vv_qa_cqm_viz": {
       "type": "application/vnd.pmtiles",
       "title": "Backscatter VV – Composite Quality Map – PMTiles",
-      "description": "Value-encoded WebP tiles of Backscatter VV – Composite Quality Map on WebMercatorQuad z5-z13: an 8-bit code in all three channels, linear over -13 to 12 dB and clipped to it, with code 0 as nodata. Decode with the band's raster:scale and raster:offset; the year's style decodes it as a raster-dem source and colours it with a color-relief layer. Lossy (WebP quality 90): for analysis, read the COGs with the \"data\" role.",
+      "description": "Value-encoded WebP tiles of Backscatter VV – Composite Quality Map on WebMercatorQuad z5-z13: an 8-bit code in all three channels, linear over -20 to 12 dB and clipped to it, with code 0 as nodata. Decode with the band's raster:scale and raster:offset; the year's style decodes it as a raster-dem source and colours it with a color-relief layer. Lossy (WebP quality 90): for analysis, read the COGs with the \"data\" role.",
       "roles": [
         "visual"
       ],
@@ -601,8 +605,8 @@
         {
           "data_type": "uint8",
           "nodata": 0,
-          "raster:scale": 0.0984251968503937,
-          "raster:offset": -13.098425196850394,
+          "raster:scale": 0.12598425196850394,
+          "raster:offset": -20.125984251968504,
           "unit": "dB"
         }
       ]
@@ -610,7 +614,7 @@
     "rtc_vh_viz": {
       "type": "application/vnd.pmtiles",
       "title": "Backscatter VH – PMTiles",
-      "description": "Value-encoded WebP tiles of Backscatter VH on WebMercatorQuad z5-z13: an 8-bit code in all three channels, linear over -31 to -1 dB and clipped to it, with code 0 as nodata. Decode with the band's raster:scale and raster:offset; the year's style decodes it as a raster-dem source and colours it with a color-relief layer. Lossy (WebP quality 90): for analysis, read the COGs with the \"data\" role.",
+      "description": "Value-encoded WebP tiles of Backscatter VH on WebMercatorQuad z5-z13: an 8-bit code in all three channels, linear over -31 to 2 dB and clipped to it, with code 0 as nodata. Decode with the band's raster:scale and raster:offset; the year's style decodes it as a raster-dem source and colours it with a color-relief layer. Lossy (WebP quality 90): for analysis, read the COGs with the \"data\" role.",
       "roles": [
         "visual"
       ],
@@ -618,8 +622,8 @@
         {
           "data_type": "uint8",
           "nodata": 0,
-          "raster:scale": 0.11811023622047244,
-          "raster:offset": -31.118110236220474,
+          "raster:scale": 0.12992125984251968,
+          "raster:offset": -31.12992125984252,
           "unit": "dB"
         }
       ]
@@ -643,7 +647,7 @@
     "rtc_vh_qa_cqm_viz": {
       "type": "application/vnd.pmtiles",
       "title": "Backscatter VH – Composite Quality Map – PMTiles",
-      "description": "Value-encoded WebP tiles of Backscatter VH – Composite Quality Map on WebMercatorQuad z5-z13: an 8-bit code in all three channels, linear over -13 to 12 dB and clipped to it, with code 0 as nodata. Decode with the band's raster:scale and raster:offset; the year's style decodes it as a raster-dem source and colours it with a color-relief layer. Lossy (WebP quality 90): for analysis, read the COGs with the \"data\" role.",
+      "description": "Value-encoded WebP tiles of Backscatter VH – Composite Quality Map on WebMercatorQuad z5-z13: an 8-bit code in all three channels, linear over -20 to 12 dB and clipped to it, with code 0 as nodata. Decode with the band's raster:scale and raster:offset; the year's style decodes it as a raster-dem source and colours it with a color-relief layer. Lossy (WebP quality 90): for analysis, read the COGs with the \"data\" role.",
       "roles": [
         "visual"
       ],
@@ -651,10 +655,18 @@
         {
           "data_type": "uint8",
           "nodata": 0,
-          "raster:scale": 0.0984251968503937,
-          "raster:offset": -13.098425196850394,
+          "raster:scale": 0.12598425196850394,
+          "raster:offset": -20.125984251968504,
           "unit": "dB"
         }
+      ]
+    },
+    "style-default": {
+      "type": "application/vnd.mapbox.style+json",
+      "title": "Map style",
+      "roles": [
+        "style",
+        "default"
       ]
     }
   },
@@ -667,14 +679,133 @@
       "roles": [
         "collection-mirror"
       ],
+      "table:primary_geometry": "geometry",
+      "table:columns": [
+        {
+          "name": "type",
+          "type": "string",
+          "description": "Always `Feature`."
+        },
+        {
+          "name": "stac_version",
+          "type": "string",
+          "description": "STAC version of the item."
+        },
+        {
+          "name": "stac_extensions",
+          "type": "list<element: string>",
+          "description": "Schema URIs of the STAC extensions the item uses."
+        },
+        {
+          "name": "id",
+          "type": "string",
+          "description": "Item id, `{scope}-mosaic-{year}`, such as `alps-mosaic-2024`."
+        },
+        {
+          "name": "geometry",
+          "type": "binary",
+          "description": "Footprint of the year's mosaic in WGS84 (EPSG:4326), as WKB: the union of the year's tiles, simplified."
+        },
+        {
+          "name": "bbox",
+          "type": "struct<xmin: double, ymin: double, xmax: double, ymax: double>",
+          "description": "Bounds of the footprint in WGS84. The GeoParquet covering column, with statistics per row group, so a bounding-box filter skips row groups."
+        },
+        {
+          "name": "links",
+          "type": "list<element: struct<rel: string, href: string, type: string, title: string>>",
+          "description": "The item document's links, with absolute hrefs: root, collection, parent and the CEOS-ARD specification."
+        },
+        {
+          "name": "assets",
+          "type": "struct",
+          "description": "One struct per asset key, with absolute https hrefs."
+        },
+        {
+          "name": "collection",
+          "type": "string",
+          "description": "Id of the collection, `glace-{scope}-mosaics`."
+        },
+        {
+          "name": "start_datetime",
+          "type": "timestamp[us, tz=UTC]",
+          "description": "First day of the year's compositing window, at 00:00 UTC."
+        },
+        {
+          "name": "end_datetime",
+          "type": "timestamp[us, tz=UTC]",
+          "description": "The day after the window's last day, at 00:00 UTC."
+        },
+        {
+          "name": "constellation",
+          "type": "string",
+          "description": "Always `sentinel-1`."
+        },
+        {
+          "name": "instruments",
+          "type": "list<element: string>",
+          "description": "Always `[c-sar]`."
+        },
+        {
+          "name": "sar:instrument_mode",
+          "type": "string",
+          "description": "Always `IW`, Interferometric Wide swath."
+        },
+        {
+          "name": "sar:frequency_band",
+          "type": "string",
+          "description": "Always `C`."
+        },
+        {
+          "name": "sar:polarizations",
+          "type": "list<element: string>",
+          "description": "Polarizations with at least one composite, `VV` and `VH`."
+        },
+        {
+          "name": "proj:code",
+          "type": "string",
+          "description": "CRS of the item's COGs, `EPSG:3035`."
+        },
+        {
+          "name": "proj:shape",
+          "type": "list<element: int64>",
+          "description": "Raster shape of the item's COGs, `[rows, columns]`."
+        },
+        {
+          "name": "proj:transform",
+          "type": "list<element: double>",
+          "description": "Affine transform of the item's COGs, six coefficients in `proj:code` units."
+        },
+        {
+          "name": "version",
+          "type": "string",
+          "description": "Dataset version the item belongs to."
+        },
+        {
+          "name": "glace:build_fingerprint",
+          "type": "string",
+          "description": "Fingerprint of the inputs and settings the year's mosaics were built from. It changes when any of them change."
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "description": "Description of the item."
+        },
+        {
+          "name": "datetime",
+          "type": "timestamp[us, tz=UTC]",
+          "description": "Midpoint of the compositing window."
+        }
+      ],
       "alternate": {
         "s3": {
           "href": "s3://eu-central-1.opendata.source.coop/giuz/glace-alps/mosaics/items.parquet",
           "alternate:name": "S3"
         }
       },
-      "file:size": 1402060,
-      "file:checksum": "12205bd062b2c0dcaa9a86825f391584a5df1a037d6810a86e82d0721c99700262be"
+      "table:row_count": 12,
+      "file:size": 231932,
+      "file:checksum": "1220dd277502ee59510d245614302c5d7ef912c5137c676272bfd2b410737939ffde"
     },
     "thumbnail": {
       "href": "https://data.source.coop/giuz/glace-alps/mosaics/thumbnail.webp",
@@ -683,13 +814,13 @@
       "roles": [
         "thumbnail"
       ],
-      "file:size": 384130,
-      "file:checksum": "1220eda4ec8afce0d77217cd5a2688682fc9f799a4d892727c6d6e85d0827a9f8d83"
+      "file:size": 388360,
+      "file:checksum": "1220f00e8b53df27973adc74b074d6dcfcdda5b2d437293ff26d403d628e4121c0cc"
     },
     "style-default": {
       "href": "./styles/default.json",
       "type": "application/vnd.mapbox.style+json",
-      "title": "GLACE web-map style",
+      "title": "Map style – latest year",
       "description": "Every web-map layer of the latest published year, the first visible and the rest hidden. Each year's mosaic item carries the style of its own year, as styles/default.json beside its archives. Each archive is a raster-dem source whose custom encoding decodes its values, drawn by a color-relief layer with a default color ramp that a client can change.",
       "roles": [
         "style",
@@ -699,6 +830,7 @@
       "file:checksum": "122037b34ee4416fcf829dc3e966e5344758d1934faf68fb6dde19277c11149b24e2"
     }
   },
+  "updated": "2026-10-18T06:16:01Z",
   "links": [
     {
       "rel": "root",
@@ -731,6 +863,24 @@
       "title": "CC-BY-4.0"
     },
     {
+      "rel": "cite-as",
+      "href": "https://doi.org/10.48656/60er-3j55",
+      "type": "text/html",
+      "title": "DOI of version 1.0"
+    },
+    {
+      "rel": "related",
+      "href": "https://doi.org/10.48656/d4r9-fj97",
+      "type": "text/html",
+      "title": "Canonical DOI, every version"
+    },
+    {
+      "rel": "preview",
+      "href": "https://lqgentner.github.io/glace-viewer",
+      "type": "text/html",
+      "title": "GLACE Viewer, an interactive web map"
+    },
+    {
       "rel": "item",
       "href": "./2015/item.json",
       "type": "application/geo+json",
@@ -744,15 +894,33 @@
     },
     {
       "rel": "item",
+      "href": "./2017/item.json",
+      "type": "application/geo+json",
+      "title": "GLACE mosaics, 2017"
+    },
+    {
+      "rel": "item",
       "href": "./2018/item.json",
       "type": "application/geo+json",
       "title": "GLACE mosaics, 2018"
     },
     {
       "rel": "item",
+      "href": "./2019/item.json",
+      "type": "application/geo+json",
+      "title": "GLACE mosaics, 2019"
+    },
+    {
+      "rel": "item",
       "href": "./2020/item.json",
       "type": "application/geo+json",
       "title": "GLACE mosaics, 2020"
+    },
+    {
+      "rel": "item",
+      "href": "./2021/item.json",
+      "type": "application/geo+json",
+      "title": "GLACE mosaics, 2021"
     },
     {
       "rel": "item",
@@ -777,6 +945,12 @@
       "href": "./2025/item.json",
       "type": "application/geo+json",
       "title": "GLACE mosaics, 2025"
+    },
+    {
+      "rel": "item",
+      "href": "./2026/item.json",
+      "type": "application/geo+json",
+      "title": "GLACE mosaics, 2026"
     }
   ]
 }
