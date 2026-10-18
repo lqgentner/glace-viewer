@@ -1,7 +1,7 @@
 {
   "name": "GLACE — Sentinel-1 composites, European Alps",
   "short_name": "GLACE",
-  "description": "Sentinel-1 annual summer composites of the European Alps.",
+  "description": "Sentinel-1 coherence and backscatter composites of the European Alps.",
   "start_url": "../",
   "scope": "../",
   "display": "standalone",

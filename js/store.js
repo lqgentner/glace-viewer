@@ -1,7 +1,8 @@
 /*
- * Read one raster record per PMTiles archive. The mosaics collection enumerates
- * archives, styles supply rendering metadata, and items supply acquisition dates.
- * Join on pmtiles:layers; see AGENTS.md for the catalog contract.
+ * Read one raster record per PMTiles archive. The year items enumerate archives
+ * and supply dates, units and their year's style, which supplies decoding; the
+ * collection's style is the fallback, and its renders supply default stretches.
+ * Join on the layer ID; see AGENTS.md.
  */
 
 import { MOSAIC_COLLECTION_URL } from "./config.js";
@@ -36,66 +37,69 @@ function parseLayerId(id) {
   };
 }
 
-/* Enumerate collection archives using pmtiles:layers as their identity. */
-function archives(collection, collectionUrl) {
-  const links = Array.isArray(collection?.links) ? collection.links : [];
+/*
+ * Enumerate an item's archives: its visual PMTiles assets. The asset key
+ * coh12_vv_viz in item alps-mosaic-2023 is layer glace-coh12_vv-2023.
+ */
+function archives(item, itemUrl) {
+  const year = /(\d{4})$/.exec(item?.id ?? "");
+  if (year === null) return [];
   const found = [];
-  for (const link of links) {
-    if (link?.rel !== "pmtiles" || !isNonEmptyString(link.href)) continue;
-    const ids = Array.isArray(link["pmtiles:layers"]) ? link["pmtiles:layers"] : [];
-    for (const id of ids) {
-      const parsed = parseLayerId(id);
-      if (parsed !== null) found.push({ ...parsed, url: resolve(link.href, collectionUrl) });
+  for (const [key, asset] of Object.entries(item?.assets ?? {})) {
+    if (!Array.isArray(asset?.roles) || !asset.roles.includes("visual")) continue;
+    if (asset.type !== "application/vnd.pmtiles" || !isNonEmptyString(asset.href)) continue;
+    const stem = /^(.+)_viz$/.exec(key);
+    const parsed = stem && parseLayerId(`glace-${stem[1]}-${year[1]}`);
+    const band = Array.isArray(asset.bands) ? asset.bands[0] : null;
+    if (parsed) {
+      found.push({
+        ...parsed,
+        url: resolve(asset.href, itemUrl),
+        units: isNonEmptyString(band?.unit) ? band.unit : "",
+      });
     }
   }
   return found;
 }
 
-/*
- * Index style assets by year and by the default role, when present.
+/**
+ * The href of a STAC document's style asset, preferring one with the default
+ * role. An item's describes its year; the collection's is the fallback.
  *
- * @param {object} collection  the mosaics collection
- * @returns {Map<number|string, string>}
+ * @param {object} document  a mosaic item or the mosaics collection
+ * @returns {string|null}
  */
-export function styleHrefs(collection) {
-  const out = new Map();
-  for (const [key, asset] of Object.entries(collection?.assets ?? {})) {
+export function styleHref(document) {
+  let found = null;
+  for (const asset of Object.values(document?.assets ?? {})) {
     if (!Array.isArray(asset?.roles) || !asset.roles.includes("style")) continue;
     if (!isNonEmptyString(asset.href)) continue;
-    const year = /(\d{4})(?:\.json)?$/.exec(asset.href) ?? /(\d{4})$/.exec(key);
-    if (year) out.set(Number(year[1]), asset.href);
-    if (asset.roles.includes("default")) out.set("default", asset.href);
+    if (asset.roles.includes("default")) return asset.href;
+    found ??= asset.href;
   }
-  if (out.size === 0) throw new Error("the mosaics collection names no style asset");
-  return out;
+  return found;
 }
 
 /*
- * Index portolan:legend metadata by layer ID and stem. Zoom limits come from the
- * style source.
+ * Index the style's color-relief layers by layer ID and stem. Each draws a
+ * raster-dem source whose custom encoding decodes the archive; the source also
+ * supplies zoom limits and the credit line. The style's ramp is not read: the
+ * viewer chooses color maps, and stretches come from the collection's renders.
  */
-function legends(style) {
-  const sources = style?.sources ?? {};
+function sources(style) {
+  const declared = style?.sources ?? {};
   const byId = new Map();
   const byStem = new Map();
   for (const layer of Array.isArray(style?.layers) ? style.layers : []) {
-    const legend = layer?.metadata?.["portolan:legend"];
-    // Ignore unrelated style layers.
-    if (legend === null || typeof legend !== "object") continue;
+    if (layer?.type !== "color-relief") continue;
     const parsed = parseLayerId(layer.id);
     if (parsed === null) continue;
-    const source = sources[layer.source] ?? {};
+    const source = declared[layer.source] ?? {};
     const entry = {
-      cmap: legend.cmap,
-      vmin: legend.vmin,
-      vmax: legend.vmax,
-      units: typeof legend.unit === "string" ? legend.unit : "",
-      colors: (Array.isArray(legend.stops) ? legend.stops : [])
-        .map((stop) => stop?.color)
-        .filter(isNonEmptyString),
-      channels: legend.channels ?? null,
       minZoom: source.minzoom,
       maxZoom: source.maxzoom,
+      encoding: valueEncoding(source),
+      attribution: isNonEmptyString(source.attribution) ? source.attribution : undefined,
     };
     byId.set(layer.id, entry);
     if (!byStem.has(parsed.stem)) byStem.set(parsed.stem, entry);
@@ -103,34 +107,52 @@ function legends(style) {
   return { byId, byStem };
 }
 
-/* RGB shares the polarization field but uses channel recipes instead of a ramp. */
-export const FALSE_COLOUR = "RGB";
+/**
+ * Default stretches by stem from the collection's STAC renders, whose keys are
+ * the layer stems.
+ *
+ * @param {object} collection  the mosaics collection
+ * @returns {Map<string, {vmin: number, vmax: number}>}
+ */
+export function stretches(collection) {
+  const out = new Map();
+  for (const [stem, render] of Object.entries(collection?.renders ?? {})) {
+    const range = Array.isArray(render?.rescale) ? render.rescale[0] : null;
+    if (!Array.isArray(range) || range.length !== 2) continue;
+    const [vmin, vmax] = range;
+    if (isFiniteNumber(vmin) && isFiniteNumber(vmax) && vmin < vmax) out.set(stem, { vmin, vmax });
+  }
+  return out;
+}
+
+/*
+ * A value-encoded archive is a raster-dem source with MapLibre's custom
+ * encoding: value = R * redFactor + G * greenFactor + B * blueFactor - baseShift.
+ * The style declares the four numbers; nothing else about the archive is assumed.
+ */
+const ENCODING_FACTORS = ["redFactor", "greenFactor", "blueFactor", "baseShift"];
+
+export function valueEncoding(source) {
+  if (source?.type !== "raster-dem" || source.encoding !== "custom") return null;
+  if (!ENCODING_FACTORS.every((name) => isFiniteNumber(source[name]))) return null;
+  return Object.fromEntries([
+    ["encoding", "custom"],
+    ...ENCODING_FACTORS.map((name) => [name, source[name]]),
+  ]);
+}
 
 /*
  * Validate catalog input before handing it to MapLibre. One incomplete layer must
  * not discard the others.
  */
-function drawable(layer) {
-  if (!isFiniteNumber(layer.minZoom) || !isFiniteNumber(layer.maxZoom)) return false;
-  if (layer.minZoom > layer.maxZoom) return false;
-
-  /*
-   * RGB channel metadata is descriptive: invalid channels omit legend numbers but
-   * do not prevent rendering.
-   */
-  if (layer.polarization === FALSE_COLOUR) return true;
-
-  return (
-    isFiniteNumber(layer.vmin) &&
-    isFiniteNumber(layer.vmax) &&
-
-    layer.vmin < layer.vmax &&
-
-    Array.isArray(layer.colors) &&
-    layer.colors.length > 0 &&
-    layer.colors.every(isNonEmptyString)
-  );
-}
+const drawable = (layer) =>
+  isFiniteNumber(layer.minZoom) &&
+  isFiniteNumber(layer.maxZoom) &&
+  layer.minZoom <= layer.maxZoom &&
+  layer.encoding !== null &&
+  isFiniteNumber(layer.vmin) &&
+  isFiniteNumber(layer.vmax) &&
+  layer.vmin < layer.vmax;
 
 /* Optional acquisition dates, formatted as YYYY-MM-DD. */
 const ISO_DATETIME = /^(\d{4}-\d{2}-\d{2})T/;
@@ -144,34 +166,35 @@ function acquisitionWindow(item) {
 /**
  * Join catalog documents without network access.
  *
- * @param {object} collection  the mosaics collection
- * @param {string} collectionUrl  where it was read from, for relative hrefs
- * @param {object|Map<number|string, object>} style  the MapLibre style it
- *   nominates, or one per year keyed as styleHrefs() keys them
- * @param {Map<number, object>} windows  year -> {startDate, endDate}
+ * @param {{item: object, url: string, style?: object}[]} items  the year items,
+ *   with the URLs they were read from for relative hrefs and their own styles
+ * @param {object} style  the MapLibre style the collection nominates, for items
+ *   without one
+ * @param {object} collection  the mosaics collection, for its renders
  * @returns {object[]}
  */
-export function storeLayers(collection, collectionUrl, style, windows = new Map()) {
-  /* A single style document acts as the default for every year. */
-  const styles = style instanceof Map ? style : new Map([["default", style]]);
-  const drawn = new Map([...styles].map(([key, document]) => [key, legends(document)]));
-  const fallback = drawn.get("default");
+export function storeLayers(items, style, collection) {
+  const fallback = sources(style);
+  const ranges = stretches(collection);
   const layers = [];
-  for (const archive of archives(collection, collectionUrl)) {
-    const own = drawn.get(archive.year);
-    /* Fixed per-layer stretches allow fallback by stem across years. */
-    const legend =
-      own?.byId.get(archive.id) ??
-      fallback?.byId.get(archive.id) ??
-      own?.byStem.get(archive.stem) ??
-      fallback?.byStem.get(archive.stem);
-    if (legend === undefined) {
+  const found = (Array.isArray(items) ? items : []).flatMap(({ item, url, style: own }) => {
+    const drawn = sources(own);
+    return archives(item, url).map((archive) => ({ ...archive, ...acquisitionWindow(item), drawn }));
+  });
+  for (const { drawn: own, ...archive } of found) {
+    /* Encodings are fixed per layer, so fallback by stem across years is safe. */
+    const source =
+      own.byId.get(archive.id) ??
+      fallback.byId.get(archive.id) ??
+      own.byStem.get(archive.stem) ??
+      fallback.byStem.get(archive.stem);
+    if (source === undefined) {
       console.warn("store: no style entry describes", archive.id);
       continue;
     }
-    const layer = { ...archive, ...legend, ...(windows.get(archive.year) ?? {}) };
+    const layer = { ...source, ...ranges.get(archive.stem), ...archive };
     if (!drawable(layer)) {
-      console.warn("store: skipping a layer the style describes incompletely", archive.id);
+      console.warn("store: skipping a layer the catalog describes incompletely", archive.id);
       continue;
     }
     layers.push(layer);
@@ -180,39 +203,54 @@ export function storeLayers(collection, collectionUrl, style, windows = new Map(
   return layers;
 }
 
+/** The collection's [west, south, east, north], or null without a valid one. */
+export function catalogBounds(collection) {
+  const bbox = collection?.extent?.spatial?.bbox?.[0];
+  const valid =
+    Array.isArray(bbox) &&
+    bbox.length === 4 &&
+    bbox.every(isFiniteNumber) &&
+    bbox[0] < bbox[2] &&
+    bbox[1] < bbox[3];
+  return valid ? bbox : null;
+}
+
+/*
+ * Read a year's item and the style it lists. Either failing omits the year;
+ * an item without a style is drawn from the collection's.
+ */
+async function readYear(url) {
+  try {
+    const item = await readJson(url);
+    const href = styleHref(item);
+    const style = href === null ? undefined : await readJson(resolve(href, url));
+    return { item, url, style };
+  } catch (error) {
+    console.warn("store: skipping a year that cannot be read", error.message);
+    return null;
+  }
+}
+
 /**
  * Fetch raster inventory, styles, and optional acquisition dates.
  *
- * @returns {Promise<object[]>}  one record per archive
+ * @returns {Promise<{layers: object[], bounds: number[]|null}>}  one record per
+ *   archive, and the catalog's extent
  */
 export async function readStore() {
   const collectionUrl = new URL(MOSAIC_COLLECTION_URL, location.href).href;
   const collection = await readJson(collectionUrl);
 
-  /*
-   * Fetch styles and items concurrently. Style failures are fatal; item failures
-   * only omit dates. Deduplicate style hrefs because a year and default can name
-   * the same file.
-   */
-  const hrefs = styleHrefs(collection);
-  const unique = [...new Set(hrefs.values())];
-  const requests = unique.map((href) => readJson(resolve(href, collectionUrl)));
-
-  const items = (collection?.links ?? [])
+  /* The collection's style failing is fatal; it is read beside the years. */
+  const href = styleHref(collection);
+  if (href === null) throw new Error("the mosaics collection names no style asset");
+  const years = (collection?.links ?? [])
     .filter((link) => link?.rel === "item" && isNonEmptyString(link.href))
-    .map((link) => readJson(resolve(link.href, collectionUrl)).catch(() => null));
-  const answered = await Promise.all([...requests, ...items]);
-  const documents = new Map(unique.map((href, index) => [href, answered[index]]));
-  const drawnAs = new Map([...hrefs].map(([key, href]) => [key, documents.get(href)]));
-  const settled = answered.slice(unique.length);
+    .map((link) => readYear(resolve(link.href, collectionUrl)));
+  const [style, ...items] = await Promise.all([readJson(resolve(href, collectionUrl)), ...years]);
 
-  const windows = new Map();
-  for (const item of settled) {
-    // The item names its own year, the way the archives do: `ch-mosaic-2024`.
-    const year = /(\d{4})$/.exec(item?.id ?? "");
-    const dates = acquisitionWindow(item);
-    if (year && dates.startDate) windows.set(Number(year[1]), dates);
-  }
-
-  return storeLayers(collection, collectionUrl, drawnAs, windows);
+  return {
+    layers: storeLayers(items.filter(Boolean), style, collection),
+    bounds: catalogBounds(collection),
+  };
 }

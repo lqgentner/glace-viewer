@@ -8,17 +8,17 @@
     "https://stac-extensions.github.io/file/v2.1.0/schema.json",
     "https://stac-extensions.github.io/version/v1.2.0/schema.json"
   ],
-  "id": "ch-mosaic-2021",
+  "id": "alps-mosaic-2021",
   "geometry": null,
   "bbox": [
-    6.796066566434904,
-    45.85497680754794,
-    10.44539311148726,
-    47.31316584658046
+    4.761241226765218,
+    43.40110528524522,
+    16.595654772526252,
+    48.38818786316379
   ],
   "properties": {
-    "start_datetime": "2021-07-11T00:00:00Z",
-    "end_datetime": "2021-10-09T00:00:00Z",
+    "start_datetime": "2021-07-06T00:00:00Z",
+    "end_datetime": "2021-10-04T00:00:00Z",
     "constellation": "sentinel-1",
     "instruments": [
       "c-sar"
@@ -31,28 +31,28 @@
     ],
     "proj:code": "EPSG:3035",
     "proj:shape": [
-      4350,
-      7200
+      14475,
+      24100
     ],
     "proj:transform": [
       40.0,
       0.0,
-      4069000.0,
+      3894000.0,
       0.0,
       -40.0,
-      2698000.0
+      2832000.0
     ],
-    "version": "0.1",
-    "glace:build_fingerprint": "bfa304055a8dde9aef919f633dbb2c7ca7d10a8cfa0f250697a473e35ab946d9",
-    "description": "Annual mosaics of the GLACE composites for 2021, on the fixed equal-area grid (EPSG:3035, 40 m) every year of this collection shares.",
-    "datetime": "2021-08-25T00:00:00Z"
+    "version": "1.0",
+    "glace:build_fingerprint": "07b54b8c8adf79d093fa041060102a692b77e5ac6aa7d1896aa8ccbbf678456c",
+    "description": "Annual mosaics of the GLACE composites for 2021, on a fixed equal-area grid (ETRS89-LAEA, 40 m) every year of this collection shares.",
+    "datetime": "2021-08-20T00:00:00Z"
   },
   "links": [
     {
       "rel": "root",
       "href": "../../catalog.json",
       "type": "application/json",
-      "title": "GLACE Switzerland"
+      "title": "GLACE Alps"
     },
     {
       "rel": "collection",
@@ -74,38 +74,27 @@
     }
   ],
   "assets": {
-    "coh12_rgb_viz": {
-      "href": "coh12_rgb_viz.pmtiles",
-      "type": "application/vnd.pmtiles",
-      "title": "coh12_rgb web-map tiles",
-      "description": "Pre-styled 8-bit WebP rendering of coh12_rgb on WebMercatorQuad z5-z13, stretched 0.1-0.75 as the collection's style for 2021 declares. Not for analysis: read coh12_vv.tif and coh12_vh.tif.",
-      "file:size": 23753058,
-      "file:checksum": "1220a300f25e4e23fa55f0f322882c7b6d577cf0b259ad56bd5ea0e76d8663719afd",
-      "proj:code": "EPSG:3857",
-      "roles": [
-        "visual"
-      ]
-    },
     "coh12_vh": {
       "href": "coh12_vh.tif",
       "type": "image/tiff; application=geotiff; profile=cloud-optimized",
-      "title": "coh12_vh annual mosaic",
+      "title": "Coherence VH",
+      "description": "12-day repeat-pass interferometric coherence, cross-polarized (VH), resampled from the 10 m tiles onto the 40 m equal-area grid by averaging in the linear domain. Dimensionless, in [0, 1].",
       "bands": [
         {
           "name": "coh12_vh",
           "data_type": "float32",
           "nodata": "nan",
           "statistics": {
-            "maximum": 0.8923739790916443,
-            "mean": 0.23194673989529274,
-            "minimum": 0.04091060534119606,
-            "stddev": 0.11969764622111603,
-            "valid_percent": 28.60978607918263
+            "maximum": 0.91239994764328,
+            "mean": 0.19920505367007502,
+            "minimum": 0.044294241815805435,
+            "stddev": 0.10334972202739541,
+            "valid_percent": 38.52808863471861
           }
         }
       ],
-      "file:size": 17003289,
-      "file:checksum": "122064d125b174eef2d00294764bd4660c6a9adfe00f2be1f1b1eaf955211c95d508",
+      "file:size": 242374498,
+      "file:checksum": "12201f838f0202ee0312aaac72851bb350177ec5b0426f354c227f19a3230779f821",
       "raster:spatial_resolution": 40.0,
       "roles": [
         "data",
@@ -115,36 +104,47 @@
     "coh12_vh_qa_cqm": {
       "href": "coh12_vh_qa_cqm.tif",
       "type": "image/tiff; application=geotiff; profile=cloud-optimized",
-      "title": "coh12_vh_qa_cqm annual mosaic",
+      "title": "Coherence VH \u2013 Composite Quality Map",
+      "description": "Composite quality of the Coherence VH composite: the local resolution of the weighted composite, where higher is better resolved, averaged onto the 40 m grid. Linear scaling; the decibel conversion is declared in the collection's renders.",
       "bands": [
         {
           "name": "coh12_vh_qa_cqm",
           "data_type": "float32",
           "nodata": "nan",
           "statistics": {
-            "maximum": 24780.52734375,
-            "mean": 2.7123919413366617,
-            "minimum": 0.023621628060936928,
-            "stddev": 16.89330086249975,
-            "valid_percent": 28.60978607918263
+            "maximum": 9.194847106933594,
+            "mean": 1.0107224730203583,
+            "minimum": 0.01846730336546898,
+            "stddev": 0.48002113063431934,
+            "valid_percent": 38.52808863471861
           }
         }
       ],
-      "file:size": 23256886,
-      "file:checksum": "12205f9ef1fd24ab86b29655bab75998c1164386b25cbd755d28949ec856fc31f0f3",
+      "file:size": 205522018,
+      "file:checksum": "1220d1f446c5f9d192e616532576df91931c86086094069d6f255c240554390a87ad",
       "raster:spatial_resolution": 40.0,
       "roles": [
-        "quality"
+        "quality",
+        "cloud-optimized"
       ]
     },
     "coh12_vh_qa_cqm_viz": {
       "href": "coh12_vh_qa_cqm_viz.pmtiles",
       "type": "application/vnd.pmtiles",
-      "title": "coh12_vh_qa_cqm web-map tiles",
-      "description": "Pre-styled 8-bit WebP rendering of coh12_vh_qa_cqm on WebMercatorQuad z5-z13, stretched -3-10 dB through cmc.glasgow as the collection's style for 2021 declares. Not for analysis: read coh12_vh_qa_cqm.tif.",
-      "file:size": 21894998,
-      "file:checksum": "12200136f88b088cdd6e9c93ce68fa3f7f1d6e52d478f0f748d6ce434c7aed53785b",
+      "title": "Coherence VH \u2013 Composite Quality Map \u2013 PMTiles",
+      "description": "Value-encoded WebP tiles of Coherence VH \u2013 Composite Quality Map on WebMercatorQuad z5-z13: an 8-bit code in all three channels, linear over -20 to 14 dB and clipped to it, with code 0 as nodata. Decode with the band's raster:scale and raster:offset; the year's style decodes it as a raster-dem source and colours it with a color-relief layer. Lossy (WebP quality 90): for analysis, read the COGs with the \"data\" role.",
+      "file:size": 122627989,
+      "file:checksum": "122050fb306d409387aedaab6b79f78eb7613075bb371edaaaab95318c572b106299",
       "proj:code": "EPSG:3857",
+      "bands": [
+        {
+          "data_type": "uint8",
+          "nodata": 0,
+          "raster:scale": 0.13385826771653545,
+          "raster:offset": -20.133858267716537,
+          "unit": "dB"
+        }
+      ],
       "roles": [
         "visual"
       ]
@@ -152,36 +152,46 @@
     "coh12_vh_qa_num": {
       "href": "coh12_vh_qa_num.tif",
       "type": "image/tiff; application=geotiff; profile=cloud-optimized",
-      "title": "coh12_vh_qa_num annual mosaic",
+      "title": "Coherence VH \u2013 Contributing Observations",
+      "description": "Mean number of acquisitions that contributed to the Coherence VH composite, averaged over the 10 m pixels inside each 40 m pixel: a float mean of the counts.",
       "bands": [
         {
           "name": "coh12_vh_qa_num",
           "data_type": "float32",
           "nodata": "nan",
           "statistics": {
-            "maximum": 49.0,
-            "mean": 38.723473265896374,
-            "minimum": 10.818482398986816,
-            "stddev": 6.39673190421975,
-            "valid_percent": 28.60978607918263
+            "maximum": 52.0,
+            "mean": 39.24796187856338,
+            "minimum": 8.791192054748535,
+            "stddev": 8.53658179753395,
+            "valid_percent": 38.52808863471861
           }
         }
       ],
-      "file:size": 21262849,
-      "file:checksum": "122004f24cb066533eb8aa7144d97effb95ef2b91980bb63179ec813920627edb954",
+      "file:size": 275667826,
+      "file:checksum": "12204b9bdad14a47d450e0933a5a62c973dfdf647edebaae042076fc262e9c91f26d",
       "raster:spatial_resolution": 40.0,
       "roles": [
-        "quality"
+        "quality",
+        "cloud-optimized"
       ]
     },
     "coh12_vh_qa_num_viz": {
       "href": "coh12_vh_qa_num_viz.pmtiles",
       "type": "application/vnd.pmtiles",
-      "title": "coh12_vh_qa_num web-map tiles",
-      "description": "Pre-styled 8-bit WebP rendering of coh12_vh_qa_num on WebMercatorQuad z5-z13, stretched 0-90 through cmc.glasgow as the collection's style for 2021 declares. Not for analysis: read coh12_vh_qa_num.tif.",
-      "file:size": 2003146,
-      "file:checksum": "1220644d79b51ddf9a3d28fa97b23091e438e066c66f7fa771d716e7d356a99f6f54",
+      "title": "Coherence VH \u2013 Contributing Observations \u2013 PMTiles",
+      "description": "Value-encoded WebP tiles of Coherence VH \u2013 Contributing Observations on WebMercatorQuad z5-z13: an 8-bit code in all three channels, linear over 0 to 253 and clipped to it, with code 0 as nodata. Decode with the band's raster:scale and raster:offset; the year's style decodes it as a raster-dem source and colours it with a color-relief layer. Lossy (WebP quality 90): for analysis, read the COGs with the \"data\" role.",
+      "file:size": 8997387,
+      "file:checksum": "1220453f56ef3a34024ec22934ab0fd349873d2718de6ba7385b4ec3f2a34c1bfd5c",
       "proj:code": "EPSG:3857",
+      "bands": [
+        {
+          "data_type": "uint8",
+          "nodata": 0,
+          "raster:scale": 0.9960629921259843,
+          "raster:offset": -0.9960629921259843
+        }
+      ],
       "roles": [
         "visual"
       ]
@@ -189,11 +199,19 @@
     "coh12_vh_viz": {
       "href": "coh12_vh_viz.pmtiles",
       "type": "application/vnd.pmtiles",
-      "title": "coh12_vh web-map tiles",
-      "description": "Pre-styled 8-bit WebP rendering of coh12_vh on WebMercatorQuad z5-z13, stretched 0.1-0.55 through cmc.lipari as the collection's style for 2021 declares. Not for analysis: read coh12_vh.tif.",
-      "file:size": 23711431,
-      "file:checksum": "122066b4c959b915b45e5a0712d1c79c4b96622dfa00df0b47c000e9bc9309aa8ae8",
+      "title": "Coherence VH \u2013 PMTiles",
+      "description": "Value-encoded WebP tiles of Coherence VH on WebMercatorQuad z5-z13: an 8-bit code in all three channels, linear over 0 to 1 and clipped to it, with code 0 as nodata. Decode with the band's raster:scale and raster:offset; the year's style decodes it as a raster-dem source and colours it with a color-relief layer. Lossy (WebP quality 90): for analysis, read the COGs with the \"data\" role.",
+      "file:size": 177919220,
+      "file:checksum": "122086d7407983a4906610ca3c049e07976306f4d773537f409f870bbf7a95a6d2fb",
       "proj:code": "EPSG:3857",
+      "bands": [
+        {
+          "data_type": "uint8",
+          "nodata": 0,
+          "raster:scale": 0.003937007874015748,
+          "raster:offset": -0.003937007874015748
+        }
+      ],
       "roles": [
         "visual"
       ]
@@ -201,23 +219,24 @@
     "coh12_vv": {
       "href": "coh12_vv.tif",
       "type": "image/tiff; application=geotiff; profile=cloud-optimized",
-      "title": "coh12_vv annual mosaic",
+      "title": "Coherence VV",
+      "description": "12-day repeat-pass interferometric coherence, co-polarized (VV), resampled from the 10 m tiles onto the 40 m equal-area grid by averaging in the linear domain. Dimensionless, in [0, 1].",
       "bands": [
         {
           "name": "coh12_vv",
           "data_type": "float32",
           "nodata": "nan",
           "statistics": {
-            "maximum": 0.8987714052200317,
-            "mean": 0.34062367211298483,
-            "minimum": 0.045559730380773544,
-            "stddev": 0.1878227322148973,
-            "valid_percent": 28.60978607918263
+            "maximum": 0.9173310995101929,
+            "mean": 0.24929381122242583,
+            "minimum": 0.04144345223903656,
+            "stddev": 0.14689936100054152,
+            "valid_percent": 38.52808863471861
           }
         }
       ],
-      "file:size": 17777650,
-      "file:checksum": "12206c0bfb37b68354a0fbde552d8cf11f7eb9055479bc54be06f277a9fa5a20ed6c",
+      "file:size": 251352058,
+      "file:checksum": "1220488ba23bcf1acf7b8381c02d0927e7f8c79a701a56fd4b9479facd5bdc78ac6c",
       "raster:spatial_resolution": 40.0,
       "roles": [
         "data",
@@ -227,36 +246,47 @@
     "coh12_vv_qa_cqm": {
       "href": "coh12_vv_qa_cqm.tif",
       "type": "image/tiff; application=geotiff; profile=cloud-optimized",
-      "title": "coh12_vv_qa_cqm annual mosaic",
+      "title": "Coherence VV \u2013 Composite Quality Map",
+      "description": "Composite quality of the Coherence VV composite: the local resolution of the weighted composite, where higher is better resolved, averaged onto the 40 m grid. Linear scaling; the decibel conversion is declared in the collection's renders.",
       "bands": [
         {
           "name": "coh12_vv_qa_cqm",
           "data_type": "float32",
           "nodata": "nan",
           "statistics": {
-            "maximum": 24793.140625,
-            "mean": 2.715649942749474,
-            "minimum": 0.023621628060936928,
-            "stddev": 17.472126297530444,
-            "valid_percent": 28.60978607918263
+            "maximum": 9.197580337524414,
+            "mean": 1.0109314949044281,
+            "minimum": 0.01846730336546898,
+            "stddev": 0.4803831139203734,
+            "valid_percent": 38.52808863471861
           }
         }
       ],
-      "file:size": 23260472,
-      "file:checksum": "1220c560fbb7880a86c5e50db876a14a9692cb5276d08d3328a600e8bcf14264e1c7",
+      "file:size": 205492384,
+      "file:checksum": "12201172b073785520f0bfaa8b32b38ff1073f777e0a040d0f7b6dffcf1269c427c4",
       "raster:spatial_resolution": 40.0,
       "roles": [
-        "quality"
+        "quality",
+        "cloud-optimized"
       ]
     },
     "coh12_vv_qa_cqm_viz": {
       "href": "coh12_vv_qa_cqm_viz.pmtiles",
       "type": "application/vnd.pmtiles",
-      "title": "coh12_vv_qa_cqm web-map tiles",
-      "description": "Pre-styled 8-bit WebP rendering of coh12_vv_qa_cqm on WebMercatorQuad z5-z13, stretched -3-10 dB through cmc.glasgow as the collection's style for 2021 declares. Not for analysis: read coh12_vv_qa_cqm.tif.",
-      "file:size": 21880806,
-      "file:checksum": "122042ecbc235a9afa13432c85e27f15879fc723947d30753cd4fcd04ece0a92115b",
+      "title": "Coherence VV \u2013 Composite Quality Map \u2013 PMTiles",
+      "description": "Value-encoded WebP tiles of Coherence VV \u2013 Composite Quality Map on WebMercatorQuad z5-z13: an 8-bit code in all three channels, linear over -20 to 14 dB and clipped to it, with code 0 as nodata. Decode with the band's raster:scale and raster:offset; the year's style decodes it as a raster-dem source and colours it with a color-relief layer. Lossy (WebP quality 90): for analysis, read the COGs with the \"data\" role.",
+      "file:size": 122640264,
+      "file:checksum": "1220b1f82e31e957eb7640f62d759c3675eb340a23e838e9e489d328cf71657abb62",
       "proj:code": "EPSG:3857",
+      "bands": [
+        {
+          "data_type": "uint8",
+          "nodata": 0,
+          "raster:scale": 0.13385826771653545,
+          "raster:offset": -20.133858267716537,
+          "unit": "dB"
+        }
+      ],
       "roles": [
         "visual"
       ]
@@ -264,36 +294,46 @@
     "coh12_vv_qa_num": {
       "href": "coh12_vv_qa_num.tif",
       "type": "image/tiff; application=geotiff; profile=cloud-optimized",
-      "title": "coh12_vv_qa_num annual mosaic",
+      "title": "Coherence VV \u2013 Contributing Observations",
+      "description": "Mean number of acquisitions that contributed to the Coherence VV composite, averaged over the 10 m pixels inside each 40 m pixel: a float mean of the counts.",
       "bands": [
         {
           "name": "coh12_vv_qa_num",
           "data_type": "float32",
           "nodata": "nan",
           "statistics": {
-            "maximum": 49.0,
-            "mean": 38.74904698031762,
-            "minimum": 10.81214714050293,
-            "stddev": 6.39987028438321,
-            "valid_percent": 28.60978607918263
+            "maximum": 52.0,
+            "mean": 39.26719247589458,
+            "minimum": 8.934536933898926,
+            "stddev": 8.539934995789034,
+            "valid_percent": 38.52808863471861
           }
         }
       ],
-      "file:size": 12660462,
-      "file:checksum": "1220ff1636ea408c306aecf168e6dffd9b7e96541c150bdb783398b41cf4a52b6ff9",
+      "file:size": 158173154,
+      "file:checksum": "12206a2a4e07140c5ab20be2963846547d0f4d1efcca85bb69e6bc54ddc230aa5eed",
       "raster:spatial_resolution": 40.0,
       "roles": [
-        "quality"
+        "quality",
+        "cloud-optimized"
       ]
     },
     "coh12_vv_qa_num_viz": {
       "href": "coh12_vv_qa_num_viz.pmtiles",
       "type": "application/vnd.pmtiles",
-      "title": "coh12_vv_qa_num web-map tiles",
-      "description": "Pre-styled 8-bit WebP rendering of coh12_vv_qa_num on WebMercatorQuad z5-z13, stretched 0-90 through cmc.glasgow as the collection's style for 2021 declares. Not for analysis: read coh12_vv_qa_num.tif.",
-      "file:size": 1997375,
-      "file:checksum": "12204d27214bce6c610d8b46bcbd3aa8fc447f2e096789ddfa98484ddffaa7b01684",
+      "title": "Coherence VV \u2013 Contributing Observations \u2013 PMTiles",
+      "description": "Value-encoded WebP tiles of Coherence VV \u2013 Contributing Observations on WebMercatorQuad z5-z13: an 8-bit code in all three channels, linear over 0 to 253 and clipped to it, with code 0 as nodata. Decode with the band's raster:scale and raster:offset; the year's style decodes it as a raster-dem source and colours it with a color-relief layer. Lossy (WebP quality 90): for analysis, read the COGs with the \"data\" role.",
+      "file:size": 8993012,
+      "file:checksum": "122050d0238f5b021773d3683fc751e5e25b1ac86f0fa022b152062a0ce9290cb482",
       "proj:code": "EPSG:3857",
+      "bands": [
+        {
+          "data_type": "uint8",
+          "nodata": 0,
+          "raster:scale": 0.9960629921259843,
+          "raster:offset": -0.9960629921259843
+        }
+      ],
       "roles": [
         "visual"
       ]
@@ -301,23 +341,19 @@
     "coh12_vv_viz": {
       "href": "coh12_vv_viz.pmtiles",
       "type": "application/vnd.pmtiles",
-      "title": "coh12_vv web-map tiles",
-      "description": "Pre-styled 8-bit WebP rendering of coh12_vv on WebMercatorQuad z5-z13, stretched 0.1-0.75 through cmc.lipari as the collection's style for 2021 declares. Not for analysis: read coh12_vv.tif.",
-      "file:size": 22035084,
-      "file:checksum": "1220f9592727a348d503c8d981eb0afd7e124e19fa5041e8339e2a6905f3c37aee07",
+      "title": "Coherence VV \u2013 PMTiles",
+      "description": "Value-encoded WebP tiles of Coherence VV on WebMercatorQuad z5-z13: an 8-bit code in all three channels, linear over 0 to 1 and clipped to it, with code 0 as nodata. Decode with the band's raster:scale and raster:offset; the year's style decodes it as a raster-dem source and colours it with a color-relief layer. Lossy (WebP quality 90): for analysis, read the COGs with the \"data\" role.",
+      "file:size": 210688186,
+      "file:checksum": "1220f9cefdb9fe44ae2d31c955c66764b02028d2ac4fa33071a49054901cfbf2de86",
       "proj:code": "EPSG:3857",
-      "roles": [
-        "visual"
-      ]
-    },
-    "rtc_rgb_viz": {
-      "href": "rtc_rgb_viz.pmtiles",
-      "type": "application/vnd.pmtiles",
-      "title": "rtc_rgb web-map tiles",
-      "description": "Pre-styled 8-bit WebP rendering of rtc_rgb on WebMercatorQuad z5-z13, stretched -16.5--4 dB as the collection's style for 2021 declares. Not for analysis: read rtc_vv.tif and rtc_vh.tif.",
-      "file:size": 38780852,
-      "file:checksum": "1220041c4e4ea69ef6462df9f4b32661c6267eb4ec2f9e3b9cce8232fdb342a62bce",
-      "proj:code": "EPSG:3857",
+      "bands": [
+        {
+          "data_type": "uint8",
+          "nodata": 0,
+          "raster:scale": 0.003937007874015748,
+          "raster:offset": -0.003937007874015748
+        }
+      ],
       "roles": [
         "visual"
       ]
@@ -325,7 +361,8 @@
     "rtc_vh": {
       "href": "rtc_vh.tif",
       "type": "image/tiff; application=geotiff; profile=cloud-optimized",
-      "title": "rtc_vh annual mosaic",
+      "title": "Backscatter VH",
+      "description": "Radiometrically terrain-corrected gamma-nought backscatter, cross-polarized (VH), resampled from the 10 m tiles onto the 40 m equal-area grid by averaging in the linear domain. Linear power. For display, the collection's renders declare the decibel conversion, 10*log10.",
       "bands": [
         {
           "name": "rtc_vh",
@@ -333,16 +370,16 @@
           "nodata": "nan",
           "unit": "linear power",
           "statistics": {
-            "maximum": 11.008174896240234,
-            "mean": 0.02782788971976901,
-            "minimum": 0.0004716884868685156,
-            "stddev": 0.025767661155825645,
-            "valid_percent": 28.60978607918263
+            "maximum": 250.52487182617188,
+            "mean": 0.03790245912880386,
+            "minimum": 0.0003508536610752344,
+            "stddev": 0.08118851168180093,
+            "valid_percent": 38.52808863471861
           }
         }
       ],
-      "file:size": 18484408,
-      "file:checksum": "1220f6a59da084985eb9cebf00e33ab7e86edfb223ab3244a1e994f200bbbcd2902c",
+      "file:size": 279257873,
+      "file:checksum": "122091d91426d95a500035718305e84633c8b5c5def8fdeea1c28027534b3637d613",
       "raster:spatial_resolution": 40.0,
       "roles": [
         "data",
@@ -352,36 +389,47 @@
     "rtc_vh_qa_cqm": {
       "href": "rtc_vh_qa_cqm.tif",
       "type": "image/tiff; application=geotiff; profile=cloud-optimized",
-      "title": "rtc_vh_qa_cqm annual mosaic",
+      "title": "Backscatter VH \u2013 Composite Quality Map",
+      "description": "Composite quality of the Backscatter VH composite: the local resolution of the weighted composite, where higher is better resolved, averaged onto the 40 m grid. Linear scaling; the decibel conversion is declared in the collection's renders.",
       "bands": [
         {
           "name": "rtc_vh_qa_cqm",
           "data_type": "float32",
           "nodata": "nan",
           "statistics": {
-            "maximum": 78.26097106933594,
-            "mean": 1.878513380189614,
-            "minimum": 0.020762210711836815,
-            "stddev": 1.4470700161967247,
-            "valid_percent": 28.60978607918263
+            "maximum": 5.761983871459961,
+            "mean": 0.9918396004117649,
+            "minimum": 0.018285008147358894,
+            "stddev": 0.4153540455726431,
+            "valid_percent": 38.52808863471861
           }
         }
       ],
-      "file:size": 22610295,
-      "file:checksum": "12208dbda5e5ed39ff4da0a2b45c36314906581e1f840bdd3b7c9537f50ecab769fb",
+      "file:size": 204363633,
+      "file:checksum": "1220c6a6d2206abe2b8bfdd1f160da889f2c16932434c3644b36c780bc0686c23daf",
       "raster:spatial_resolution": 40.0,
       "roles": [
-        "quality"
+        "quality",
+        "cloud-optimized"
       ]
     },
     "rtc_vh_qa_cqm_viz": {
       "href": "rtc_vh_qa_cqm_viz.pmtiles",
       "type": "application/vnd.pmtiles",
-      "title": "rtc_vh_qa_cqm web-map tiles",
-      "description": "Pre-styled 8-bit WebP rendering of rtc_vh_qa_cqm on WebMercatorQuad z5-z13, stretched -4-8 dB through cmc.glasgow as the collection's style for 2021 declares. Not for analysis: read rtc_vh_qa_cqm.tif.",
-      "file:size": 23563265,
-      "file:checksum": "1220e637e66ac8d3836881d4e59c6d1f2ec8c1df3f2f6bb93d240d54f92e8d51b83f",
+      "title": "Backscatter VH \u2013 Composite Quality Map \u2013 PMTiles",
+      "description": "Value-encoded WebP tiles of Backscatter VH \u2013 Composite Quality Map on WebMercatorQuad z5-z13: an 8-bit code in all three channels, linear over -20 to 12 dB and clipped to it, with code 0 as nodata. Decode with the band's raster:scale and raster:offset; the year's style decodes it as a raster-dem source and colours it with a color-relief layer. Lossy (WebP quality 90): for analysis, read the COGs with the \"data\" role.",
+      "file:size": 130892404,
+      "file:checksum": "1220387ba2759bd10e74361e93152874e5929dc867455650174751f493a25166e259",
       "proj:code": "EPSG:3857",
+      "bands": [
+        {
+          "data_type": "uint8",
+          "nodata": 0,
+          "raster:scale": 0.12598425196850394,
+          "raster:offset": -20.125984251968504,
+          "unit": "dB"
+        }
+      ],
       "roles": [
         "visual"
       ]
@@ -389,36 +437,46 @@
     "rtc_vh_qa_num": {
       "href": "rtc_vh_qa_num.tif",
       "type": "image/tiff; application=geotiff; profile=cloud-optimized",
-      "title": "rtc_vh_qa_num annual mosaic",
+      "title": "Backscatter VH \u2013 Contributing Observations",
+      "description": "Mean number of acquisitions that contributed to the Backscatter VH composite, averaged over the 10 m pixels inside each 40 m pixel: a float mean of the counts.",
       "bands": [
         {
           "name": "rtc_vh_qa_num",
           "data_type": "float32",
           "nodata": "nan",
           "statistics": {
-            "maximum": 58.0,
-            "mean": 46.17191084365184,
-            "minimum": 13.576775550842285,
-            "stddev": 8.16424443525696,
-            "valid_percent": 28.60978607918263
+            "maximum": 60.0,
+            "mean": 46.62287059519986,
+            "minimum": 12.849794387817383,
+            "stddev": 10.151521494731607,
+            "valid_percent": 38.52808863471861
           }
         }
       ],
-      "file:size": 6756096,
-      "file:checksum": "1220845a56c0d14cef3d57c81ed481f6a1346a0a7d3d06aabee361d909bb9ea4deea",
+      "file:size": 49885142,
+      "file:checksum": "1220c70c90fb71161a77be3dc30803451af0e4635164890dd995ab6108b8d63b00ad",
       "raster:spatial_resolution": 40.0,
       "roles": [
-        "quality"
+        "quality",
+        "cloud-optimized"
       ]
     },
     "rtc_vh_qa_num_viz": {
       "href": "rtc_vh_qa_num_viz.pmtiles",
       "type": "application/vnd.pmtiles",
-      "title": "rtc_vh_qa_num web-map tiles",
-      "description": "Pre-styled 8-bit WebP rendering of rtc_vh_qa_num on WebMercatorQuad z5-z13, stretched 0-90 through cmc.glasgow as the collection's style for 2021 declares. Not for analysis: read rtc_vh_qa_num.tif.",
-      "file:size": 3122295,
-      "file:checksum": "1220fb5f06c81606a495e9407342a0642769439e1174c24878b4a09422d511c85582",
+      "title": "Backscatter VH \u2013 Contributing Observations \u2013 PMTiles",
+      "description": "Value-encoded WebP tiles of Backscatter VH \u2013 Contributing Observations on WebMercatorQuad z5-z13: an 8-bit code in all three channels, linear over 0 to 253 and clipped to it, with code 0 as nodata. Decode with the band's raster:scale and raster:offset; the year's style decodes it as a raster-dem source and colours it with a color-relief layer. Lossy (WebP quality 90): for analysis, read the COGs with the \"data\" role.",
+      "file:size": 13919180,
+      "file:checksum": "1220d79ddbd492d5b87b32f3a4262b45509fac75bbd659688fdfd44a767f39821abe",
       "proj:code": "EPSG:3857",
+      "bands": [
+        {
+          "data_type": "uint8",
+          "nodata": 0,
+          "raster:scale": 0.9960629921259843,
+          "raster:offset": -0.9960629921259843
+        }
+      ],
       "roles": [
         "visual"
       ]
@@ -426,11 +484,20 @@
     "rtc_vh_viz": {
       "href": "rtc_vh_viz.pmtiles",
       "type": "application/vnd.pmtiles",
-      "title": "rtc_vh web-map tiles",
-      "description": "Pre-styled 8-bit WebP rendering of rtc_vh on WebMercatorQuad z5-z13, stretched -23.5--11 dB through cmc.grayC as the collection's style for 2021 declares. Not for analysis: read rtc_vh.tif.",
-      "file:size": 30111063,
-      "file:checksum": "122069a92998bbdfbabc41b1cc7358643420a837be8627faa0c90f93a3b20f544077",
+      "title": "Backscatter VH \u2013 PMTiles",
+      "description": "Value-encoded WebP tiles of Backscatter VH on WebMercatorQuad z5-z13: an 8-bit code in all three channels, linear over -31 to 2 dB and clipped to it, with code 0 as nodata. Decode with the band's raster:scale and raster:offset; the year's style decodes it as a raster-dem source and colours it with a color-relief layer. Lossy (WebP quality 90): for analysis, read the COGs with the \"data\" role.",
+      "file:size": 336230801,
+      "file:checksum": "12206b1d8c18795f4848b7419e29a99ec36a9c39450a13d8398feefa9e8db7ea92dd",
       "proj:code": "EPSG:3857",
+      "bands": [
+        {
+          "data_type": "uint8",
+          "nodata": 0,
+          "raster:scale": 0.12992125984251968,
+          "raster:offset": -31.12992125984252,
+          "unit": "dB"
+        }
+      ],
       "roles": [
         "visual"
       ]
@@ -438,7 +505,8 @@
     "rtc_vv": {
       "href": "rtc_vv.tif",
       "type": "image/tiff; application=geotiff; profile=cloud-optimized",
-      "title": "rtc_vv annual mosaic",
+      "title": "Backscatter VV",
+      "description": "Radiometrically terrain-corrected gamma-nought backscatter, co-polarized (VV), resampled from the 10 m tiles onto the 40 m equal-area grid by averaging in the linear domain. Linear power. For display, the collection's renders declare the decibel conversion, 10*log10.",
       "bands": [
         {
           "name": "rtc_vv",
@@ -446,16 +514,16 @@
           "nodata": "nan",
           "unit": "linear power",
           "statistics": {
-            "maximum": 104.63533782958984,
-            "mean": 0.1412411921958673,
-            "minimum": 0.001392839360050857,
-            "stddev": 0.1645799976680539,
-            "valid_percent": 28.60978607918263
+            "maximum": 1415.0223388671875,
+            "mean": 0.17448911739741074,
+            "minimum": 0.0011562120635062456,
+            "stddev": 0.5101348811554204,
+            "valid_percent": 38.52808863471861
           }
         }
       ],
-      "file:size": 22262184,
-      "file:checksum": "12201a1182ba197ebee6606c4aceb5ce5e93adef6de5b1e393f731d4b2cde3791178",
+      "file:size": 331709756,
+      "file:checksum": "1220566d141ec3b2ab158fd45b30e780b4a31ec21d31b82686dc6ab5cddcb6fc4c61",
       "raster:spatial_resolution": 40.0,
       "roles": [
         "data",
@@ -465,36 +533,47 @@
     "rtc_vv_qa_cqm": {
       "href": "rtc_vv_qa_cqm.tif",
       "type": "image/tiff; application=geotiff; profile=cloud-optimized",
-      "title": "rtc_vv_qa_cqm annual mosaic",
+      "title": "Backscatter VV \u2013 Composite Quality Map",
+      "description": "Composite quality of the Backscatter VV composite: the local resolution of the weighted composite, where higher is better resolved, averaged onto the 40 m grid. Linear scaling; the decibel conversion is declared in the collection's renders.",
       "bands": [
         {
           "name": "rtc_vv_qa_cqm",
           "data_type": "float32",
           "nodata": "nan",
           "statistics": {
-            "maximum": 70.89083862304688,
-            "mean": 1.878489613949828,
-            "minimum": 0.020762210711836815,
-            "stddev": 1.4470923964724896,
-            "valid_percent": 28.60978607918263
+            "maximum": 5.761983871459961,
+            "mean": 0.9918394163636312,
+            "minimum": 0.018285008147358894,
+            "stddev": 0.41535472940803303,
+            "valid_percent": 38.52808863471861
           }
         }
       ],
-      "file:size": 22621342,
-      "file:checksum": "12202766e68af170511d0926b7d823cd55035e1fbc18368e4fcef5c02127239f8216",
+      "file:size": 204353831,
+      "file:checksum": "12209d9cfe3c5265231213593d422c9cb86d5214428c8abd66c8edf338f89bd44e2a",
       "raster:spatial_resolution": 40.0,
       "roles": [
-        "quality"
+        "quality",
+        "cloud-optimized"
       ]
     },
     "rtc_vv_qa_cqm_viz": {
       "href": "rtc_vv_qa_cqm_viz.pmtiles",
       "type": "application/vnd.pmtiles",
-      "title": "rtc_vv_qa_cqm web-map tiles",
-      "description": "Pre-styled 8-bit WebP rendering of rtc_vv_qa_cqm on WebMercatorQuad z5-z13, stretched -4-8 dB through cmc.glasgow as the collection's style for 2021 declares. Not for analysis: read rtc_vv_qa_cqm.tif.",
-      "file:size": 23562705,
-      "file:checksum": "12204c642f05bc044504966e3c33af9f35fe651cc17b0325479a4589b59e32e053b6",
+      "title": "Backscatter VV \u2013 Composite Quality Map \u2013 PMTiles",
+      "description": "Value-encoded WebP tiles of Backscatter VV \u2013 Composite Quality Map on WebMercatorQuad z5-z13: an 8-bit code in all three channels, linear over -20 to 12 dB and clipped to it, with code 0 as nodata. Decode with the band's raster:scale and raster:offset; the year's style decodes it as a raster-dem source and colours it with a color-relief layer. Lossy (WebP quality 90): for analysis, read the COGs with the \"data\" role.",
+      "file:size": 130899348,
+      "file:checksum": "1220acd7b285927f5ea11b24062c26196b6362a0d54e7e0baccb5618153e795828a9",
       "proj:code": "EPSG:3857",
+      "bands": [
+        {
+          "data_type": "uint8",
+          "nodata": 0,
+          "raster:scale": 0.12598425196850394,
+          "raster:offset": -20.125984251968504,
+          "unit": "dB"
+        }
+      ],
       "roles": [
         "visual"
       ]
@@ -502,36 +581,46 @@
     "rtc_vv_qa_num": {
       "href": "rtc_vv_qa_num.tif",
       "type": "image/tiff; application=geotiff; profile=cloud-optimized",
-      "title": "rtc_vv_qa_num annual mosaic",
+      "title": "Backscatter VV \u2013 Contributing Observations",
+      "description": "Mean number of acquisitions that contributed to the Backscatter VV composite, averaged over the 10 m pixels inside each 40 m pixel: a float mean of the counts.",
       "bands": [
         {
           "name": "rtc_vv_qa_num",
           "data_type": "float32",
           "nodata": "nan",
           "statistics": {
-            "maximum": 58.0,
-            "mean": 46.171916108425854,
-            "minimum": 13.576775550842285,
-            "stddev": 8.164246914767501,
-            "valid_percent": 28.60978607918263
+            "maximum": 60.0,
+            "mean": 46.622872319654356,
+            "minimum": 12.849794387817383,
+            "stddev": 10.1515218071798,
+            "valid_percent": 38.52808863471861
           }
         }
       ],
-      "file:size": 6756090,
-      "file:checksum": "1220751ad660a9a7d3ea494155cb90cf3923223b1bc0b522ede2dd2f1e13cb0ddc4f",
+      "file:size": 49884909,
+      "file:checksum": "122079882ee616184c381c2b09448c495f053d782600cd70e9692ef9e65a0e265565",
       "raster:spatial_resolution": 40.0,
       "roles": [
-        "quality"
+        "quality",
+        "cloud-optimized"
       ]
     },
     "rtc_vv_qa_num_viz": {
       "href": "rtc_vv_qa_num_viz.pmtiles",
       "type": "application/vnd.pmtiles",
-      "title": "rtc_vv_qa_num web-map tiles",
-      "description": "Pre-styled 8-bit WebP rendering of rtc_vv_qa_num on WebMercatorQuad z5-z13, stretched 0-90 through cmc.glasgow as the collection's style for 2021 declares. Not for analysis: read rtc_vv_qa_num.tif.",
-      "file:size": 3122260,
-      "file:checksum": "122085a301063858dc5dd5a77922e2dbaf8dab38cbca0d1c17e61a15fa7af309de7d",
+      "title": "Backscatter VV \u2013 Contributing Observations \u2013 PMTiles",
+      "description": "Value-encoded WebP tiles of Backscatter VV \u2013 Contributing Observations on WebMercatorQuad z5-z13: an 8-bit code in all three channels, linear over 0 to 253 and clipped to it, with code 0 as nodata. Decode with the band's raster:scale and raster:offset; the year's style decodes it as a raster-dem source and colours it with a color-relief layer. Lossy (WebP quality 90): for analysis, read the COGs with the \"data\" role.",
+      "file:size": 13919139,
+      "file:checksum": "1220319aa2e055da47e6ded90ff99d211d4d25d7401b7545b42ac30abeed1760afd6",
       "proj:code": "EPSG:3857",
+      "bands": [
+        {
+          "data_type": "uint8",
+          "nodata": 0,
+          "raster:scale": 0.9960629921259843,
+          "raster:offset": -0.9960629921259843
+        }
+      ],
       "roles": [
         "visual"
       ]
@@ -539,15 +628,36 @@
     "rtc_vv_viz": {
       "href": "rtc_vv_viz.pmtiles",
       "type": "application/vnd.pmtiles",
-      "title": "rtc_vv web-map tiles",
-      "description": "Pre-styled 8-bit WebP rendering of rtc_vv on WebMercatorQuad z5-z13, stretched -16.5--4 dB through cmc.grayC as the collection's style for 2021 declares. Not for analysis: read rtc_vv.tif.",
-      "file:size": 32294313,
-      "file:checksum": "1220727dd7b54c1e57c263fe4bf76341f4edf894bd45d47a34ed9d415e0bf5b007cd",
+      "title": "Backscatter VV \u2013 PMTiles",
+      "description": "Value-encoded WebP tiles of Backscatter VV on WebMercatorQuad z5-z13: an 8-bit code in all three channels, linear over -25 to 10 dB and clipped to it, with code 0 as nodata. Decode with the band's raster:scale and raster:offset; the year's style decodes it as a raster-dem source and colours it with a color-relief layer. Lossy (WebP quality 90): for analysis, read the COGs with the \"data\" role.",
+      "file:size": 331772234,
+      "file:checksum": "12204ef7a405e47699a866ddaa36197d791892d7f6b27b675679debf7f6f648d66e2",
       "proj:code": "EPSG:3857",
+      "bands": [
+        {
+          "data_type": "uint8",
+          "nodata": 0,
+          "raster:scale": 0.1377952755905512,
+          "raster:offset": -25.137795275590552,
+          "unit": "dB"
+        }
+      ],
       "roles": [
         "visual"
       ]
+    },
+    "style-default": {
+      "href": "./styles/default.json",
+      "type": "application/vnd.mapbox.style+json",
+      "title": "Map style \u2013 2021",
+      "description": "Every published web-map layer of 2021, the first visible and the rest hidden. Each archive is a raster-dem source whose custom encoding decodes its values, drawn by a color-relief layer with a default color ramp that a client can change.",
+      "roles": [
+        "style",
+        "default"
+      ],
+      "file:size": 20413,
+      "file:checksum": "1220a973db0ba48dfbc5ddf6e18ef9ab90158e976050e2ed554c264208f500a237d5"
     }
   },
-  "collection": "glace-ch-mosaics"
+  "collection": "glace-alps-mosaics"
 }

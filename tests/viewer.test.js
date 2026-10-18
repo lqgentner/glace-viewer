@@ -18,6 +18,8 @@ import { captureWarnings, installBrowser, load, REPO, settle } from "./helpers/b
 const CATALOG = {
   "http://localhost/tiles/mosaics/collection.json": path.join(REPO, "tests", "fixtures", "two-years", "collection.json"),
   "http://localhost/tiles/mosaics/style.json": path.join(REPO, "tests", "fixtures", "two-years", "style.json"),
+  "http://localhost/tiles/mosaics/2022/item.json": path.join(REPO, "tests", "fixtures", "two-years", "item-2022.json"),
+  "http://localhost/tiles/mosaics/2023/item.json": path.join(REPO, "tests", "fixtures", "two-years", "item-2023.json"),
   "data/inventories.json": path.join(REPO, "data", "inventories.json"),
 };
 
@@ -25,40 +27,61 @@ const glaceLayers = (map) => [...map.layers.keys()].filter((id) => id.startsWith
 const visible = (map, id) => map.getLayer(id)?.layout?.visibility === "visible";
 
 test("the viewer", async (t) => {
-  const page = installBrowser({
-    files: CATALOG,
-    // The tile grid imports its parquet reader; this is the same seam a
-    // deployment would use to pin a different CDN. See tile-grid.test.js.
-    site: { hyparquetUrl: new URL("./fixtures/fake-hyparquet.mjs", import.meta.url).href },
-  });
+  const page = installBrowser({ files: CATALOG });
   const { el, change, input } = page;
 
   await load("js/app.js");
   const { map } = page;
+  // While the catalog loads, the panel says so in place of its controls, whose
+  // placeholders keep it at its loaded size; the legend's title says so too.
+  // Nothing over the map repeats it.
+  const busy = () => el("raster-controls").getAttribute("aria-busy") === "true";
+  assert.equal(busy(), true, "loading before the catalog");
+  assert.equal(el("legend").getAttribute("aria-busy"), "true", "and so is the legend");
+  assert.equal(el("raster-controls").hidden, false, "the placeholders hold the space");
+  assert.equal(el("raster-loading").textContent, "Loading layers…");
+  assert.equal(el("selection-summary").textContent, "Loading layers…");
+  assert.equal(el("status").hidden, true);
+  assert.equal(el("quantity-row").hidden, false, "QA rows are expected until known absent");
   await settle();
+  assert.equal(busy(), false, "the controls once it has loaded");
+  assert.equal(el("legend").hasAttribute("aria-busy"), false);
 
   await t.test("a wide viewport opens with the panel expanded", async () => {
-    const collapsed = () => el("panel").classList.contains("collapsed");
-    assert.equal(collapsed(), false);
-    assert.equal(el("panel").classList.contains("expanded"), true);
-    assert.equal(el("panel-toggle").getAttribute("aria-expanded"), "true");
-
-    el("panel-toggle").click();
-    assert.equal(collapsed(), true, "and can still be collapsed by hand");
-    assert.equal(el("panel").classList.contains("expanded"), false);
-    assert.equal(el("panel-toggle").getAttribute("aria-expanded"), "false");
-    // `up` marks the collapsed state here as it does on the inventories toggle.
-    assert.ok(el("panel-toggle").querySelector(".chevron").classList.contains("up"));
-
-    el("panel-toggle").click();
-    assert.equal(collapsed(), false);
+    assert.equal(el("panel-shell").classList.contains("expanded"), true);
+    assert.equal(el("panel-body").hasAttribute("inert"), false);
+    assert.equal(el("sheet-handle").getAttribute("aria-expanded"), "true");
   });
 
-  await t.test("rotating onto a narrow screen collapses it again", async () => {
+  await t.test("the controls are three tabs, Layers first", async () => {
+    const selected = (id) => el(id).getAttribute("aria-selected") === "true";
+    assert.equal(selected("tab-layers"), true);
+    assert.equal(el("raster-controls").hidden, false);
+    assert.equal(el("inventories-section").hidden, true);
+    assert.equal(el("extras").hidden, true);
+    assert.equal(el("panel").querySelectorAll("details").length, 0, "nothing collapses any more");
+
+    el("tab-map").click();
+    assert.equal(selected("tab-map"), true);
+    assert.equal(el("extras").hidden, false);
+    assert.equal(el("raster-controls").hidden, true);
+    el("tab-layers").click();
+  });
+
+  await t.test("the scale bar sits at the bottom left, the collapsed credit at the right", () => {
+    const isA = (cls) => (c) => c instanceof globalThis.maplibregl[cls];
+    const scale = map.controls.find(isA("ScaleControl"));
+    const credit = map.controls.find(isA("AttributionControl"));
+    assert.equal(map.positions.get(scale), "bottom-left");
+    assert.equal(map.positions.get(credit), "bottom-right");
+    assert.equal(credit.options.compact, true, "collapsed as on narrow maps");
+  });
+
+  await t.test("rotating onto a narrow screen lowers it to the compact sheet", async () => {
     page.setNarrow(true);
-    assert.ok(el("panel").classList.contains("collapsed"), "the new width's default wins");
+    assert.equal(el("panel-shell").classList.contains("expanded"), false, "the new width's default wins");
     page.setNarrow(false);
-    assert.ok(el("panel").classList.contains("expanded"));
+    assert.ok(el("panel-shell").classList.contains("expanded"));
   });
 
   await t.test("the style asks for a globe that flattens as you zoom in", async () => {
@@ -113,6 +136,8 @@ test("the viewer", async (t) => {
     assert.deepEqual(glaceLayers(map), ["glace-coh12_vv-2023"]);
     assert.ok(visible(map, "glace-coh12_vv-2023"));
     assert.equal(el("year-value").textContent, "2023");
+    assert.equal(el("selection-summary").textContent, "Coherence · VV · 2023", "the legend's title");
+    assert.equal(el("year").getAttribute("aria-valuetext"), "2023", "the slider speaks the year, not its index");
   });
 
   await t.test("the panel opens on VV, and names the products in words", async () => {
@@ -125,7 +150,7 @@ test("the viewer", async (t) => {
       ["COH12", "RTC"],
     );
 
-    assert.deepEqual(faces("pol"), ["VV", "VH"], "VV is the left-hand button");
+    assert.deepEqual(faces("pol"), ["VV", "VH", "RGB"], "VV is the left-hand button");
     const checked = (id) =>
       [...el(id).children].find((b) => b.getAttribute("aria-checked") === "true");
     assert.equal(checked("pol").dataset.value, "VV", "and the one selected");
@@ -142,7 +167,7 @@ test("the viewer", async (t) => {
   await t.test("the description sits under the ramp and says what the layer is", async () => {
     assert.deepEqual(
       [...el("layer-info").children].map((line) => line.textContent),
-      ["Composite Coherence", "12-day baseline", "Local resolution weighted median"],
+      ["Coherence composite", "12-day baseline", "Local resolution weighted"],
     );
     // Under the color ramp rather than in a footer: it describes what the
     // controls above it just selected.
@@ -154,33 +179,17 @@ test("the viewer", async (t) => {
     );
   });
 
-  await t.test("the scale carries the color map's credit", async () => {
-    const credit = el("legend-credit").querySelector("button.credit");
-    assert.ok(credit, "an info mark beside the SCALE heading");
-
-    credit.click();
-    const popover = page.window.document.querySelector(".credit-popover");
-    assert.match(popover.textContent, /Colormap: lipari/, "cmc. prefix stripped");
-    assert.match(popover.textContent, /Fabio Crameri/);
-    assert.equal(
-      popover.querySelector("a").href,
-      "https://www.fabiocrameri.ch/colourmaps/",
-    );
-    credit.click();
+  await t.test("the scale names its color map instead of crediting it", async () => {
+    assert.equal(el("cmap").textContent, "color map lipari");
+    assert.equal(el("legend-credit"), null);
   });
 
-  await t.test("the additional layers start collapsed", async () => {
-    assert.equal(el("extras").hidden, true);
-    assert.equal(el("extras-toggle").getAttribute("aria-expanded"), "false");
+  await t.test("the map options live in the Map tab", async () => {
     // The toggles moved inside it, and still work from there.
     assert.ok(el("extras").contains(el("hillshade-row")));
     assert.ok(el("extras").contains(el("grid")));
     assert.ok(el("extras").contains(el("basemap")));
     assert.ok(el("extras").contains(el("basemap-style")));
-
-    el("extras-toggle").click();
-    assert.equal(el("extras").hidden, false);
-    assert.equal(el("extras-toggle").getAttribute("aria-expanded"), "true");
   });
 
   await t.test("the dark flavor's labels are lifted through the flavor, not patched after", async () => {
@@ -196,11 +205,11 @@ test("the viewer", async (t) => {
     }
   });
 
-  await t.test("World Imagery replaces the vector fills but keeps labels independent", async () => {
+  await t.test("Imagery replaces the vector fills but keeps labels independent", async () => {
     const buttons = [...el("basemap-style").children];
     assert.deepEqual(
       buttons.map((button) => button.textContent),
-      ["Vector", "World Imagery"],
+      ["Vector", "Imagery"],
     );
     assert.equal(buttons[0].getAttribute("aria-checked"), "true");
     assert.equal(map.getSource("world-imagery"), undefined, "imagery is lazy");
@@ -287,6 +296,51 @@ test("the viewer", async (t) => {
     assert.equal(map.options.minZoom, 1, "and cannot zoom out past a whole earth");
   });
 
+  await t.test("the tile grid explains itself in an info box", async () => {
+    const info = el("grid-row").querySelector(".credit");
+    assert.equal(info.getAttribute("aria-label"), "Catalog tile grid: what it shows");
+    info.click();
+    const box = page.window.document.getElementById("popover");
+    assert.match(box.textContent, /Randolph Glacier Inventory/);
+    assert.equal(box.querySelector("a").href, "https://en.wikipedia.org/wiki/Military_Grid_Reference_System");
+    info.click();
+  });
+
+  await t.test("the about dialog names the catalog's years and closes again", async () => {
+    const about = el("about");
+    assert.equal(el("about-years").textContent, "from 2022 to 2023");
+    // The Copernicus notice for modified data names the years it covers.
+    assert.equal(el("about-credit-years").textContent, "2022–2023");
+    // One button ends the scrolling controls, after whichever tab is open.
+    assert.equal(el("panel-body").lastElementChild, el("about-open"));
+    el("about-open").click();
+    assert.equal(about.open, true);
+    assert.equal(page.window.document.activeElement, about.querySelector(".close"));
+    about.querySelector(".close").click();
+    assert.equal(about.open, false);
+  });
+
+  await t.test("the home button shows only while the catalog is out of view", async () => {
+    const home = el("home");
+    const shown = () => !home.hidden;
+    assert.equal(home.textContent, "Back to the Alps", "a button on the map, in words");
+    assert.equal(shown(), false, "over Aletsch");
+
+    const { center, zoom } = map;
+    map.center = { lng: -100, lat: 40 };
+    map.fire("moveend");
+    assert.equal(shown(), true, "panned off the catalog's extent");
+    map.center = center;
+    map.zoom = 3;
+    map.fire("moveend");
+    assert.equal(shown(), true, "zoomed out past the rasters");
+
+    home.click();
+    assert.deepEqual([map.center, map.zoom], [{ lng: 9.548, lat: 46.01 }, 6.64], "the overview");
+    assert.equal(shown(), false);
+    Object.assign(map, { center, zoom });
+  });
+
   await t.test("changing product adds the new raster and hides the old", async () => {
     el("product").querySelector('[data-value="RTC"]').click();
     await settle();
@@ -299,14 +353,14 @@ test("the viewer", async (t) => {
   await t.test("opacity applies to the visible raster", async () => {
     input(el("opacity"), "40");
     await settle();
-    assert.equal(map.getLayer("glace-rtc_vv-2023").paint["raster-opacity"], 0.4);
+    assert.equal(map.getLayer("glace-rtc_vv-2023").paint["color-relief-opacity"], 0.4);
     assert.equal(el("opacity-value").textContent, "40%");
   });
 
   await t.test("a new layer inherits the current opacity", async () => {
     el("pol").querySelector('[data-value="VH"]').click();
     await settle();
-    assert.equal(map.getLayer("glace-rtc_vh-2023").paint["raster-opacity"], 0.4);
+    assert.equal(map.getLayer("glace-rtc_vh-2023").paint["color-relief-opacity"], 0.4);
   });
 
   await t.test("a year with no archive for this combination is reported", async () => {
@@ -315,7 +369,7 @@ test("the viewer", async (t) => {
     await settle();
 
     assert.equal(el("year-value").textContent, "2022");
-    assert.equal(el("status").textContent, "No Backscatter VH layer for 2022");
+    assert.equal(el("legend-note").textContent, "No Backscatter VH layer for 2022");
     assert.equal(el("layer-info").textContent, "");
     assert.equal(
       glaceLayers(map).filter((id) => visible(map, id)).length,
@@ -388,7 +442,7 @@ test("the viewer", async (t) => {
 
   await t.test("the inventory list is built from the index", async () => {
     assert.equal(el("inventories").children.length, 5);
-    assert.equal(el("inventories-section").hidden, false);
+    assert.equal(el("tab-inventories").hidden, false);
     assert.ok(el("inv-sgi2023"), "each row is keyed by inventory id");
   });
 
@@ -410,7 +464,7 @@ test("the viewer", async (t) => {
   await t.test("the swatch picks an outline color, now or for when the layer is added", async () => {
     const swatch = (id) => el(`inv-${id}`).parentElement.querySelector(".swatch");
     const palette = () => page.window.document.querySelector(".palette-popover");
-    const chip = (color) => palette().querySelector(`[aria-label="${color}"]`);
+    const chip = (color) => palette().querySelector(`[data-value="${color}"]`);
 
     assert.equal(palette(), null);
     swatch("sgi2023").dispatchEvent(new page.window.Event("mouseenter"));
@@ -421,8 +475,9 @@ test("the viewer", async (t) => {
     // In the body, like the credit popover, so it can reach past the panel.
     assert.equal(palette().parentElement, page.window.document.body);
     assert.equal(palette().children.length, 9);
-    assert.ok(swatch("sgi2023").classList.contains("popover-open"), "the disc stays while open");
+    assert.ok(swatch("sgi2023").classList.contains("popover-open"), "the box stays while open");
     assert.equal(page.window.document.activeElement, chip("#ff7f00"), "focus lands on the current color");
+    assert.equal(chip("#ff7f00").getAttribute("aria-label"), "Orange", "named, not read out as a code");
     swatch("sgi2023").click();
     assert.equal(palette(), null, "a second click closes it");
 
@@ -435,7 +490,7 @@ test("the viewer", async (t) => {
     page.window.document.dispatchEvent(escape);
     assert.equal(palette(), null, "Escape closes it");
     assert.equal(page.window.document.activeElement, swatch("sgi2023"), "and hands focus back");
-    assert.equal(swatch("sgi2023").classList.contains("popover-open"), false, "and drops the disc");
+    assert.equal(swatch("sgi2023").classList.contains("popover-open"), false, "and drops the box");
 
     swatch("sgi2023").click();
     palette().dispatchEvent(new page.window.Event("mouseleave"));
@@ -468,9 +523,14 @@ test("the viewer", async (t) => {
   await t.test("a popup reports every overlay under the pointer", async () => {
     map.hits = [
       { layer: { id: "inv-line-sgi2023" }, properties: { name: "Aletschgletscher", year: 2023 } },
-      { layer: { id: "grid-fill" }, properties: { tile: "32TMS", glacier_fraction: 0.42 } },
+      { layer: { id: "grid-fill" }, properties: { mgrs_tile: "32TMS", glacier_fraction: 0.42 } },
     ];
-    map.fire("click", { point: { x: 10, y: 10 }, lngLat: [8, 46] });
+    // Escape closes the last popup, which this click would otherwise only close.
+    page.window.document.dispatchEvent(new page.window.KeyboardEvent("keydown", { key: "Escape" }));
+    map.fire("click", { point: { x: 10, y: 10 }, lngLat: { lng: 8, lat: 46 } });
+    // A single click waits 250 ms for a second one.
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    await settle();
 
     assert.equal(page.popups.length, 1);
     const text = page.popups.at(-1).content.textContent;
@@ -487,7 +547,12 @@ test("the viewer", async (t) => {
         properties: { name: '<img src=x onerror="fail()">', year: 2023 },
       },
     ];
-    map.fire("click", { point: { x: 10, y: 10 }, lngLat: [8, 46] });
+    // Escape closes the last popup, which this click would otherwise only close.
+    page.window.document.dispatchEvent(new page.window.KeyboardEvent("keydown", { key: "Escape" }));
+    map.fire("click", { point: { x: 10, y: 10 }, lngLat: { lng: 8, lat: 46 } });
+    // A single click waits 250 ms for a second one.
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    await settle();
 
     const { content } = page.popups.at(-1);
     const wrapper = page.window.document.createElement("div");
@@ -501,7 +566,7 @@ test("the viewer", async (t) => {
     await settle();
     assert.ok(map.getSource("inv-sgi2016"));
 
-    await captureWarnings(async () => {
+    const warnings = await captureWarnings(async () => {
       map.fire("error", { sourceId: "inv-sgi2016", error: new Error("HTTP 404") });
       await settle();
     });
@@ -509,7 +574,12 @@ test("the viewer", async (t) => {
     assert.equal(map.getSource("inv-sgi2016"), undefined);
     assert.equal(map.getLayer("inv-line-sgi2016"), undefined);
     assert.equal(el("inv-sgi2016").checked, false, "the box is unticked");
-    assert.ok(el("status").textContent.includes("HTTP 404"));
+    assert.equal(
+      el("status").textContent,
+      "Error loading Swiss Glacier Inventory 2016. Tick it again to retry.",
+      "in words, and how to retry",
+    );
+    assert.ok(warnings.some((line) => line.includes("HTTP 404")), "the detail goes to the console");
 
     change(el("inv-sgi2016"), true);
     await settle();
@@ -527,13 +597,13 @@ test("the viewer", async (t) => {
       map.fire("error", { sourceId: "inv-sgi2016", error: new Error("HTTP 500") });
       await settle();
     });
-    assert.match(el("status").textContent, /HTTP 500/, "a failure outranks another's progress");
+    assert.match(el("status").textContent, /Error loading Swiss/, "a failure outranks another's progress");
 
     map.settle();
     await settle();
     assert.match(
       el("status").textContent,
-      /HTTP 500/,
+      /Error loading Swiss/,
       "the other inventory finishing must not wipe the failure",
     );
   });
@@ -548,7 +618,12 @@ test("the viewer", async (t) => {
       },
       { layer: { id: "inv-line-pauletal2020" }, properties: { glacier_nr: 1234, year: 2015 } },
     ];
-    map.fire("click", { point: { x: 10, y: 10 }, lngLat: [8, 46] });
+    // Escape closes the last popup, which this click would otherwise only close.
+    page.window.document.dispatchEvent(new page.window.KeyboardEvent("keydown", { key: "Escape" }));
+    map.fire("click", { point: { x: 10, y: 10 }, lngLat: { lng: 8, lat: 46 } });
+    // A single click waits 250 ms for a second one.
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    await settle();
 
     const text = page.popups.at(-1).content.textContent;
     assert.ok(text.includes("Grosser Aletschgletscher"));

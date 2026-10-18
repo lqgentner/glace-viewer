@@ -22,8 +22,17 @@ test("a missing catalog costs only the rasters", async () => {
   page.map.fire("style.load");
   await settle();
 
-  assert.equal(el("raster-controls").hidden, true, "dead sliders are hidden, not left behind");
-  assert.match(el("status").textContent, /No GLACE layers/);
+  const selected = () => el("tabs").querySelector('[aria-selected="true"]');
+  assert.equal(el("tab-layers").hidden, true, "the Layers tab goes with the catalog");
+  assert.equal(selected(), el("tab-inventories"), "and the next tab takes its place");
+  assert.equal(el("raster-controls").hidden, true, "with the placeholders");
+  // The band says so in one line, so it is not left empty.
+  assert.equal(el("legend").hidden, false);
+  assert.equal(el("legend").hasAttribute("aria-busy"), false);
+  assert.equal(el("legend-note").textContent, "The GLACE layers could not be loaded.");
+  assert.equal(el("legend-bar").hidden, true);
+  assert.equal(el("legend-labels").hidden, true);
+  assert.match(el("status").textContent, /Error loading the GLACE layers/);
   assert.match(el("status").textContent, /still work/);
 
   // Everything with no bearing on the rasters is untouched.

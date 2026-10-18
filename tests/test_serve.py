@@ -53,6 +53,7 @@ class ServerTestCase(unittest.TestCase):
         (cls.web_dir / "js").mkdir(parents=True)
         (cls.web_dir / "index.html").write_bytes(b"<!doctype html>")
         (cls.web_dir / "js" / "app.js").write_bytes(b"// app")
+        (cls.web_dir / "js" / "lib.mjs").write_bytes(b"export {};")
 
         cls.tiles_dir = root / "tiles"
         (cls.tiles_dir / "nested").mkdir(parents=True)
@@ -221,6 +222,12 @@ class TestCacheHeaders(ServerTestCase):
         for path in ("/index.html", "/js/app.js"):
             with self.subTest(path=path):
                 self.assertIn("no-store", self.get(path).headers["cache-control"])
+
+    def test_library_modules_are_never_stored(self) -> None:
+        # MapLibre ships .mjs; a stale copy keeps running after npm moves it.
+        response = self.get("/js/lib.mjs")
+        self.assertIn("no-store", response.headers["cache-control"])
+        self.assertEqual(response.headers["content-type"], "text/javascript")
 
     def test_archives_are_cacheable(self) -> None:
         self.assertNotIn("cache-control", self.get("/tiles/sample.pmtiles").headers)

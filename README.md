@@ -1,6 +1,6 @@
 <p align="center">
   <br />
-  <img src="https://data.source.coop/lqgentner/glace-ch/_assets/glace-wordmark.svg" alt="GLACE" width="350">
+  <img src="https://data.source.coop/giuz/glace-alps/_assets/glace-wordmark.svg" alt="GLACE" width="350">
   <br />
 </p>
 
@@ -14,9 +14,9 @@
   <br />
   <a href="https://lqgentner.github.io/glace-viewer">🗺️ Web map</a>
   ·
-  <a href="https://source.coop/lqgentner/glace-ch">💾 Dataset on Source Coop</a>
+  <a href="https://source.coop/giuz/glace-alps">💾 Dataset on Source Coop</a>
   ·
-  <a href="https://browser.portolan-sdi.org/#/external/data.source.coop/lqgentner/glace-ch/catalog.json">🧭 Portolan/STAC browser</a>
+  <a href="https://browser.portolan-sdi.org/#/external/data.source.coop/giuz/glace-alps/catalog.json">🧭 Portolan/STAC browser</a>
   ·
   <a href="https://github.com/lqgentner/glace-production">⚙️ Production pipeline</a>
 </p>
@@ -31,9 +31,12 @@ You can choose among the available years, VV or VH polarization, false color,
 and quality layers. The map also offers adjustable raster opacity, vector or
 satellite basemaps, hillshade, 3D terrain, glacier inventories, and
 the catalog's tile grid. Available raster choices come from the catalog.
+Click the map to read the layer's value there. The address keeps your choices,
+so a copied link opens the same view.
 
-The displayed rasters have their colors baked in. For numerical analysis,
-use the COG assets linked from the STAC items in the browser above.
+The archives carry quantized values, colored in the browser, so you can change
+the color map and its range. They are lossy 8-bit WebP, so for numerical analysis use the COG assets linked from the
+STAC items in the browser above.
 
 ## Run locally
 
@@ -97,3 +100,10 @@ beside each toggle and in [data/inventories.json](data/inventories.json).
 The viewer code is [MIT licensed](LICENSE). The glacier inventories, basemaps,
 and elevation data come from third parties and have their own licenses.
 Their attribution is displayed in GLACE Viewer.
+
+## Third-party color maps
+
+The `cmc.*` color maps in `js/colormaps.js` are Fabio Crameri's Scientific
+colour maps, MIT License: Crameri, F. (2018). Scientific colour maps. Zenodo.
+https://doi.org/10.5281/zenodo.1243862. viridis, magma and cividis come from
+matplotlib (CC0). Regenerate the file with `uv run scripts/colormaps.py > js/colormaps.js`.

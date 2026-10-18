@@ -1,11 +1,18 @@
 /*
  * Raster selection and legends for records from js/store.js. Sources are created on
- * first display and retained for reuse. Rendering uses pre-styled PMTiles.
+ * first display and retained for reuse. Value-encoded archives are colored here,
+ * with a color map and range set in the scale editor, which also sets false
+ * color's three channel ranges.
  */
 
-import { addStacked, map, styleReady } from "./map.js";
-import { FALSE_COLOUR, isFiniteNumber, isNonEmptyString, readStore } from "./store.js";
-import { buildSegmented, clearStatus, creditButton, el, h, setStatus } from "./ui.js";
+import { addStacked, map, setDataBounds, styleReady } from "./map.js";
+import { archive } from "./archive.js";
+import { FALSE_COLOUR, channelValues, compositeLayers, compositeTiles, restretch } from "./composite.js";
+import { isNonEmptyString, readStore } from "./store.js";
+import { COLOR_MAPS } from "./colormaps.js";
+import { PHONE, buildSegmented, clearStatus, el, h, hideTab, rove, setStatus, setUrlParams, urlParam } from "./ui.js";
+import { decodePixel, step } from "./values.js";
+import { codeAt, codeRange, compositeCounts, histogramPath, pixelAt, viewCounts } from "./histogram.js";
 
 const STATUS_KEY = "rasters";
 
@@ -15,11 +22,11 @@ const productLabel = (product) => PRODUCT_LABELS[product] ?? product;
 
 /* Split product and qualifier to fit the panel width. */
 const PRODUCT_DETAIL = {
-  COH12: ["Composite Coherence", "12-day baseline"],
-  RTC: ["Composite Backscatter", "Radiometrically terrain corrected"],
+  COH12: ["Coherence composite", "12-day baseline"],
+  RTC: ["Backscatter composite", "Radiometrically terrain corrected"],
 };
 
-const COMPOSITING_DETAIL = "Local resolution weighted median";
+const COMPOSITING_DETAIL = "Local resolution weighted";
 
 /*
  * Panel order and allowlist after removing QA suffixes. Unsupported polarizations
@@ -51,13 +58,19 @@ const QUANTITIES = [
 const QUANTITY_ORDER = QUANTITIES.map((quantity) => quantity.value);
 const quantityOf = (value) => QUANTITIES.find((quantity) => quantity.value === value);
 
-const CHANNEL_SWATCHES = ["#e0524f", "#4c9f4c", "#5b8def"];
+/* Default color maps are the viewer's choice; the catalog's style ramp is not read. */
+const PRODUCT_CMAP = { COH12: "cmc.lipari", RTC: "cmc.navia" };
+const QA_CMAP = "cmc.glasgow";
 
-/* Credit scientific color maps named cmc.<map> in the style. */
-const COLOUR_MAP_CREDIT = {
-  citation: "© Fabio Crameri",
-  links: [{ label: "Scientific color maps", url: "https://www.fabiocrameri.ch/colourmaps/" }],
-};
+export function defaultCmap(layer) {
+  const { quantity } = splitPolarization(layer.polarization);
+  if (quantity !== MEASUREMENT) return QA_CMAP;
+  return PRODUCT_CMAP[layer.product] ?? "viridis";
+}
+
+const CHANNEL_SWATCHES = ["#e0524f", "#4c9f4c", "#5b8def"];
+/* What each channel's limits stretch over, as the editor's bar under its histogram. */
+const CHANNEL_RAMPS = [["#000", "#f00"], ["#000", "#0f0"], ["#000", "#00f"]];
 
 const state = {
   axes: null,
@@ -68,7 +81,94 @@ const state = {
   opacity: 1,
   added: new Set(),
   activeKey: null,
+  /* Color-map and limit choices by layer stem, so a year change keeps them:
+     { cmap, limits: [{ vmin, vmax }] } with one limits entry per band. */
+  custom: new Map(),
 };
+
+/* ---------- value-encoded layers ---------- */
+
+const encoded = (layer) => Boolean(layer?.encoding);
+/* The scale editor edits a value-encoded layer, or false color's channels. */
+const editable = (layer) => Boolean(layer?.encoding || layer?.composite);
+/* The bands with limits: each has its encoding, default limits and units. */
+const bandsOf = (layer) => layer.channels ?? [layer];
+const customOf = (layer) => state.custom.get(layer.stem) ?? {};
+const ownLimits = (layer, band) => customOf(layer).limits?.[band] ?? {};
+const cmapOf = (layer) => customOf(layer).cmap ?? defaultCmap(layer);
+const colorsOf = (layer) => COLOR_MAPS[cmapOf(layer)];
+const rangeOf = (layer, band = 0) => ({
+  vmin: ownLimits(layer, band).vmin ?? bandsOf(layer)[band].vmin,
+  vmax: ownLimits(layer, band).vmax ?? bandsOf(layer)[band].vmax,
+});
+const stretchOf = (layer) => bandsOf(layer).map((_, band) => rangeOf(layer, band));
+const shortName = (name) => name.replace(/^cmc\./, "");
+const gradient = (colors) => `linear-gradient(to right, ${colors.join(", ")})`;
+
+/* Record a color map or limits, and redraw. */
+function customize(layer, change) {
+  remember(layer, change);
+  render();
+}
+
+/*
+ * Record a color map, or limits by band index, forgetting values equal to the
+ * defaults so reset means a change.
+ */
+function remember(layer, { cmap, limits = {} }) {
+  const custom = customOf(layer);
+  const next = {};
+  const chosen = cmap ?? custom.cmap;
+  if (chosen !== undefined && chosen !== defaultCmap(layer)) next.cmap = chosen;
+  const own = bandsOf(layer).map((band, at) => {
+    const merged = { ...custom.limits?.[at], ...limits[at] };
+    for (const which of ["vmin", "vmax"]) if (merged[which] === band[which]) delete merged[which];
+    return merged;
+  });
+  if (own.some((limit) => Object.keys(limit).length)) next.limits = own;
+  if (Object.keys(next).length) state.custom.set(layer.stem, next);
+  else state.custom.delete(layer.stem);
+}
+
+/*
+ * A color-relief expression: transparent below the first valid code, the ramp
+ * over vmin-vmax, clamped outside it. Code 1 is the lowest value; code 0, one
+ * step below, is nodata.
+ */
+export function reliefColor(encoding, colors, vmin, vmax) {
+  const scale = step(encoding);
+  const edge = scale - encoding.baseShift - scale / 2;
+  const stops = [
+    [edge, "rgba(0, 0, 0, 0)"],
+    [edge + scale / 100, colors[0]],
+  ];
+  colors.forEach((color, at) => {
+    const position = vmin + ((vmax - vmin) * at) / Math.max(1, colors.length - 1);
+    if (position > stops[stops.length - 1][0]) stops.push([position, color]);
+  });
+  return ["interpolate", ["linear"], ["elevation"], ...stops.flat()];
+}
+
+/* Redraw what changed: a composite's channel limits, or an archive's ramp. */
+function applyRamp(layer) {
+  if (!state.added.has(layer.id)) return;
+  if (layer.composite) {
+    const stretch = stretchOf(layer);
+    if (JSON.stringify(stretch) !== JSON.stringify(layer.stretch)) {
+      restretch(layer, stretch, () => map.getSource(layer.id).setTiles([compositeTiles(layer.id)]));
+    }
+    return;
+  }
+  if (!encoded(layer)) return;
+  const { vmin, vmax } = rangeOf(layer);
+  map.setPaintProperty(
+    layer.id,
+    "color-relief-color",
+    reliefColor(layer.encoding, colorsOf(layer), vmin, vmax),
+  );
+}
+
+const opacityProperty = (layer) => (layer.composite ? "raster-opacity" : "color-relief-opacity");
 
 const key = (product, polarization, year) => `${product}|${polarization}|${year}`;
 
@@ -154,43 +254,68 @@ export function indexLayers(layers) {
 function ensureLayer(layer) {
   const id = layer.id;
   if (state.added.has(id)) return;
+  /* A composite has no archive of its own, so its source names the credit. */
+  if (layer.composite) {
+    restretch(layer, stretchOf(layer));
+    map.addSource(id, {
+      type: "raster",
+      tiles: [compositeTiles(id)],
+      tileSize: 256,
+      minzoom: layer.minZoom,
+      maxzoom: layer.maxZoom,
+      attribution: layer.attribution,
+    });
+    addStacked("data", {
+      id,
+      type: "raster",
+      source: id,
+      layout: { visibility: "none" },
+      paint: { "raster-opacity": state.opacity, "raster-resampling": "nearest" },
+    });
+    state.added.add(id);
+    return;
+  }
   /*
    * Inherit attribution and bounds from PMTiles metadata. Zoom limits come from the
-   * catalog style.
+   * catalog style. Register the shared reader first, so reloads read from memory.
    */
+  archive(layer.url);
   map.addSource(id, {
-    type: "raster",
+    type: "raster-dem",
     url: `pmtiles://${layer.url}`,
     tileSize: 256,
     minzoom: layer.minZoom,
     maxzoom: layer.maxZoom,
+    ...layer.encoding,
   });
+  const { vmin, vmax } = rangeOf(layer);
   addStacked("data", {
     id,
-    type: "raster",
+    type: "color-relief",
     source: id,
     layout: { visibility: "none" },
-    paint: { "raster-opacity": state.opacity, "raster-resampling": "nearest" },
+    paint: {
+      "color-relief-opacity": state.opacity,
+      resampling: "nearest",
+      "color-relief-color": reliefColor(layer.encoding, colorsOf(layer), vmin, vmax),
+    },
   });
   state.added.add(id);
 }
 
 /*
- * Report the first failure per raster source. Ignore canceled requests, which are
- * normal during panning.
+ * Keep the first failure per raster source, shown while its layer is selected.
+ * Ignore canceled requests, which are normal during panning.
  */
-const reportedFailures = new Set();
+const failures = new Map();
 
 map.on("error", (event) => {
   const source = event.sourceId;
-  if (!source || !state.added.has(source) || reportedFailures.has(source)) return;
+  if (!source || !state.added.has(source) || failures.has(source)) return;
   if (event.error?.name === "AbortError") return;
-  reportedFailures.add(source);
-  setStatus(
-    STATUS_KEY,
-    `This layer could not be drawn — ${event.error?.message ?? "its tiles could not be read"}`,
-    "error",
-  );
+  console.warn(`${source}:`, event.error?.message);
+  failures.set(source, "Error loading this layer's tiles. Try again later.");
+  if (source === selected()?.id) setStatus(STATUS_KEY, failures.get(source), "error");
 });
 
 function selectionName() {
@@ -204,13 +329,73 @@ function render() {
   const active = selected();
   if (active) {
     updateLegend(active);
-    clearStatus(STATUS_KEY);
+    const failure = failures.get(active.id);
+    if (failure) setStatus(STATUS_KEY, failure, "error");
+    else clearStatus(STATUS_KEY);
   } else {
     el("layer-info").replaceChildren();
-    setStatus(STATUS_KEY, `No ${selectionName()} for ${state.year}`, "info");
+    legendNote(`No ${selectionName()} for ${state.year}`);
+    clearStatus(STATUS_KEY);
   }
   syncControls();
+  followSelection(active);
   showOnMap(active);
+  syncUrl(active);
+  const quantity = quantityOf(state.quantity)?.name;
+  el("selection-summary").textContent = [
+    productLabel(state.product),
+    quantity ? `${state.pol} ${quantity}` : state.pol,
+    state.year,
+  ].join(" · ");
+}
+
+/*
+ * The selection in the URL, with the selected layer's own color map and limits:
+ * ?year=2024&product=coh12&pol=vv&layer=qa_num&opacity=60&cmap=…&range=min_max…
+ */
+function syncUrl(layer) {
+  const custom = layer ? customOf(layer) : {};
+  setUrlParams({
+    year: state.year,
+    product: state.product.toLowerCase(),
+    pol: state.pol.toLowerCase(),
+    layer: state.quantity === MEASUREMENT ? null : state.quantity.toLowerCase(),
+    opacity: state.opacity === 1 ? null : Math.round(state.opacity * 100),
+    cmap: custom.cmap ?? null,
+    range: custom.limits ? stretchOf(layer).flatMap(({ vmin, vmax }) => [vmin, vmax]).join("_") : null,
+  });
+}
+
+/* Restore what syncUrl() wrote, wherever the catalog and the limits allow it. */
+function restoreFromUrl() {
+  const upper = (name) => urlParam(name)?.toUpperCase();
+  const wanted = {
+    product: upper("product") ?? state.product,
+    pol: upper("pol") ?? state.pol,
+    quantity: upper("layer") ?? state.quantity,
+    year: Number(urlParam("year") ?? state.year),
+  };
+  if (findLayer(wanted.product, wanted.pol, wanted.quantity, wanted.year)) Object.assign(state, wanted);
+
+  const opacity = Number(urlParam("opacity") ?? NaN);
+  if (Number.isInteger(opacity) && opacity >= 0 && opacity <= 100) {
+    state.opacity = opacity / 100;
+    el("opacity").value = opacity;
+    el("opacity-value").textContent = `${opacity}%`;
+  }
+
+  const layer = selected();
+  if (!layer) return;
+  const cmap = urlParam("cmap");
+  if (cmap in COLOR_MAPS && !layer.composite) remember(layer, { cmap });
+  const values = (urlParam("range") ?? "").split("_").map(Number);
+  const bands = bandsOf(layer);
+  const limits = bands.map((band, at) => ({ vmin: values[2 * at], vmax: values[2 * at + 1] }));
+  const fits = limits.every(({ vmin, vmax }, at) => {
+    const { lowest, highest } = limitsRange(bands[at]);
+    return Number.isFinite(vmin) && Number.isFinite(vmax) && lowest <= vmin && vmin < vmax && vmax <= highest;
+  });
+  if (values.length === 2 * bands.length && fits) remember(layer, { limits });
 }
 
 /* Hide only the previous raster. Calls settle in order, so the last selection wins. */
@@ -223,81 +408,116 @@ async function showOnMap(active) {
   }
   if (!active) return;
   ensureLayer(active);
+  applyRamp(active);
   map.setLayoutProperty(wanted, "visibility", "visible");
-  map.setPaintProperty(wanted, "raster-opacity", state.opacity);
+  map.setPaintProperty(wanted, opacityProperty(active), state.opacity);
   state.activeKey = wanted;
 }
 
 const unitSuffix = (layer) =>
   typeof layer.units === "string" && layer.units ? ` ${layer.units}` : "";
-const round = (value, span) => value.toFixed(Math.abs(span) < 5 ? 2 : 1);
+const decimals = (span) => (Math.abs(span) < 5 ? 2 : 1);
+const round = (value, span) => value.toFixed(decimals(span));
+
+/* A one-line message in the ramp's place, so the band keeps its height. */
+function legendNote(text) {
+  for (const id of ["legend-bar", "legend-labels", "legend-channels", "legend-edit", "cmap"]) {
+    el(id).hidden = true;
+  }
+  // Always rendered: a live region shown with its text is often not announced.
+  el("legend-note").textContent = text;
+}
 
 function updateLegend(layer) {
   const falseColour = layer.polarization === FALSE_COLOUR;
+  el("legend-note").textContent = "";
   el("legend-bar").hidden = falseColour;
   el("legend-labels").hidden = falseColour;
   el("legend-channels").hidden = !falseColour;
+  el("cmap").hidden = falseColour;
+  el("legend-edit").hidden = !editable(layer);
 
   if (falseColour) {
     updateChannelLegend(layer);
   } else {
-    el("legend-bar").style.background = `linear-gradient(to right, ${layer.colors.join(", ")})`;
-    const unit = unitSuffix(layer);
-    const span = layer.vmax - layer.vmin;
-    el("legend-min").textContent = round(layer.vmin, span) + unit;
-    el("legend-max").textContent = round(layer.vmax, span) + unit;
+    const own = ownLimits(layer, 0);
+    const { vmin, vmax } = rangeOf(layer);
+    const span = vmax - vmin;
+    el("legend-bar").style.background = gradient(colorsOf(layer));
+    el("cmap").textContent = `color map ${shortName(cmapOf(layer))}`;
+    el("legend-min").textContent = round(vmin, span);
+    el("legend-max").textContent = round(vmax, span);
+    for (const which of ["vmin", "vmax"]) {
+      const limit = el(which === "vmin" ? "legend-min" : "legend-max");
+      limit.classList.toggle("modified", which in own);
+      limit.parentElement.querySelector(".visually-hidden").hidden = !(which in own);
+    }
+    for (const unit of el("legend-labels").querySelectorAll(".unit")) {
+      unit.textContent = unitSuffix(layer);
+    }
   }
-  updateColourMapCredit(layer);
+  if (el("scale-editor").open && editable(layer)) syncEditor(layer);
   el("layer-info").replaceChildren(...layerDetail(layer).map((line) => h("div", { textContent: line })));
 }
 
 function updateChannelLegend(layer) {
-  const unit = unitSuffix(layer);
   el("legend-channels").replaceChildren(
-    ...falseColourChannels(layer).flatMap(({ band, vmin, vmax }, at) => [
-      h("span", { class: "swatch", style: { background: CHANNEL_SWATCHES[at] } }),
-      h("span", { class: "band", textContent: band }),
-      h("span", {
-        textContent:
-          vmin === undefined
-            ? ""
-            : `${round(vmin, vmax - vmin)} to ${round(vmax, vmax - vmin)}${unit}`,
-      }),
-    ]),
+    ...bandsOf(layer).flatMap((band, at) => {
+      const { vmin, vmax } = rangeOf(layer, at);
+      const own = ownLimits(layer, at);
+      const limit = (which, value) =>
+        h(
+          "span",
+          { class: which in own ? "modified" : null },
+          round(value, vmax - vmin),
+          which in own ? h("span", { class: "visually-hidden", textContent: " (custom)" }) : null,
+        );
+      return [
+        h("span", { class: "swatch", style: { background: CHANNEL_SWATCHES[at] } }),
+        h("span", { class: "channel", style: { color: CHANNEL_SWATCHES[at] }, textContent: "RGB"[at] }),
+        h("span", { class: "band", textContent: band.band }),
+        // The limits are spoken; the scale editor shows them.
+        h(
+          "span",
+          { class: "visually-hidden" },
+          h("span", { class: "range" }, limit("vmin", vmin), " to ", limit("vmax", vmax), unitSuffix(band)),
+        ),
+      ];
+    }),
   );
 }
 
-/*
- * Validate the three {band, vmin, vmax} channel records. Invalid metadata omits
- * legend numbers without hiding the pre-styled layer.
- */
-function validChannels(channels) {
-  const usable =
-    Array.isArray(channels) &&
-    channels.length === 3 &&
-    channels.every(
-      (channel) =>
-        channel !== null &&
-        typeof channel === "object" &&
-        isNonEmptyString(channel.band) &&
-        isFiniteNumber(channel.vmin) &&
-        isFiniteNumber(channel.vmax) &&
-        channel.vmin < channel.vmax,
-    );
-  return usable ? channels : null;
-}
+/* ---------- the value under a click ---------- */
+
+/* Whole numbers for an encoding in whole steps, as counts are; else as the legend rounds. */
+const formatValue = (band, value) =>
+  (Number.isInteger(step(band.encoding)) ? Math.round(value).toString() : round(value, band.vmax - band.vmin)) +
+  unitSuffix(band);
 
 /**
- * Use the style's published channel stretches. Without them, show band names and
- * the ratio (a difference in dB) but never infer ranges from sibling layers.
+ * The selected layer's values at [lng, lat], from the pixel MapLibre draws:
+ * VV and VH for false color. Null where it draws nothing.
  *
- * @param {object} layer
- * @returns {{band: string, vmin?: number, vmax?: number}[]}
+ * @returns {Promise<{heading: string, fields: string[][]}|null>}
  */
-export function falseColourChannels(layer) {
-  const published = validChannels(layer.channels);
-  if (published !== null) return published;
-  return [{ band: "VV" }, { band: "VH" }, { band: layer.units === "dB" ? "VV − VH" : "VV / VH" }];
+export async function valuesAt(lngLat) {
+  const layer = selected();
+  if (!editable(layer)) return null;
+  const heading = `${productLabel(layer.product)} ${layer.year}`;
+  const read = (record) => pixelAt(record.url, layer.minZoom, layer.maxZoom, lngLat, map.getZoom());
+  if (layer.composite) {
+    const { vv, vh } = layer.composite;
+    const [a, b] = await Promise.all([read(vv), read(vh)]);
+    const values = new Float64Array(3);
+    if (!a || !b || !channelValues(layer, a, b, 0, values)) return null;
+    const fields = [vv, vh].map((record, at) => [record.polarization, formatValue(record, values[at])]);
+    return { heading, fields };
+  }
+  const pixel = await read(layer);
+  const value = pixel && pixel[3] !== 0 ? decodePixel(layer.encoding, pixel[0], pixel[1], pixel[2]) : null;
+  if (value === null) return null;
+  const quantity = quantityOf(state.quantity)?.name;
+  return { heading, fields: [[quantity ? `${state.pol} ${quantity}` : state.pol, formatValue(layer, value)]] };
 }
 
 const isDate = (value) => isNonEmptyString(value) && /^\d{4}-\d{2}-\d{2}$/.test(value);
@@ -321,21 +541,519 @@ export function layerDetail(layer) {
   return lines;
 }
 
-/*
- * Keep the credit button while its color map is unchanged so an open popover
- * survives renders.
- */
-let shownColourMap = null;
+/* ---------- scale editor ---------- */
 
-function updateColourMapCredit(layer) {
-  const cmap = isNonEmptyString(layer.cmap) ? layer.cmap.replace(/^cmc\./, "") : "";
-  if (cmap === shownColourMap) return;
-  shownColourMap = cmap;
-  el("legend-credit").replaceChildren(
-    ...(cmap
-      ? [creditButton("Color map", { ...COLOUR_MAP_CREDIT, title: `Colormap: ${cmap}` })]
-      : []),
+/*
+ * The limits a band can take. For an archive, below code 1 the ramp falls into
+ * the nodata stop, and above code 255 MapLibre's packed ramp wraps around. It
+ * rounds a stop to the smallest factor, so the top allows less than half of
+ * that, enough for floating-point error. A ratio channel takes its axis. The
+ * refusal names bottom and top: an archive's codes 1 and 255.
+ */
+function limitsRange(band) {
+  if (band.bounds) {
+    const [low, high] = band.bounds;
+    return { lowest: low, highest: high, bottom: low, top: high };
+  }
+  const { encoding } = band;
+  const { redFactor, greenFactor, blueFactor } = encoding;
+  const bottom = decodePixel(encoding, 1, 1, 1);
+  const top = decodePixel(encoding, 255, 255, 255);
+  return {
+    lowest: bottom - step(encoding) / 2,
+    highest: top + Math.min(redFactor, greenFactor, blueFactor) / 4,
+    bottom,
+    top,
+  };
+}
+
+function rangeText(band) {
+  const { bottom, top } = limitsRange(band);
+  return `Enter a value between ${round(bottom, top - bottom)} and ${round(top, top - bottom)}${unitSuffix(band)}.`;
+}
+
+/*
+ * Parse a typed limit, rounded to the precision the legend shows so what is shown
+ * is what is drawn. Text, an inverted range, or a limit the band cannot take is
+ * a problem, with the reason to show.
+ *
+ * @returns {{value: number}|{problem: string}}
+ */
+function parseLimit(layer, at, which, typed) {
+  const band = bandsOf(layer)[at];
+  const text = typed.trim().replace(",", ".");
+  const range = rangeOf(layer, at);
+  const other = which === "vmin" ? range.vmax : range.vmin;
+  const value = Number(Number(text).toFixed(decimals(other - Number(text))));
+  const next = { ...range, [which]: value };
+  const { lowest, highest } = limitsRange(band);
+  if (text === "" || !Number.isFinite(value)) return { problem: rangeText(band) };
+  if (next.vmin >= next.vmax) return { problem: "Min must be below Max." };
+  if (next.vmin < lowest || next.vmax > highest) return { problem: rangeText(band) };
+  return { value };
+}
+
+/*
+ * A histogram's axis runs over codes 1-255 at even width, from half a step
+ * below code 1 to half a step above code 255. A ratio's encoding has 255 such
+ * steps across its axis.
+ */
+const HISTOGRAM_HEIGHT = 64; // the viewBox of each histogram's SVG
+const clamp = (value, low, high) => Math.min(high, Math.max(low, value));
+const fractionOf = (encoding, value) =>
+  clamp(((value + encoding.baseShift) / step(encoding) - 0.5) / 255, 0, 1);
+const valueAt = (encoding, fraction) => (fraction * 255 + 0.5) * step(encoding) - encoding.baseShift;
+const percent = (fraction) => `${(fraction * 100).toFixed(3)}%`;
+
+const bandNodes = () => [...el("bands").children];
+const limitInputs = () => [...el("bands").querySelectorAll("input")];
+
+/*
+ * One block per band from #band-template: a histogram over the band's axis,
+ * the ramp it draws and its limits, Min left and Max right. False color names
+ * each channel.
+ */
+function buildBands(layer) {
+  const template = el("band-template").content.firstElementChild;
+  const nodes = bandsOf(layer).map((band, at) => {
+    const node = template.cloneNode(true);
+    node.dataset.band = at;
+    for (const which of ["vmin", "vmax"]) {
+      const input = node.querySelector(`input.${which}`);
+      input.id = `${which}-${at}`;
+      const name = which === "vmin" ? "Min" : "Max";
+      const label = layer.composite ? `${band.band} ${name.toLowerCase()}` : name;
+      const unit = unitSuffix(band).trim();
+      input.setAttribute("aria-label", unit ? `${label} (${unit})` : label);
+      initField(input, at, which);
+    }
+    const name = node.querySelector(".band-name");
+    name.hidden = !layer.composite;
+    if (layer.composite) {
+      node.style.setProperty("--tint", CHANNEL_SWATCHES[at]);
+      name.querySelector(".channel").textContent = "RGB"[at];
+      name.querySelector(".name").textContent = band.band;
+    }
+    initHistogram(node.querySelector(".histogram"), at);
+    return node;
+  });
+  el("bands").replaceChildren(...nodes);
+  el("bands").classList.toggle("channels", Boolean(layer.composite));
+}
+
+/* The bands' names, so blocks are rebuilt only for a layer of another kind. */
+const bandsKey = (layer) => bandsOf(layer).map((band) => band.band ?? "").join("|");
+
+/* Fill the editor from the layer. A field being typed in is left alone unless forced. */
+function syncEditor(layer, { force = false } = {}) {
+  if (el("bands").dataset.key !== bandsKey(layer)) {
+    buildBands(layer);
+    el("bands").dataset.key = bandsKey(layer);
+  }
+  bandsOf(layer).forEach((band, at) => {
+    const node = bandNodes()[at];
+    const { vmin, vmax } = rangeOf(layer, at);
+    for (const [which, value] of [["vmin", vmin], ["vmax", vmax]]) {
+      const input = el(`${which}-${at}`);
+      if (force || document.activeElement !== input) {
+        input.value = round(value, vmax - vmin);
+        input.removeAttribute("aria-invalid");
+      }
+      // iOS's decimal keypad has no minus sign.
+      input.inputMode = limitsRange(band).bottom < 0 ? "text" : "decimal";
+    }
+    // Handles, shading and the ramp below sit where the limits fall on the axis.
+    const low = fractionOf(band.encoding, vmin);
+    const high = fractionOf(band.encoding, vmax);
+    const chart = node.querySelector(".histogram");
+    chart.style.setProperty("--low", percent(low));
+    chart.style.setProperty("--high", percent(high));
+    const colors = layer.composite ? CHANNEL_RAMPS[at] : colorsOf(layer);
+    const stops = colors.map(
+      (color, index) => `${color} ${percent(low + ((high - low) * index) / Math.max(1, colors.length - 1))}`,
+    );
+    node.querySelector(".band-bar").style.background = `linear-gradient(to right, ${stops.join(", ")})`;
+    for (const unit of node.querySelectorAll(".unit")) unit.textContent = unitSuffix(band).trim();
+  });
+  // The reason a limit was refused stays only while its field is flagged. The live
+  // region is emptied rather than hidden, so it exists when the next reason comes.
+  const flagged = limitInputs().some((input) => input.getAttribute("aria-invalid") === "true");
+  if (!flagged) el("limits-hint").textContent = "";
+  // aria-disabled, not disabled: a focused button that turns unavailable keeps focus.
+  el("range-reset").setAttribute("aria-disabled", String(!customOf(layer).limits));
+  const counted = viewed?.layer === layer && viewed.counts.some((counts) => codeRange(counts) !== null);
+  el("range-percentile").setAttribute("aria-disabled", String(!counted));
+  el("range-extent").setAttribute("aria-disabled", String(!counted));
+  el("cmap-section").hidden = Boolean(layer.composite);
+  const current = cmapOf(layer);
+  for (const option of el("cmap-options").children) {
+    option.setAttribute("aria-pressed", String(option.dataset.value === current));
+  }
+}
+
+/** The selected layer, where the editor can edit it. */
+const editing = () => {
+  const layer = selected();
+  return editable(layer) ? layer : null;
+};
+
+/* The read in progress, aborted when the editor closes or reopens. */
+let reading = null;
+/* The layer the histograms show or are reading, and their counts once read. */
+let shown = null;
+let viewed = null;
+/* Whether a recount is under way, and the preset pressed meanwhile, for when it ends. */
+let recounting = false;
+let queued = null;
+
+/*
+ * A note over the charts; a chart is an image, so its label carries the note
+ * too, or the range of values counted.
+ */
+function note(layer, text, counts = null) {
+  bandNodes().forEach((node, at) => {
+    node.querySelector(".note").textContent = text;
+    const band = bandsOf(layer)[at];
+    const label = `Histogram of ${band.band ?? "the values"} in view`;
+    const range = counts && codeRange(counts[at]);
+    const value = (code) => round(code * step(band.encoding) - band.encoding.baseShift, band.vmax - band.vmin);
+    const detail = text || (range ? `from ${value(range[0])} to ${value(range[1])}${unitSuffix(band)}` : "");
+    node.querySelector(".histogram").setAttribute("aria-label", detail ? `${label}: ${detail}` : label);
+  });
+}
+
+const drawBars = (counts) =>
+  bandNodes().forEach((node, at) =>
+    node.querySelector(".bars").setAttribute("d", counts ? histogramPath(counts[at], HISTOGRAM_HEIGHT) : ""),
   );
+
+/*
+ * Count the values in view. A new layer starts blank; a recount of the same
+ * one, after the map moves, keeps the old bars until the new ones are ready.
+ * A preset pressed during a recount applies to the new counts.
+ */
+async function showHistogram(layer) {
+  reading?.abort();
+  const controller = (reading = new AbortController());
+  if (shown !== layer) {
+    shown = layer;
+    viewed = null;
+    queued = null;
+    syncEditor(layer);
+    drawBars(null);
+    note(layer, "Loading…");
+  }
+  recounting = true;
+  try {
+    const bounds = map.getBounds();
+    // After panning across world copies, longitudes run past ±180.
+    const shift = 360 * Math.round(map.getCenter().lng / 360);
+    // Drawn tiles are at least 181 px wide (256 px at half a zoom down).
+    const { clientWidth: width, clientHeight: height } = map.getContainer();
+    const budget = Math.ceil(width / 181 + 1) * Math.ceil(height / 181 + 1);
+    const view = [bounds.getWest() - shift, bounds.getSouth(), bounds.getEast() - shift, bounds.getNorth()];
+    const counts = layer.composite
+      ? await compositeCounts(layer, view, map.getZoom(), controller.signal, budget)
+      : [await viewCounts(layer, view, map.getZoom(), controller.signal, budget)];
+    drawBars(counts);
+    note(layer, counts.some((band) => codeRange(band) !== null) ? "" : "No data in view", counts);
+    viewed = { layer, counts };
+    recounting = false;
+    syncEditor(layer);
+    if (queued) fitBands(layer, queued);
+    queued = null;
+  } catch {
+    if (controller.signal.aborted) return;
+    recounting = false;
+    queued = null;
+    viewed = null;
+    drawBars(null);
+    note(layer, "The values in view could not be read");
+    syncEditor(layer);
+  }
+}
+
+/* The open editor follows the selection, and closes on a layer it cannot edit. */
+function followSelection(layer) {
+  const editor = el("scale-editor");
+  if (!editor.open) return;
+  if (!editable(layer)) {
+    editor.close();
+  } else if (shown !== layer) {
+    syncEditor(layer, { force: true });
+    showHistogram(layer);
+  }
+}
+
+/*
+ * Round to `digits`, then into the band's range on that grid, so a limit at
+ * either end is drawn rather than refused.
+ */
+function onGrid(band, value, digits) {
+  const unit = 10 ** -digits;
+  const { lowest, highest } = limitsRange(band);
+  const inside = clamp(value, Math.ceil(lowest / unit) * unit, Math.floor(highest / unit) * unit);
+  return Number(inside.toFixed(digits));
+}
+
+/*
+ * Limits from code positions, rounded as the fields show them and kept a shown
+ * digit apart within what the band can take.
+ */
+function limitsAt(band, low, high) {
+  const { encoding } = band;
+  const scale = step(encoding);
+  const [from, to] = [low * scale - encoding.baseShift, high * scale - encoding.baseShift];
+  const digits = decimals(to - from);
+  const unit = 10 ** -digits;
+  const fit = (value) => onGrid(band, value, digits);
+  let [vmin, vmax] = [fit(from), fit(to)];
+  if (vmax <= vmin) {
+    if (fit(vmin + unit) > vmin) vmax = fit(vmin + unit);
+    else vmin = fit(vmax - unit);
+  }
+  return { vmin, vmax };
+}
+
+/* Fit every counted band's limits to the code positions `pick` finds in its counts. */
+function fitBands(layer, pick) {
+  if (viewed?.layer !== layer) return;
+  if (recounting) {
+    queued = pick;
+    return;
+  }
+  const limits = {};
+  bandsOf(layer).forEach((band, at) => {
+    if (codeRange(viewed.counts[at]) !== null) limits[at] = limitsAt(band, ...pick(viewed.counts[at]));
+  });
+  customize(layer, { limits });
+}
+
+/*
+ * Drag a band's limit across its histogram. A press moves the nearer handle
+ * there and keeps it under the pointer until release; a limit stops one shown
+ * digit short of the other. A touch may start a scroll of the editor instead,
+ * so it moves the handle once it travels across, or on release as a tap.
+ */
+const ACROSS = 6; // px
+
+function initHistogram(node, at) {
+  let dragging = null;
+  let touch = null;
+
+  const fractionAt = (event) => {
+    const box = node.getBoundingClientRect();
+    return box.width > 0 ? clamp((event.clientX - box.left) / box.width, 0, 1) : null;
+  };
+  const follow = (layer, fraction) => {
+    const band = bandsOf(layer)[at];
+    const range = rangeOf(layer, at);
+    const other = dragging === "vmin" ? range.vmax : range.vmin;
+    const raw = valueAt(band.encoding, fraction);
+    // The precision of the range this drag makes, as parseLimit rounds it.
+    const digits = decimals(other - raw);
+    const unit = 10 ** -digits;
+    let value = onGrid(band, raw, digits);
+    value = dragging === "vmin" ? Math.min(value, other - unit) : Math.max(value, other + unit);
+    const { value: limit } = parseLimit(layer, at, dragging, value.toFixed(digits));
+    if (limit !== undefined && limit !== range[dragging]) {
+      customize(layer, { limits: { [at]: { [dragging]: limit } } });
+    }
+  };
+
+  node.addEventListener("pointerdown", (event) => {
+    const layer = editing();
+    const fraction = fractionAt(event);
+    if (!layer || fraction === null) return;
+    event.preventDefault();
+    // A field being typed in would not show the dragged value.
+    if (document.activeElement?.matches("#bands input")) document.activeElement.blur();
+    const { encoding } = bandsOf(layer)[at];
+    const { vmin, vmax } = rangeOf(layer, at);
+    const toLow = Math.abs(fraction - fractionOf(encoding, vmin));
+    const toHigh = Math.abs(fraction - fractionOf(encoding, vmax));
+    dragging = toLow <= toHigh ? "vmin" : "vmax";
+    node.setPointerCapture?.(event.pointerId);
+    node.classList.add("dragging");
+    if (event.pointerType === "touch") touch = { x: event.clientX, y: event.clientY };
+    else follow(layer, fraction);
+  });
+  node.addEventListener("pointermove", (event) => {
+    const layer = editing();
+    const fraction = fractionAt(event);
+    if (!dragging || !layer || fraction === null) return;
+    if (touch) {
+      const across = Math.abs(event.clientX - touch.x);
+      if (across < ACROSS || across < Math.abs(event.clientY - touch.y)) return;
+      touch = null;
+    }
+    follow(layer, fraction);
+  });
+  const end = () => {
+    dragging = null;
+    touch = null;
+    node.classList.remove("dragging");
+  };
+  node.addEventListener("pointerup", (event) => {
+    const layer = editing();
+    const fraction = fractionAt(event);
+    if (touch && dragging && layer && fraction !== null) follow(layer, fraction);
+    end();
+  });
+  // The browser cancels a touch it scrolls with.
+  for (const type of ["pointercancel", "lostpointercapture"]) node.addEventListener(type, end);
+}
+
+/* A band's limit field: each valid value applies as it is typed; the rest are flagged. */
+function initField(input, at, which) {
+  input.addEventListener("input", () => {
+    const layer = editing();
+    if (!layer) return;
+    const { value, problem } = parseLimit(layer, at, which, input.value);
+    input.setAttribute("aria-invalid", String(problem !== undefined));
+    el("limits-hint").textContent = problem ?? "";
+    if (value !== undefined && value !== rangeOf(layer, at)[which]) {
+      customize(layer, { limits: { [at]: { [which]: value } } });
+    }
+  });
+  // Leaving the field shows what is drawn, which also discards invalid text.
+  input.addEventListener("change", () => {
+    const layer = editing();
+    if (layer) syncEditor(layer, { force: true });
+  });
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") input.blur();
+  });
+}
+
+/*
+ * On a phone the editor is docked to the bottom and rises above the keyboard:
+ * the visual viewport shrinks by the keyboard's height within the layout
+ * viewport, and the editor's offset follows through --keyboard-inset.
+ */
+function keepAboveKeyboard(editor) {
+  const viewport = window.visualViewport;
+  if (!PHONE.matches || !viewport) return () => {};
+  const root = document.documentElement.style;
+  const place = () => {
+    const layout = document.documentElement.clientHeight;
+    const inset = Math.max(0, layout - (viewport.height + viewport.offsetTop));
+    root.setProperty("--keyboard-inset", `${inset}px`);
+  };
+  // The keyboard's resize follows the focus; reveal the field once it has.
+  let pending = null;
+  const settled = () => {
+    viewport.removeEventListener("resize", pending);
+    pending = null;
+  };
+  const reveal = (event) => {
+    if (!event.target.matches("input")) return;
+    if (pending) settled();
+    const field = event.target;
+    pending = () => {
+      settled();
+      field.scrollIntoView({ block: "nearest" });
+    };
+    viewport.addEventListener("resize", pending);
+  };
+  place();
+  viewport.addEventListener("resize", place);
+  viewport.addEventListener("scroll", place);
+  editor.addEventListener("focusin", reveal);
+  return () => {
+    if (pending) settled();
+    viewport.removeEventListener("resize", place);
+    viewport.removeEventListener("scroll", place);
+    editor.removeEventListener("focusin", reveal);
+    root.removeProperty("--keyboard-inset");
+  };
+}
+
+function initLegend() {
+  const editor = el("scale-editor");
+  let release = () => {};
+
+  /*
+   * Not modal: the map stays live behind the editor, which recounts the view
+   * after each move. The edit button toggles it.
+   */
+  el("legend-edit").addEventListener("click", () => {
+    const layer = editing();
+    if (editor.open || !layer) {
+      editor.close();
+      return;
+    }
+    syncEditor(layer, { force: true });
+    editor.show();
+    release();
+    release = keepAboveKeyboard(editor);
+    el("legend-edit").setAttribute("aria-expanded", "true");
+    showHistogram(layer);
+  });
+  editor.addEventListener("close", () => {
+    reading?.abort();
+    shown = null;
+    viewed = null;
+    recounting = false;
+    queued = null;
+    release();
+    release = () => {};
+    el("legend-edit").setAttribute("aria-expanded", "false");
+  });
+  // A closing the user asked for returns to the button that opened the editor.
+  const dismiss = () => {
+    editor.close();
+    el("legend-edit").focus();
+  };
+  editor.querySelector(".close").addEventListener("click", dismiss);
+  // A non-modal dialog has no close request of its own.
+  editor.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") dismiss();
+  });
+  map.on("moveend", () => {
+    const layer = editing();
+    if (editor.open && layer) showHistogram(layer);
+  });
+
+  el("cmap-options").replaceChildren(
+    ...Object.keys(COLOR_MAPS).map((name) =>
+      h(
+        "button",
+        {
+          type: "button",
+          class: "cmap-option",
+          dataset: { value: name },
+          onclick: () => {
+            const layer = editing();
+            if (layer && !layer.composite) customize(layer, { cmap: name });
+          },
+        },
+        h("span", { class: "ramp", style: { background: gradient(COLOR_MAPS[name]) } }),
+        h("span", { textContent: shortName(name) }),
+      ),
+    ),
+  );
+
+  /* Presets fit every band to the values in view, as the histograms counted them. */
+  const unavailable = (id) => el(id).getAttribute("aria-disabled") === "true";
+  el("range-percentile").addEventListener("click", () => {
+    const layer = editing();
+    if (layer && !unavailable("range-percentile")) {
+      fitBands(layer, (counts) => [codeAt(counts, 0.02), codeAt(counts, 0.98)]);
+    }
+  });
+  el("range-extent").addEventListener("click", () => {
+    const layer = editing();
+    if (layer && !unavailable("range-extent")) fitBands(layer, codeRange);
+  });
+
+  /* Reset restores every band's default limits and keeps the chosen color map. */
+  el("range-reset").addEventListener("click", () => {
+    const layer = editing();
+    if (!layer || unavailable("range-reset")) return;
+    customize(layer, { limits: bandsOf(layer).map(({ vmin, vmax }) => ({ vmin, vmax })) });
+    syncEditor(layer, { force: true });
+  });
 }
 
 /* ---------- controls ---------- */
@@ -363,6 +1081,8 @@ function syncControls() {
   }
   el("year-value").textContent = state.year;
   el("year").value = state.axes.years.indexOf(state.year);
+  el("year").setAttribute("aria-valuetext", String(state.year));
+  for (const id of ["product", "quantity", "pol"]) rove(el(id));
 }
 
 function initControls(axes) {
@@ -417,24 +1137,28 @@ function initControls(axes) {
 /* ---------- boot ---------- */
 
 /*
- * Hide unavailable raster controls while keeping the independent map and overlays
- * usable.
+ * Hide the Layers tab and say so in the legend, while keeping the independent
+ * map and overlays usable.
  */
 function noRasters(reason) {
-  el("raster-controls").hidden = true;
-  el("layer-info").replaceChildren();
+  hideTab(el("tab-layers"), true);
+  el("selection-summary").hidden = true;
+  el("legend").removeAttribute("aria-busy");
+  legendNote("The GLACE layers could not be loaded.");
+  console.warn("rasters:", reason);
   setStatus(
     STATUS_KEY,
-    `No GLACE layers: ${reason}. Basemap, terrain and inventories still work.`,
+    "Error loading the GLACE layers. The basemap, terrain and inventories still work.",
     "error",
   );
 }
 
 export async function loadRasters() {
-  setStatus(STATUS_KEY, "Loading layers…");
   let axes;
   try {
-    axes = indexLayers(await readStore());
+    const { layers, bounds } = await readStore();
+    setDataBounds(bounds);
+    axes = indexLayers([...layers, ...compositeLayers(layers)]);
   } catch (error) {
     noRasters(error.message);
     return null;
@@ -463,7 +1187,11 @@ export async function loadRasters() {
     state.year = fallback.year;
   }
 
+  restoreFromUrl();
   initControls(axes);
+  initLegend();
   render();
+  el("raster-controls").removeAttribute("aria-busy");
+  el("legend").removeAttribute("aria-busy");
   return axes;
 }

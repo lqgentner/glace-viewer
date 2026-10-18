@@ -78,6 +78,7 @@ class FakeMap {
     this.calls = [];
     this.controlNodes = [];
     this.controls = [];
+    this.positions = new Map();
     this.terrain = null;
     this.pitch = initialPitch;
     this.center = { lng: options.center[0], lat: options.center[1] };
@@ -91,13 +92,19 @@ class FakeMap {
   /* Custom controls are built rather than ignored: the 3D button is DOM the
    * page owns, so a test has to be able to press it. MapLibre's own controls
    * are stubs with no `onAdd` and contribute nothing. */
-  addControl(control) {
+  addControl(control, position) {
     // Deliberately not recorded in `calls`: that log is what the tests read to
     // assert nothing has been added to the *map* yet, and controls are attached
     // at construction time rather than in response to anything a reader did.
     // `controls` is separate, and holds what each was constructed with.
     this.controls.push(control);
+    this.positions.set(control, position);
     if (typeof control.onAdd === "function") this.controlNodes.push(control.onAdd(this));
+  }
+
+  removeControl(control) {
+    this.controls = this.controls.filter((c) => c !== control);
+    this.positions.delete(control);
   }
 
   setTerrain(spec) {
@@ -116,6 +123,10 @@ class FakeMap {
     return this.pitch;
   }
 
+  getBearing() {
+    return 0;
+  }
+
   getCenter() {
     return this.center;
   }
@@ -124,8 +135,24 @@ class FakeMap {
     return this.zoom;
   }
 
+  /* A square view about the center, half a tile of 512 px either way. */
+  getBounds() {
+    const half = 180 / 2 ** this.zoom;
+    const { lng, lat } = this.center;
+    return {
+      getWest: () => lng - half,
+      getEast: () => lng + half,
+      getSouth: () => Math.max(-85, lat - half / 2),
+      getNorth: () => Math.min(85, lat + half / 2),
+    };
+  }
+
   getContainer() {
     return window.document.getElementById(this.options.container);
+  }
+
+  getCanvasContainer() {
+    return this.getContainer();
   }
 
   /* A plate carrée about the center, scaled like the mercator equator: no
@@ -138,6 +165,13 @@ class FakeMap {
       x: element.clientWidth / 2 + (lng - this.center.lng) * scale,
       y: element.clientHeight / 2 - (lat - this.center.lat) * scale,
     };
+  }
+
+  flyTo(options) {
+    if (options.center) this.center = { lng: options.center[0], lat: options.center[1] };
+    if (options.zoom !== undefined) this.zoom = options.zoom;
+    this.calls.push(`flyTo ${options.center} z${options.zoom}`);
+    this.fire("moveend");
   }
 
   easeTo(options) {
@@ -179,6 +213,13 @@ class FakeMap {
 
   addSource(id, spec) {
     if (this.sources.has(id)) throw new Error(`source '${id}' added twice`);
+    // Not enumerable, so a test comparing the spec does not see it.
+    Object.defineProperty(spec, "setTiles", {
+      value: (tiles) => {
+        spec.tiles = tiles;
+        this.calls.push(`tiles ${id}`);
+      },
+    });
     this.sources.set(id, spec);
     this.calls.push(`+source ${id}`);
   }
@@ -268,7 +309,7 @@ export function installBrowser({
   });
   const { window } = dom;
 
-  for (const name of ["window", "document", "location", "HTMLElement", "Node", "Event"]) {
+  for (const name of ["window", "document", "location", "history", "HTMLElement", "Node", "Event"]) {
     Object.defineProperty(globalThis, name, {
       value: window[name],
       configurable: true,
@@ -279,10 +320,28 @@ export function installBrowser({
   if (site === undefined) delete globalThis.GLACE_CONFIG;
   else globalThis.GLACE_CONFIG = site;
 
+  /* jsdom's dialogs lack the focusing steps. The page needs only the open
+   * state, the autofocus that show() and showModal() give, and close() with
+   * its event. */
+  function show() {
+    if (this.open) return;
+    this.setAttribute("open", "");
+    this.querySelector("[autofocus]")?.focus();
+  }
+  Object.assign(window.HTMLDialogElement.prototype, {
+    show,
+    showModal: show,
+    close() {
+      if (!this.open) return;
+      this.removeAttribute("open");
+      this.dispatchEvent(new window.Event("close"));
+    },
+  });
+
   /* jsdom has no matchMedia, and the page asks for one at boot to decide
    * whether the panel starts collapsed. The page only ever asks the one
-   * question — is this viewport narrow — so the stub answers every query the
-   * same way rather than parsing them. */
+   * question — is this a phone — so the stub answers every query the same way
+   * rather than parsing them. */
   const mediaListeners = new Set();
   let narrowViewport = narrow;
   window.matchMedia = (media) => ({
@@ -316,6 +375,13 @@ export function installBrowser({
       }
     },
     Popup: class {
+      constructor(options = {}) {
+        this.options = options;
+      }
+      remove() {
+        this.removed = true;
+        return this;
+      }
       setLngLat() {
         return this;
       }
@@ -329,26 +395,52 @@ export function installBrowser({
       }
     },
   };
-  globalThis.pmtiles = { Protocol: class { tile() {} } };
-  /* Enough of the canvas for js/cog-rgb.js to turn its RGBA into tile bytes.
-   * The real one encodes a PNG; this hands the raw pixels straight back, which
-   * is both simpler and more useful — a test can assert on a channel value
-   * instead of decoding an image to find it. */
+  /* The pmtiles classes js/archive.js builds on, without a network: a test that
+   * reads tiles replaces FetchSource or PMTiles with one that serves them. */
+  globalThis.pmtiles = {
+    Protocol: class {
+      tiles = new Map();
+      tile() {}
+      add(reader) { this.tiles.set(reader.source.getKey(), reader); }
+      get(key) { return this.tiles.get(key); }
+    },
+    FetchSource: class {
+      constructor(url) { this.url = url; }
+      getKey() { return this.url; }
+      async getBytes() { throw new Error("no network in tests"); }
+    },
+    PMTiles: class {
+      constructor(source) { this.source = source; }
+      async getHeader() { return { minLon: -180, minLat: -85, maxLon: 180, maxLat: 85 }; }
+      async getZxy() { return undefined; }
+    },
+    EtagMismatch: class extends Error {},
+  };
+  /* Enough of the image APIs for js/values.js and js/composite.js. A fake
+   * archive's tile bytes are raw RGBA, so decoding hands them straight back,
+   * and a composed bitmap keeps its pixels where a test can assert on them. */
   globalThis.ImageData = class {
     constructor(data, width, height) {
       Object.assign(this, { data, width, height });
     }
+  };
+  globalThis.createImageBitmap = async (source) => {
+    const data =
+      source instanceof globalThis.ImageData
+        ? source.data
+        : new Uint8ClampedArray(await source.arrayBuffer());
+    const size = Math.sqrt(data.length / 4);
+    return { width: size, height: size, data, close() {} };
   };
   globalThis.OffscreenCanvas = class {
     constructor(width, height) {
       Object.assign(this, { width, height });
     }
     getContext() {
-      return { putImageData: (image) => { this.image = image; } };
-    }
-    async convertToBlob() {
-      const { image } = this;
-      return { arrayBuffer: async () => image.data.buffer };
+      return {
+        drawImage: (bitmap) => { this.data = bitmap.data; },
+        getImageData: () => ({ data: this.data }),
+      };
     }
   };
   globalThis.basemaps = {

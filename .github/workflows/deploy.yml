@@ -36,13 +36,18 @@ jobs:
           pixi run --locked tippecanoe --version
           pixi run --locked build-tiles
 
-      # Publish the runtime files and generated archives, excluding source GeoJSON.
+      - name: Install the page's libraries
+        run: pixi run --locked install
+
+      # Publish the runtime files, generated archives and the page's libraries,
+      # excluding source GeoJSON.
       - name: Stage the site
         run: |
           mkdir -p _site/data
-          cp index.html style.css site-config.js _site/
+          cp index.html style.css site-config.js sw.js _site/
           cp -r js assets _site/
           cp data/*.pmtiles data/inventories.json _site/data/
+          pixi run --locked node scripts/stage-libraries.mjs _site
           du -sh _site
 
       - uses: actions/upload-pages-artifact@v5

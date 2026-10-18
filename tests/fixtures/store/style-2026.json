@@ -1,0 +1,872 @@
+{
+  "version": 8,
+  "name": "GLACE – Sentinel-1 composites (2026)",
+  "metadata": {
+    "description": "Every published web-map layer of one year. The first is visible and the rest ship hidden, so a client switches by visibility rather than by loading another style. Each archive holds value codes, decoded by its raster-dem source's custom encoding and drawn by a color-relief layer over a default ramp a client may replace. Rendered from metadata/assets.yaml."
+  },
+  "sources": {
+    "src-coh12_vv": {
+      "type": "raster-dem",
+      "url": "pmtiles://../coh12_vv_viz.pmtiles",
+      "tileSize": 256,
+      "minzoom": 5,
+      "maxzoom": 13,
+      "attribution": "University of Zurich, Contains modified Copernicus Sentinel data 2026",
+      "encoding": "custom",
+      "redFactor": 0.003921629170755188,
+      "greenFactor": 1.5318863948262453e-05,
+      "blueFactor": 5.983931229790021e-08,
+      "baseShift": 0.003937007874015748
+    },
+    "src-coh12_vh": {
+      "type": "raster-dem",
+      "url": "pmtiles://../coh12_vh_viz.pmtiles",
+      "tileSize": 256,
+      "minzoom": 5,
+      "maxzoom": 13,
+      "attribution": "University of Zurich, Contains modified Copernicus Sentinel data 2026",
+      "encoding": "custom",
+      "redFactor": 0.003921629170755188,
+      "greenFactor": 1.5318863948262453e-05,
+      "blueFactor": 5.983931229790021e-08,
+      "baseShift": 0.003937007874015748
+    },
+    "src-rtc_vv": {
+      "type": "raster-dem",
+      "url": "pmtiles://../rtc_vv_viz.pmtiles",
+      "tileSize": 256,
+      "minzoom": 5,
+      "maxzoom": 13,
+      "attribution": "University of Zurich, Contains modified Copernicus Sentinel data 2026",
+      "encoding": "custom",
+      "redFactor": 0.13725702097643158,
+      "greenFactor": 0.0005361602381891859,
+      "blueFactor": 2.0943759304265073e-06,
+      "baseShift": 25.137795275590552
+    },
+    "src-rtc_vh": {
+      "type": "raster-dem",
+      "url": "pmtiles://../rtc_vh_viz.pmtiles",
+      "tileSize": 256,
+      "minzoom": 5,
+      "maxzoom": 13,
+      "attribution": "University of Zurich, Contains modified Copernicus Sentinel data 2026",
+      "encoding": "custom",
+      "redFactor": 0.1294137626349212,
+      "greenFactor": 0.0005055225102926609,
+      "blueFactor": 1.9746973058307066e-06,
+      "baseShift": 31.12992125984252
+    },
+    "src-coh12_vv_qa_num": {
+      "type": "raster-dem",
+      "url": "pmtiles://../coh12_vv_qa_num_viz.pmtiles",
+      "tileSize": 256,
+      "minzoom": 5,
+      "maxzoom": 13,
+      "attribution": "University of Zurich, Contains modified Copernicus Sentinel data 2026",
+      "encoding": "custom",
+      "redFactor": 0.9921721802010625,
+      "greenFactor": 0.0038756725789104002,
+      "blueFactor": 1.5139346011368751e-05,
+      "baseShift": 0.9960629921259843
+    },
+    "src-coh12_vh_qa_num": {
+      "type": "raster-dem",
+      "url": "pmtiles://../coh12_vh_qa_num_viz.pmtiles",
+      "tileSize": 256,
+      "minzoom": 5,
+      "maxzoom": 13,
+      "attribution": "University of Zurich, Contains modified Copernicus Sentinel data 2026",
+      "encoding": "custom",
+      "redFactor": 0.9921721802010625,
+      "greenFactor": 0.0038756725789104002,
+      "blueFactor": 1.5139346011368751e-05,
+      "baseShift": 0.9960629921259843
+    },
+    "src-rtc_vv_qa_num": {
+      "type": "raster-dem",
+      "url": "pmtiles://../rtc_vv_qa_num_viz.pmtiles",
+      "tileSize": 256,
+      "minzoom": 5,
+      "maxzoom": 13,
+      "attribution": "University of Zurich, Contains modified Copernicus Sentinel data 2026",
+      "encoding": "custom",
+      "redFactor": 0.9921721802010625,
+      "greenFactor": 0.0038756725789104002,
+      "blueFactor": 1.5139346011368751e-05,
+      "baseShift": 0.9960629921259843
+    },
+    "src-rtc_vh_qa_num": {
+      "type": "raster-dem",
+      "url": "pmtiles://../rtc_vh_qa_num_viz.pmtiles",
+      "tileSize": 256,
+      "minzoom": 5,
+      "maxzoom": 13,
+      "attribution": "University of Zurich, Contains modified Copernicus Sentinel data 2026",
+      "encoding": "custom",
+      "redFactor": 0.9921721802010625,
+      "greenFactor": 0.0038756725789104002,
+      "blueFactor": 1.5139346011368751e-05,
+      "baseShift": 0.9960629921259843
+    },
+    "src-coh12_vv_qa_cqm": {
+      "type": "raster-dem",
+      "url": "pmtiles://../coh12_vv_qa_cqm_viz.pmtiles",
+      "tileSize": 256,
+      "minzoom": 5,
+      "maxzoom": 13,
+      "attribution": "University of Zurich, Contains modified Copernicus Sentinel data 2026",
+      "encoding": "custom",
+      "redFactor": 0.13333539180567638,
+      "greenFactor": 0.0005208413742409234,
+      "blueFactor": 2.034536618128607e-06,
+      "baseShift": 20.133858267716537
+    },
+    "src-coh12_vh_qa_cqm": {
+      "type": "raster-dem",
+      "url": "pmtiles://../coh12_vh_qa_cqm_viz.pmtiles",
+      "tileSize": 256,
+      "minzoom": 5,
+      "maxzoom": 13,
+      "attribution": "University of Zurich, Contains modified Copernicus Sentinel data 2026",
+      "encoding": "custom",
+      "redFactor": 0.13333539180567638,
+      "greenFactor": 0.0005208413742409234,
+      "blueFactor": 2.034536618128607e-06,
+      "baseShift": 20.133858267716537
+    },
+    "src-rtc_vv_qa_cqm": {
+      "type": "raster-dem",
+      "url": "pmtiles://../rtc_vv_qa_cqm_viz.pmtiles",
+      "tileSize": 256,
+      "minzoom": 5,
+      "maxzoom": 13,
+      "attribution": "University of Zurich, Contains modified Copernicus Sentinel data 2026",
+      "encoding": "custom",
+      "redFactor": 0.12549213346416602,
+      "greenFactor": 0.0004902036463443985,
+      "blueFactor": 1.9148579935328067e-06,
+      "baseShift": 20.125984251968504
+    },
+    "src-rtc_vh_qa_cqm": {
+      "type": "raster-dem",
+      "url": "pmtiles://../rtc_vh_qa_cqm_viz.pmtiles",
+      "tileSize": 256,
+      "minzoom": 5,
+      "maxzoom": 13,
+      "attribution": "University of Zurich, Contains modified Copernicus Sentinel data 2026",
+      "encoding": "custom",
+      "redFactor": 0.12549213346416602,
+      "greenFactor": 0.0004902036463443985,
+      "blueFactor": 1.9148579935328067e-06,
+      "baseShift": 20.125984251968504
+    }
+  },
+  "layers": [
+    {
+      "id": "glace-coh12_vv-2026",
+      "type": "color-relief",
+      "source": "src-coh12_vv",
+      "paint": {
+        "color-relief-opacity": 1,
+        "resampling": "nearest",
+        "color-relief-color": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "elevation"
+          ],
+          -0.001968503937007874,
+          "rgba(0, 0, 0, 0)",
+          -0.0019291338582677164,
+          "#031326",
+          0.1,
+          "#031326",
+          0.1375,
+          "#092844",
+          0.175,
+          "#183e61",
+          0.2125,
+          "#365176",
+          0.25,
+          "#525b7a",
+          0.2875,
+          "#655e77",
+          0.325,
+          "#785f72",
+          0.3625,
+          "#8d616d",
+          0.4,
+          "#a56267",
+          0.4375,
+          "#bf6561",
+          0.475,
+          "#da6f5e",
+          0.5125,
+          "#e98466",
+          0.55,
+          "#e99b74",
+          0.5875,
+          "#e5af84",
+          0.625,
+          "#e7c49a",
+          0.6625,
+          "#f1ddb9",
+          0.7,
+          "#fdf5da"
+        ]
+      }
+    },
+    {
+      "id": "glace-coh12_vh-2026",
+      "type": "color-relief",
+      "source": "src-coh12_vh",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "color-relief-opacity": 1,
+        "resampling": "nearest",
+        "color-relief-color": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "elevation"
+          ],
+          -0.001968503937007874,
+          "rgba(0, 0, 0, 0)",
+          -0.0019291338582677164,
+          "#031326",
+          0.1,
+          "#031326",
+          0.128125,
+          "#092844",
+          0.15625,
+          "#183e61",
+          0.184375,
+          "#365176",
+          0.2125,
+          "#525b7a",
+          0.240625,
+          "#655e77",
+          0.26875,
+          "#785f72",
+          0.296875,
+          "#8d616d",
+          0.325,
+          "#a56267",
+          0.353125,
+          "#bf6561",
+          0.38125,
+          "#da6f5e",
+          0.409375,
+          "#e98466",
+          0.4375,
+          "#e99b74",
+          0.465625,
+          "#e5af84",
+          0.49375,
+          "#e7c49a",
+          0.521875,
+          "#f1ddb9",
+          0.55,
+          "#fdf5da"
+        ]
+      }
+    },
+    {
+      "id": "glace-rtc_vv-2026",
+      "type": "color-relief",
+      "source": "src-rtc_vv",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "color-relief-opacity": 1,
+        "resampling": "nearest",
+        "color-relief-color": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "elevation"
+          ],
+          -25.068897637795274,
+          "rgba(0, 0, 0, 0)",
+          -25.06751968503937,
+          "#000000",
+          -14.5,
+          "#000000",
+          -13.8125,
+          "#171717",
+          -13.125,
+          "#262626",
+          -12.4375,
+          "#353535",
+          -11.75,
+          "#444444",
+          -11.0625,
+          "#515151",
+          -10.375,
+          "#5f5f5f",
+          -9.6875,
+          "#6b6b6b",
+          -9.0,
+          "#777777",
+          -8.3125,
+          "#848484",
+          -7.625,
+          "#919191",
+          -6.9375,
+          "#a0a0a0",
+          -6.25,
+          "#b0b0b0",
+          -5.5625,
+          "#c1c1c1",
+          -4.875,
+          "#d5d5d5",
+          -4.1875,
+          "#eaeaea",
+          -3.5,
+          "#ffffff"
+        ]
+      }
+    },
+    {
+      "id": "glace-rtc_vh-2026",
+      "type": "color-relief",
+      "source": "src-rtc_vh",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "color-relief-opacity": 1,
+        "resampling": "nearest",
+        "color-relief-color": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "elevation"
+          ],
+          -31.06496062992126,
+          "rgba(0, 0, 0, 0)",
+          -31.063661417322834,
+          "#000000",
+          -22.5,
+          "#000000",
+          -21.75,
+          "#171717",
+          -21.0,
+          "#262626",
+          -20.25,
+          "#353535",
+          -19.5,
+          "#444444",
+          -18.75,
+          "#515151",
+          -18.0,
+          "#5f5f5f",
+          -17.25,
+          "#6b6b6b",
+          -16.5,
+          "#777777",
+          -15.75,
+          "#848484",
+          -15.0,
+          "#919191",
+          -14.25,
+          "#a0a0a0",
+          -13.5,
+          "#b0b0b0",
+          -12.75,
+          "#c1c1c1",
+          -12.0,
+          "#d5d5d5",
+          -11.25,
+          "#eaeaea",
+          -10.5,
+          "#ffffff"
+        ]
+      }
+    },
+    {
+      "id": "glace-coh12_vv_qa_num-2026",
+      "type": "color-relief",
+      "source": "src-coh12_vv_qa_num",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "color-relief-opacity": 1,
+        "resampling": "nearest",
+        "color-relief-color": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "elevation"
+          ],
+          -0.49803149606299213,
+          "rgba(0, 0, 0, 0)",
+          -0.4880708661417323,
+          "#361338",
+          0.0,
+          "#361338",
+          4.375,
+          "#45172c",
+          8.75,
+          "#521b20",
+          13.125,
+          "#612013",
+          17.5,
+          "#702d06",
+          21.875,
+          "#754001",
+          26.25,
+          "#745101",
+          30.625,
+          "#726210",
+          35.0,
+          "#6d702d",
+          39.375,
+          "#687d4c",
+          43.75,
+          "#638a6a",
+          48.125,
+          "#609689",
+          52.5,
+          "#6ba4a6",
+          56.875,
+          "#86b1bf",
+          61.25,
+          "#a1bcd5",
+          65.625,
+          "#bcc7e9",
+          70.0,
+          "#dbd3ff"
+        ]
+      }
+    },
+    {
+      "id": "glace-coh12_vh_qa_num-2026",
+      "type": "color-relief",
+      "source": "src-coh12_vh_qa_num",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "color-relief-opacity": 1,
+        "resampling": "nearest",
+        "color-relief-color": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "elevation"
+          ],
+          -0.49803149606299213,
+          "rgba(0, 0, 0, 0)",
+          -0.4880708661417323,
+          "#361338",
+          0.0,
+          "#361338",
+          4.375,
+          "#45172c",
+          8.75,
+          "#521b20",
+          13.125,
+          "#612013",
+          17.5,
+          "#702d06",
+          21.875,
+          "#754001",
+          26.25,
+          "#745101",
+          30.625,
+          "#726210",
+          35.0,
+          "#6d702d",
+          39.375,
+          "#687d4c",
+          43.75,
+          "#638a6a",
+          48.125,
+          "#609689",
+          52.5,
+          "#6ba4a6",
+          56.875,
+          "#86b1bf",
+          61.25,
+          "#a1bcd5",
+          65.625,
+          "#bcc7e9",
+          70.0,
+          "#dbd3ff"
+        ]
+      }
+    },
+    {
+      "id": "glace-rtc_vv_qa_num-2026",
+      "type": "color-relief",
+      "source": "src-rtc_vv_qa_num",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "color-relief-opacity": 1,
+        "resampling": "nearest",
+        "color-relief-color": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "elevation"
+          ],
+          -0.49803149606299213,
+          "rgba(0, 0, 0, 0)",
+          -0.4880708661417323,
+          "#361338",
+          0.0,
+          "#361338",
+          4.375,
+          "#45172c",
+          8.75,
+          "#521b20",
+          13.125,
+          "#612013",
+          17.5,
+          "#702d06",
+          21.875,
+          "#754001",
+          26.25,
+          "#745101",
+          30.625,
+          "#726210",
+          35.0,
+          "#6d702d",
+          39.375,
+          "#687d4c",
+          43.75,
+          "#638a6a",
+          48.125,
+          "#609689",
+          52.5,
+          "#6ba4a6",
+          56.875,
+          "#86b1bf",
+          61.25,
+          "#a1bcd5",
+          65.625,
+          "#bcc7e9",
+          70.0,
+          "#dbd3ff"
+        ]
+      }
+    },
+    {
+      "id": "glace-rtc_vh_qa_num-2026",
+      "type": "color-relief",
+      "source": "src-rtc_vh_qa_num",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "color-relief-opacity": 1,
+        "resampling": "nearest",
+        "color-relief-color": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "elevation"
+          ],
+          -0.49803149606299213,
+          "rgba(0, 0, 0, 0)",
+          -0.4880708661417323,
+          "#361338",
+          0.0,
+          "#361338",
+          4.375,
+          "#45172c",
+          8.75,
+          "#521b20",
+          13.125,
+          "#612013",
+          17.5,
+          "#702d06",
+          21.875,
+          "#754001",
+          26.25,
+          "#745101",
+          30.625,
+          "#726210",
+          35.0,
+          "#6d702d",
+          39.375,
+          "#687d4c",
+          43.75,
+          "#638a6a",
+          48.125,
+          "#609689",
+          52.5,
+          "#6ba4a6",
+          56.875,
+          "#86b1bf",
+          61.25,
+          "#a1bcd5",
+          65.625,
+          "#bcc7e9",
+          70.0,
+          "#dbd3ff"
+        ]
+      }
+    },
+    {
+      "id": "glace-coh12_vv_qa_cqm-2026",
+      "type": "color-relief",
+      "source": "src-coh12_vv_qa_cqm",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "color-relief-opacity": 1,
+        "resampling": "nearest",
+        "color-relief-color": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "elevation"
+          ],
+          -20.066929133858267,
+          "rgba(0, 0, 0, 0)",
+          -20.065590551181103,
+          "#361338",
+          -2.5,
+          "#361338",
+          -2.09375,
+          "#45172c",
+          -1.6875,
+          "#521b20",
+          -1.28125,
+          "#612013",
+          -0.875,
+          "#702d06",
+          -0.46875,
+          "#754001",
+          -0.0625,
+          "#745101",
+          0.34375,
+          "#726210",
+          0.75,
+          "#6d702d",
+          1.15625,
+          "#687d4c",
+          1.5625,
+          "#638a6a",
+          1.96875,
+          "#609689",
+          2.375,
+          "#6ba4a6",
+          2.78125,
+          "#86b1bf",
+          3.1875,
+          "#a1bcd5",
+          3.59375,
+          "#bcc7e9",
+          4.0,
+          "#dbd3ff"
+        ]
+      }
+    },
+    {
+      "id": "glace-coh12_vh_qa_cqm-2026",
+      "type": "color-relief",
+      "source": "src-coh12_vh_qa_cqm",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "color-relief-opacity": 1,
+        "resampling": "nearest",
+        "color-relief-color": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "elevation"
+          ],
+          -20.066929133858267,
+          "rgba(0, 0, 0, 0)",
+          -20.065590551181103,
+          "#361338",
+          -2.5,
+          "#361338",
+          -2.09375,
+          "#45172c",
+          -1.6875,
+          "#521b20",
+          -1.28125,
+          "#612013",
+          -0.875,
+          "#702d06",
+          -0.46875,
+          "#754001",
+          -0.0625,
+          "#745101",
+          0.34375,
+          "#726210",
+          0.75,
+          "#6d702d",
+          1.15625,
+          "#687d4c",
+          1.5625,
+          "#638a6a",
+          1.96875,
+          "#609689",
+          2.375,
+          "#6ba4a6",
+          2.78125,
+          "#86b1bf",
+          3.1875,
+          "#a1bcd5",
+          3.59375,
+          "#bcc7e9",
+          4.0,
+          "#dbd3ff"
+        ]
+      }
+    },
+    {
+      "id": "glace-rtc_vv_qa_cqm-2026",
+      "type": "color-relief",
+      "source": "src-rtc_vv_qa_cqm",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "color-relief-opacity": 1,
+        "resampling": "nearest",
+        "color-relief-color": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "elevation"
+          ],
+          -20.062992125984252,
+          "rgba(0, 0, 0, 0)",
+          -20.06173228346457,
+          "#361338",
+          -3.0,
+          "#361338",
+          -2.5625,
+          "#45172c",
+          -2.125,
+          "#521b20",
+          -1.6875,
+          "#612013",
+          -1.25,
+          "#702d06",
+          -0.8125,
+          "#754001",
+          -0.375,
+          "#745101",
+          0.0625,
+          "#726210",
+          0.5,
+          "#6d702d",
+          0.9375,
+          "#687d4c",
+          1.375,
+          "#638a6a",
+          1.8125,
+          "#609689",
+          2.25,
+          "#6ba4a6",
+          2.6875,
+          "#86b1bf",
+          3.125,
+          "#a1bcd5",
+          3.5625,
+          "#bcc7e9",
+          4.0,
+          "#dbd3ff"
+        ]
+      }
+    },
+    {
+      "id": "glace-rtc_vh_qa_cqm-2026",
+      "type": "color-relief",
+      "source": "src-rtc_vh_qa_cqm",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "color-relief-opacity": 1,
+        "resampling": "nearest",
+        "color-relief-color": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "elevation"
+          ],
+          -20.062992125984252,
+          "rgba(0, 0, 0, 0)",
+          -20.06173228346457,
+          "#361338",
+          -3.0,
+          "#361338",
+          -2.5625,
+          "#45172c",
+          -2.125,
+          "#521b20",
+          -1.6875,
+          "#612013",
+          -1.25,
+          "#702d06",
+          -0.8125,
+          "#754001",
+          -0.375,
+          "#745101",
+          0.0625,
+          "#726210",
+          0.5,
+          "#6d702d",
+          0.9375,
+          "#687d4c",
+          1.375,
+          "#638a6a",
+          1.8125,
+          "#609689",
+          2.25,
+          "#6ba4a6",
+          2.6875,
+          "#86b1bf",
+          3.125,
+          "#a1bcd5",
+          3.5625,
+          "#bcc7e9",
+          4.0,
+          "#dbd3ff"
+        ]
+      }
+    }
+  ]
+}

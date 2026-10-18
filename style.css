@@ -6,8 +6,21 @@
   --muted: #8b95a8;
   /* Wordmark pink for text on dark surfaces. */
   --accent: #d7acce;
+  /* The wordmark gradient's blue end, for headings on dark surfaces. */
+  --accent-blue: #8bc6db;
   /* Darker accent for readable text on white controls. */
   --accent-ink: #b8479f;
+  /* Every font size is a multiple of this, so touch screens can enlarge them all. */
+  --text-scale: 1;
+  /* Checkboxes and the inventory swatches beside them share this size. */
+  --box: 14px;
+  /*
+   * The panel's and the dialogs' corners: their 6px buttons' radius plus the 10px
+   * between those buttons and the edges, so the corners are concentric.
+   */
+  --surface-radius: 16px;
+  /* The map controls' corners; the touch block raises them to the panel's. */
+  --ctrl-radius: 10px;
 }
 
 * { box-sizing: border-box; }
@@ -17,7 +30,7 @@ html, body {
   color-scheme: dark;
   margin: 0;
   height: 100%;
-  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font: calc(14px * var(--text-scale))/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   color: var(--text);
   background: var(--bg);
 }
@@ -32,35 +45,40 @@ html, body {
 #map.sky {
   background:
     radial-gradient(
-      circle at var(--globe-x) var(--globe-y),
-      transparent var(--globe-r),
-      rgba(178, 196, 228, 0.42) var(--globe-r),
-      rgba(178, 196, 228, 0.33) calc(var(--globe-r) * 1.1),
-      rgba(178, 196, 228, 0.23) calc(var(--globe-r) * 1.25),
-      rgba(178, 196, 228, 0.14) calc(var(--globe-r) * 1.5),
-      rgba(178, 196, 228, 0.07) calc(var(--globe-r) * 1.8),
-      rgba(178, 196, 228, 0.03) calc(var(--globe-r) * 2.2),
-      rgba(178, 196, 228, 0.01) calc(var(--globe-r) * 2.6),
-      transparent calc(var(--globe-r) * 3)
+      var(--globe-rx) var(--globe-ry) at var(--globe-x) var(--globe-y),
+      transparent 100%,
+      rgba(178, 196, 228, 0.42) 100%,
+      rgba(178, 196, 228, 0.33) 110%,
+      rgba(178, 196, 228, 0.23) 125%,
+      rgba(178, 196, 228, 0.14) 150%,
+      rgba(178, 196, 228, 0.07) 180%,
+      rgba(178, 196, 228, 0.03) 220%,
+      rgba(178, 196, 228, 0.01) 260%,
+      transparent 300%
     ),
     radial-gradient(ellipse at center, #141a28, var(--bg) 70%);
 }
 
 /*
- * Frosted glass adapted from joshwcomeau.com/css/backdrop-filter. Saturation and
- * brightness compensate for the blur so bright rasters do not wash out panel
- * labels.
+ * Frosted glass for the panel and the scale editor, adapted from
+ * joshwcomeau.com/css/backdrop-filter. Saturation and brightness compensate for
+ * the blur so bright rasters do not wash out panel labels.
  */
-#panel-shell {
+:root {
   --glass-blur: 16px;
   --glass-saturate: 150%;
   --glass-brightness: 78%;
   /* HSL channels let the tint alpha vary independently. */
   --glass-tint: 222 31% 10%;
-  --glass-alpha: 0.62;
+  --glass-alpha: 0.8;
+  /* The panel's band is lighter than the controls under it, which match the dialogs. */
+  --glass-alpha-nav: 0.55;
+  --glass-alpha-body: var(--glass-alpha);
   /* Overhang by two blur radii to provide neighboring pixels at the panel edges. */
   --glass-reach: calc(var(--glass-blur) * 2);
+}
 
+#panel-shell {
   position: absolute;
   top: 12px;
   left: 12px;
@@ -70,7 +88,7 @@ html, body {
 
   display: flex;
   flex-direction: column;
-  border-radius: 10px;
+  border-radius: var(--surface-radius);
 
   overflow: hidden;
   /* Keep the shadow outside the clipped panel. */
@@ -82,64 +100,123 @@ html, body {
  * Blur an oversized pane, then clip it to the shell. Keep it a sibling of the
  * scrolling panel so it stays fixed behind the controls.
  */
-#panel-glass {
+#panel-glass,
+#scale-editor .glass,
+#about .glass {
   position: absolute;
   inset: calc(-1 * var(--glass-reach));
   pointer-events: none;
 }
+/*
+ * Stop at the 12px gap to the open scale editor: a backdrop reaching under a
+ * surface drawn above it flickers as parts of the panel repaint.
+ */
+body:has(#scale-editor[open]) #panel-glass { right: -12px; }
 
 #panel {
   /* Position the panel above its glass sibling. */
   position: relative;
-  /*
-   * Allow flex shrinking; only panel-body scrolls so the collapse button stays
-   * reachable.
-   */
+  /* Allow flex shrinking; only panel-body scrolls, so the band stays in view. */
   min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding: 16px;
+  border-radius: var(--surface-radius);
+  /* The band and the body paint their own tints over the shell's glass. */
+  background: transparent;
+}
+/* The outline lies over the band's and the body's tints, as on the dialogs' sheets. */
+#panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+/*
+ * The scale editor's and the about dialog's sheets take the panel's surface.
+ * Declared before the glass tint further down, which overrides it.
+ */
+#scale-editor .sheet,
+#about .sheet {
+  border: 1px solid var(--border);
+  border-radius: var(--surface-radius);
   /* Opaque fallback for browsers without backdrop-filter. */
   background: var(--panel);
 }
 
-@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
-  #panel-glass {
-    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
-      brightness(var(--glass-brightness));
-    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
-      brightness(var(--glass-brightness));
-  }
-  #panel {
-    background: hsl(var(--glass-tint) / var(--glass-alpha));
-
-    border-color: rgba(255, 255, 255, 0.14);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09);
-  }
-}
-
-/* Put bottom spacing in the collapsible body so the closed panel fits its title. */
-#panel header {
+/* The navigation band: the handle on phones, the legend and the tabs. */
+#panel-nav {
   flex: none;
+  padding: 16px 16px 12px;
+  /* Opaque fallback for browsers without backdrop-filter. */
+  background: #1c2331;
+}
+#sheet-handle { display: none; }
+
+/* The outlined wordmark has an ink-cropped viewBox, so height sets its cap height. */
+#title { margin: 0 0 14px; }
+#title img { display: block; height: 20px; width: auto; }
+
+/* The legend's title line is the selection; Edit sits at its right. */
+#selection-summary {
+  flex: 1;
+  min-width: 0;
+  font-size: calc(13px * var(--text-scale));
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+/* One height for the ramp with its limits, the channel row, or the note. */
+#legend-slot { min-height: calc(13px + 11px * 1.45 * var(--text-scale)); }
+/* Never hidden, so it stays a live region; empty, it is 0 px tall. */
+#legend-note {
+  margin: 0;
+  font-size: calc(12px * var(--text-scale));
+  color: var(--muted);
+}
+/* While the catalog loads, the title says so over invisible placeholders. */
+#legend[aria-busy="true"] :is(#legend-slot, #legend-edit) { visibility: hidden; }
+
+/*
+ * Pills as wide as their labels, spread across the band. Only the selected one
+ * is outlined; the transparent border keeps the others the same size.
+ */
+#tabs {
   display: flex;
-  align-items: flex-start;
   justify-content: space-between;
-  gap: 8px;
+  margin-top: 12px;
+}
+#tabs [role="tab"] {
+  flex: none;
+  padding: 3px 14px;
+  font: inherit;
+  font-size: calc(12px * var(--text-scale));
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 0.14s ease;
+}
+#tabs [aria-selected="true"] { color: var(--text); font-weight: 600; border-color: var(--accent); }
+@media (hover: hover) {
+  #tabs [role="tab"]:hover { color: var(--text); }
 }
 /*
- * Extend the body to place the native scrollbar inside the panel padding. A stable
- * gutter prevents reflow; left padding preserves focus rings. Firefox uses the
- * standard thin scrollbar with the remaining space supplied by padding.
+ * The body spans the panel, so its native scrollbar sits inside the panel's
+ * edge. A stable gutter prevents reflow; left padding preserves focus rings.
+ * Firefox uses the standard thin scrollbar with the remaining space supplied by
+ * padding.
  */
 #panel-body {
   min-height: 0;
   overflow-y: auto;
-  margin: 14px -16px 0;
-  padding-left: 16px;
-  padding-right: 5px;
+  padding: 14px 5px 16px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  /* Opaque fallback for browsers without backdrop-filter. */
+  background: var(--panel);
   scrollbar-gutter: stable;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.28) transparent;
@@ -170,45 +247,97 @@ html, body {
   }
 }
 
-/*
- * CSS supplies the collapsed mobile state before deferred scripts run, preventing a
- * flash of the full panel.
- */
-#panel.collapsed #panel-body { display: none; }
-/* The outlined wordmark has an ink-cropped viewBox, so height sets its cap height. */
-#panel h1 { margin: 0; }
-#panel h1 img { display: block; height: 20px; width: auto; }
-#panel #subtitle { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
+/* The glass tints replace the opaque fallbacks above. */
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  #panel-glass,
+  #scale-editor .glass,
+  #about .glass {
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
+      brightness(var(--glass-brightness));
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
+      brightness(var(--glass-brightness));
+  }
+  #scale-editor .sheet,
+  #about .sheet {
+    background: hsl(var(--glass-tint) / var(--glass-alpha));
+    border-color: rgba(255, 255, 255, 0.14);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09);
+  }
+  #panel::after {
+    border-color: rgba(255, 255, 255, 0.14);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09);
+  }
+  #panel-nav {
+    background: hsl(var(--glass-tint) / var(--glass-alpha-nav));
+  }
+  #panel-body {
+    background: hsl(var(--glass-tint) / var(--glass-alpha-body));
+  }
+}
 
-#panel-toggle {
+/*
+ * The dialogs' close buttons: boxed, in each surface's top right corner 10px
+ * from its edges, so they read above the headings beside them. The dialogs'
+ * padding is 10px by 16px.
+ */
+:is(#scale-editor, #about) .close {
   flex: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
-  margin: -2px -4px 0 0;
+  width: 26px;
+  height: 26px;
+  margin: 0 -6px 0 0;
   padding: 0;
-  color: var(--muted);
-  background: none;
-  border: 0;
+  color: var(--text);
+  background-color: rgba(255, 255, 255, 0.13);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
   cursor: pointer;
+  transition:
+    color 0.14s ease,
+    background-color 0.14s ease,
+    border-color 0.14s ease;
 }
-#panel-toggle:hover { color: var(--text); }
+/* Outlined without fill, across the end of the scrolling content. */
+#about-open {
+  display: block;
+  width: 100%;
+  margin: 16px 0 0;
+  padding: 6px 12px;
+  font: inherit;
+  font-size: calc(12px * var(--text-scale));
+  color: var(--text);
+  background-color: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  cursor: pointer;
+  transition:
+    background-color 0.14s ease,
+    border-color 0.14s ease;
+}
+:is(#scale-editor, #about) .close svg { width: 14px; height: 14px; }
+@media (hover: hover) {
+  #about-open:hover,
+  :is(#scale-editor, #about) .close:hover {
+    color: #fff;
+    background-color: rgba(255, 255, 255, 0.24);
+    border-color: rgba(255, 255, 255, 0.3);
+  }
+}
 
 .control { margin-bottom: 14px; }
-.control > label,
-.control-head > label {
+.control > label {
   display: block;
   margin-bottom: 6px;
-  font-size: 11px;
+  font-size: calc(11px * var(--text-scale));
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--muted);
 }
 .control output { color: var(--text); font-variant-numeric: tabular-nums; }
 
-/* Keep section labels and adjacent credit buttons on one baseline. */
+/* The legend's title and its Edit button on one line. */
 .control-head {
   display: flex;
   align-items: center;
@@ -216,25 +345,25 @@ html, body {
   margin-bottom: 6px;
 }
 
-.control-head > label { flex: 1; margin-bottom: 0; }
-
 .control.checkbox { display: flex; align-items: center; gap: 8px; }
 .control.checkbox > label {
   flex: 1;
   margin: 0;
   text-transform: none;
   letter-spacing: 0;
-  font-size: 13px;
+  font-size: calc(13px * var(--text-scale));
   color: var(--text);
 }
 
 /*
- * Segments and checkboxes share off, on, and hover colors. Use a translucent wash
- * over the panel rather than another backdrop-filter.
+ * Segments, checkboxes and the Edit button share off and hover colors, though
+ * Edit drops the off fill; segments and checkboxes also share on. Use a
+ * translucent wash over the panel rather than another backdrop-filter.
  */
 .segmented button,
-input[type="checkbox"] {
-  background: rgba(255, 255, 255, 0.13);
+input[type="checkbox"],
+#legend-edit {
+  background-color: rgba(255, 255, 255, 0.13);
   border: 1px solid rgba(255, 255, 255, 0.15);
   cursor: pointer;
   transition:
@@ -242,11 +371,18 @@ input[type="checkbox"] {
     background-color 0.14s ease,
     border-color 0.14s ease;
 }
-/* Exclude selected controls: hover specificity would override their white fill. */
-.segmented button:hover:not(:disabled):not([aria-checked="true"]),
-input[type="checkbox"]:hover:not(:checked) {
-  background-color: rgba(255, 255, 255, 0.24);
-  border-color: rgba(255, 255, 255, 0.3);
+/*
+ * Exclude selected controls: hover specificity would override their white fill.
+ * Hover rules here and below apply only to pointers that hover, so a tap leaves
+ * no stuck highlight.
+ */
+@media (hover: hover) {
+  .segmented button:hover:not(:disabled):not([aria-checked="true"]),
+  input[type="checkbox"]:hover:not(:checked),
+  #legend-edit:hover {
+    background-color: rgba(255, 255, 255, 0.24);
+    border-color: rgba(255, 255, 255, 0.3);
+  }
 }
 .segmented button[aria-checked="true"],
 input[type="checkbox"]:checked {
@@ -259,7 +395,7 @@ input[type="checkbox"]:checked {
   flex: 1;
   padding: 6px 4px;
   font: inherit;
-  font-size: 12px;
+  font-size: calc(12px * var(--text-scale));
   color: #fff;
   border-radius: 6px;
 }
@@ -277,9 +413,8 @@ input[type="checkbox"] {
   -webkit-appearance: none;
   appearance: none;
   flex: none;
-  width: 14px;
-  height: 14px;
-
+  width: var(--box);
+  height: var(--box);
   margin: 0;
   border-radius: 4px;
 }
@@ -294,7 +429,11 @@ input[type="checkbox"]:checked {
   background-size: 12px;
 }
 
-input[type="checkbox"]:focus-visible {
+input[type="checkbox"]:focus-visible,
+#legend-edit:focus-visible,
+#sheet-handle:focus-visible,
+#tabs [role="tab"]:focus-visible,
+.inventory .swatch:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
@@ -303,37 +442,117 @@ input[type="checkbox"]:focus-visible {
 /* Remove the native margin so the full-width slider fits its column. */
 input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
 
-/* Shared collapse chevron; up marks the collapsed state. */
-.chevron { display: flex; transition: transform 0.15s ease; }
-.chevron.up { transform: rotate(180deg); }
-
 /*
- * Use a translucent separator over bright or dark rasters. The first declaration is
- * the fallback for browsers without color-mix().
+ * While the catalog loads, the raster controls are invisible placeholders that keep
+ * the panel's size, under a loading line.
  */
-#panel hr {
-  height: 0;
-  margin: 16px 0 14px;
-  border: 0;
-  border-top: 1px solid var(--border);
-  border-top-color: color-mix(in srgb, var(--muted) 45%, transparent);
+#raster-controls { position: relative; }
+#raster-controls[aria-busy="true"] > :not(#raster-loading) { visibility: hidden; }
+#raster-controls:not([aria-busy="true"]) #raster-loading { display: none; }
+#raster-loading { position: absolute; inset: 0 0 auto; margin: 0; }
+#raster-loading,
+#inventories .loading {
+  font-size: calc(13px * var(--text-scale));
+  color: var(--muted);
 }
-/* Hide the separator with empty inventories to avoid adjacent rules. */
-#inventories-section[hidden] + #inventories-rule { display: none; }
+#inventories .loading { margin: 0; }
 
 #hillshade-strength-row { margin-top: -6px; padding-left: 22px; }
 
+/*
+ * MapLibre's controls, attribution and scale bar take the panel's glass and its
+ * 12px inset. The map ID outranks MapLibre's rules, including its corners for
+ * focused buttons. Small and unscrolled, each blurs its own backdrop. The
+ * outline is inset and drawn over the buttons, so the sizes stay MapLibre's.
+ */
+#map .maplibregl-ctrl-top-right .maplibregl-ctrl { margin: 12px 12px 0 0; }
+#map .maplibregl-ctrl-bottom-left .maplibregl-ctrl { margin: 0 0 12px 12px; }
+/* The left margin keeps the expanded attribution off the edge of a narrow screen. */
+#map .maplibregl-ctrl-bottom-right .maplibregl-ctrl { margin: 0 12px 12px; }
+#map :is(.maplibregl-ctrl-group, .maplibregl-ctrl-attrib, .maplibregl-ctrl-scale) {
+  color: var(--text);
+  background-color: var(--panel);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+#map :is(.maplibregl-ctrl-group, .maplibregl-ctrl-attrib) {
+  outline: 1px solid var(--border);
+  outline-offset: -1px;
+}
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  #map :is(.maplibregl-ctrl-group, .maplibregl-ctrl-attrib, .maplibregl-ctrl-scale) {
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
+      brightness(var(--glass-brightness));
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
+      brightness(var(--glass-brightness));
+    background-color: hsl(var(--glass-tint) / var(--glass-alpha));
+  }
+  #map :is(.maplibregl-ctrl-group, .maplibregl-ctrl-attrib) {
+    outline-color: rgba(255, 255, 255, 0.14);
+  }
+}
+#map .maplibregl-ctrl-group { border-radius: var(--ctrl-radius); }
+#map .maplibregl-ctrl-group button:first-child {
+  border-radius: var(--ctrl-radius) var(--ctrl-radius) 0 0;
+}
+#map .maplibregl-ctrl-group button:last-child {
+  border-radius: 0 0 var(--ctrl-radius) var(--ctrl-radius);
+}
+#map .maplibregl-ctrl-group button:only-child { border-radius: inherit; }
+#map .maplibregl-ctrl-group button + button { border-top-color: rgba(255, 255, 255, 0.14); }
+#map .maplibregl-ctrl button:not(:disabled):active { background-color: rgba(255, 255, 255, 0.13); }
+@media (hover: hover) {
+  #map .maplibregl-ctrl button:not(:disabled):hover { background-color: rgba(255, 255, 255, 0.13); }
+}
+
+/*
+ * Replace MapLibre's blue focus glow, which the info button keeps even after a
+ * click, with the panel's accent ring, for keyboard focus only.
+ */
+#map :is(.maplibregl-ctrl-group button, .maplibregl-ctrl-attrib-button):focus { box-shadow: none; }
+#map :is(.maplibregl-ctrl-group button, .maplibregl-ctrl-attrib-button):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/*
+ * MapLibre's icons are dark images; these redraw them in --text, the compass's
+ * south half in --muted.
+ */
+#map .maplibregl-ctrl-zoom-in .maplibregl-ctrl-icon {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='29' height='29' viewBox='0 0 29 29' fill='%23e6eaf2'%3E%3Cpath d='M14.5 8.5c-.75 0-1.5.75-1.5 1.5v3h-3c-.75 0-1.5.75-1.5 1.5S9.25 16 10 16h3v3c0 .75.75 1.5 1.5 1.5S16 19.75 16 19v-3h3c.75 0 1.5-.75 1.5-1.5S19.75 13 19 13h-3v-3c0-.75-.75-1.5-1.5-1.5'/%3E%3C/svg%3E");
+}
+#map .maplibregl-ctrl-zoom-out .maplibregl-ctrl-icon {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='29' height='29' viewBox='0 0 29 29' fill='%23e6eaf2'%3E%3Cpath d='M10 13c-.75 0-1.5.75-1.5 1.5S9.25 16 10 16h9c.75 0 1.5-.75 1.5-1.5S19.75 13 19 13z'/%3E%3C/svg%3E");
+}
+#map .maplibregl-ctrl-compass .maplibregl-ctrl-icon {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='29' height='29' viewBox='0 0 29 29' fill='%23e6eaf2'%3E%3Cpath d='m10.5 14 4-8 4 8z'/%3E%3Cpath fill='%238b95a8' d='m10.5 16 4 8 4-8z'/%3E%3C/svg%3E");
+}
+
 /* MapLibre buttons default to image glyphs; the 3D/2D text needs explicit styling. */
 .maplibregl-ctrl-3d {
-  font: 600 11px/1 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font: 600 calc(11px * var(--text-scale))/1 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   letter-spacing: 0.04em;
-  color: #333;
+  color: var(--text);
 }
+
+/* The attribution: text and links in --muted, and a light info button. */
+#map .maplibregl-ctrl-attrib { color: var(--muted); }
+#map .maplibregl-ctrl-attrib a { color: inherit; }
+#map .maplibregl-ctrl-attrib-button {
+  background-color: transparent;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='%23e6eaf2' fill-rule='evenodd' viewBox='0 0 20 20'%3E%3Cpath d='M4 10a6 6 0 1 0 12 0 6 6 0 1 0-12 0m5-3a1 1 0 1 0 2 0 1 1 0 1 0-2 0m0 3a1 1 0 1 1 2 0v3a1 1 0 1 1-2 0'/%3E%3C/svg%3E");
+}
+#map .maplibregl-compact-show .maplibregl-ctrl-attrib-button {
+  background-color: rgba(255, 255, 255, 0.13);
+}
+
+/* The scale bar keeps its ruler: open at the top, in a light line. */
+#map .maplibregl-ctrl-scale { border-color: rgba(255, 255, 255, 0.6); }
 
 .ticks {
   display: flex;
   justify-content: space-between;
-  font-size: 10px;
+  font-size: calc(10px * var(--text-scale));
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
@@ -344,6 +563,15 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
  */
 [hidden] { display: none !important; }
 
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 #legend-bar {
   height: 10px;
   border-radius: 3px;
@@ -353,17 +581,22 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   display: flex;
   justify-content: space-between;
   margin-top: 3px;
-  font-size: 11px;
+  font-size: calc(11px * var(--text-scale));
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
 
+#legend-labels .limit { display: inline-flex; align-items: baseline; }
+#legend-labels .unit { margin-left: 4px; }
+/* A changed limit takes the accent. */
+#legend-labels .modified { color: var(--accent); }
+
+/* One line of channels; their limits are only spoken. */
 #legend-channels {
-  display: grid;
-  grid-template-columns: auto auto 1fr;
-  gap: 2px 7px;
+  display: flex;
   align-items: center;
-  font-size: 11px;
+  gap: 5px;
+  font-size: calc(11px * var(--text-scale));
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
@@ -376,28 +609,58 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
 #legend-channels .band {
   color: var(--text);
 }
+#legend-channels .channel { font-weight: 600; }
+#legend-channels .swatch:not(:first-child) { margin-left: 9px; }
 
 /* Tabular dates prevent jitter when switching years. */
 #layer-info {
   margin: 10px 0 0;
-  font-size: 11px;
+  font-size: calc(11px * var(--text-scale));
   line-height: 1.5;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
 #layer-info:empty { margin: 0; }
 
-#status {
+/* Centered between the panel (12px margin, 292px, 12px gap) and the map controls. */
+#notices {
   position: absolute;
   top: 12px;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 316px;
+  right: 62px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  /* The map stays draggable around the messages. */
+  pointer-events: none;
+  /* Above the scale editor, which can open beneath it. */
+  z-index: 4;
+}
+#notices > * { pointer-events: auto; }
+#status {
   padding: 8px 14px;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--panel);
-  font-size: 13px;
-  z-index: 3;
+  font-size: calc(13px * var(--text-scale));
+}
+#home {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  font: inherit;
+  font-size: calc(14px * var(--text-scale));
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 999px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+}
+@media (hover: hover) {
+  #home:hover { border-color: #fff; }
 }
 
 .popover,
@@ -409,91 +672,153 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   box-shadow: 0 8px 26px rgba(0, 0, 0, 0.55);
 }
 .maplibregl-popup-content {
-  font-size: 12px;
-  /* Leave room for the close button in the right inset. */
+  font-size: calc(12px * var(--text-scale));
+  overflow-wrap: anywhere;
   padding: 9px 12px 10px;
 }
 
-.maplibregl-popup-close-button {
-  top: 1px;
-  right: 3px;
-  color: var(--muted);
-  font-size: 15px;
-}
-.maplibregl-popup-close-button:hover { color: var(--text); background: transparent; }
+/* An arrow over the map, as in Google Maps, and the move cursor while dragging. */
+#map .maplibregl-canvas-container.maplibregl-interactive { cursor: default; }
+#map .maplibregl-canvas-container.maplibregl-interactive:active { cursor: move; }
 /* Include the map ID to override MapLibre's per-anchor tip colors. */
 #map .maplibregl-popup-tip { border-width: 6px; }
-#map [class*="maplibregl-popup-anchor-top"] .maplibregl-popup-tip { border-bottom-color: var(--border); }
-#map [class*="maplibregl-popup-anchor-bottom"] .maplibregl-popup-tip { border-top-color: var(--border); }
-#map .maplibregl-popup-anchor-left .maplibregl-popup-tip { border-right-color: var(--border); }
-#map .maplibregl-popup-anchor-right .maplibregl-popup-tip { border-left-color: var(--border); }
-.maplibregl-ctrl-attrib { font-size: 10px; }
+/* White, so the tip shows where the value was read. */
+#map [class*="maplibregl-popup-anchor-top"] .maplibregl-popup-tip { border-bottom-color: #fff; }
+#map [class*="maplibregl-popup-anchor-bottom"] .maplibregl-popup-tip { border-top-color: #fff; }
+#map .maplibregl-popup-anchor-left .maplibregl-popup-tip { border-right-color: #fff; }
+#map .maplibregl-popup-anchor-right .maplibregl-popup-tip { border-left-color: #fff; }
 
-@media (max-width: 640px) {
+@media (pointer: coarse) and (max-width: 640px) {
+  /*
+   * A sheet docked to the bottom, open or compact; js/sheet.js drags it between
+   * the two through --sheet-progress. The glass moves with it.
+   */
   #panel-shell {
-    /* Leave room for the map controls and their margin. */
-    right: 52px;
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
     width: auto;
-    max-height: 46%;
+    height: 66dvh;
+    max-height: none;
+    border-radius: var(--surface-radius) var(--surface-radius) 0 0;
+    padding-bottom: env(safe-area-inset-bottom);
+    transform: translateY(calc(var(--sheet-travel, 0px) * (1 - var(--sheet-progress, 0))));
+    transition: transform 220ms ease-out, visibility 220ms;
   }
-  /* Collapse before scripts run; expanded overrides this default. */
-  #panel:not(.expanded) #panel-body { display: none; }
+  /*
+   * Compact before scripts run: only the band above the pills shows. 133px is its
+   * loaded height on a touch screen; js/sheet.js measures it.
+   */
+  #panel-shell:not(.expanded) {
+    transform: translateY(calc(66dvh - var(--sheet-visible, 133px)));
+  }
+  #panel-shell.dragging { transition: none; }
+  #panel { height: 100%; border-radius: inherit; }
+  /* The band drags the sheet; the content scrolls, and at its top a pull drags it. */
+  #panel-nav {
+    position: relative;
+    touch-action: none;
+    /* A long press drags, not selects. */
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+  #panel-body {
+    flex: 1;
+    /* For Safari, which may reject pinch-zoom. */
+    touch-action: pan-y;
+    touch-action: pan-y pinch-zoom;
+    overscroll-behavior-y: contain;
+  }
+  /* A bar atop the band; js/sheet.js labels it. */
+  #sheet-handle {
+    display: block;
+    position: relative;
+    width: 36px;
+    height: 4px;
+    margin: -4px auto 12px;
+    padding: 0;
+    background: rgba(255, 255, 255, 0.35);
+    border: 0;
+    border-radius: 2px;
+    cursor: pointer;
+  }
+  /* From the band's top edge, inside the panel's clip. */
+  #sheet-handle::after {
+    content: "";
+    position: absolute;
+    inset: -12px -20px -8px;
+  }
+  /* On the compact sheet the handle's tap area is the band, so a tap anywhere opens it. */
+  #panel-shell:not(.expanded) #sheet-handle { position: static; }
+  #panel-shell:not(.expanded) #sheet-handle::after { inset: 0; z-index: 1; }
+  /* Edit shows as the sheet opens. */
+  #legend-edit { opacity: var(--sheet-progress, 0); }
+  #panel-shell:not(.expanded):not(.dragging) #legend-edit { visibility: hidden; }
+
+  /* The map's bottom corners and the notices ride the sheet's top edge. */
+  #map .maplibregl-ctrl-bottom-left,
+  #map .maplibregl-ctrl-bottom-right { bottom: var(--sheet-visible, 133px); }
+  /* The scale bar and the credit fade as the sheet opens, and hide once it is open. */
+  #map :is(.maplibregl-ctrl-scale, .maplibregl-ctrl-attrib) {
+    opacity: calc(1 - var(--sheet-progress, 0));
+  }
+  body:has(#panel-shell.expanded:not(.dragging)) #map :is(.maplibregl-ctrl-scale, .maplibregl-ctrl-attrib) {
+    visibility: hidden;
+  }
+  #notices {
+    top: auto;
+    /* Above the scale bar and the credit, which fade out as the sheet opens. */
+    bottom: calc(var(--sheet-visible, 133px) + 12px + 36px * (1 - var(--sheet-progress, 0)));
+    left: 12px;
+    right: 12px;
+    transition: bottom 220ms ease-out;
+  }
+  body:has(#panel-shell.dragging) #notices { transition: none; }
+  #status { align-self: stretch; text-align: center; }
 }
 
 /* Inventory controls. */
 .inventory {
+  /* The label's line height, on whose first line the boxes and the info icon center. */
+  --line: calc(13px * var(--text-scale) * 1.3);
   display: flex;
   align-items: flex-start;
   gap: 8px;
   margin-bottom: 8px;
 }
 
-.inventory input[type="checkbox"] { margin-top: 2px; }
+.inventory :is(input[type="checkbox"], .swatch) { margin-top: calc((var(--line) - var(--box)) / 2); }
 .inventory label {
   flex: 1;
-  font-size: 13px;
+  font-size: calc(13px * var(--text-scale));
   line-height: 1.3;
   color: var(--text);
   cursor: pointer;
 }
-/* Padding enlarges the hit target around the color bar. */
-.inventory .swatch {
-  position: relative;
-  width: 18px;
-  height: 17px;
-  padding: 7px 2px;
-  background-clip: content-box;
-  border: 0;
-  border-radius: 2px;
-  flex: none;
-  cursor: pointer;
-}
 /*
- * Show a pencil disc on hover or while the picker is open. Focus alone keeps the
- * plain ring so Escape restores the bar.
+ * The outline color, filling a box the checkbox's size. It shows only while its
+ * inventory is ticked; hidden, it keeps its place so labels stay aligned.
  */
-.inventory .swatch::before,
-.inventory .swatch::after {
-  content: "";
-  position: absolute;
-  opacity: 0;
+.inventory .swatch {
+  flex: none;
+  width: var(--box);
+  height: var(--box);
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: border-color 0.14s ease;
 }
-.inventory .swatch::before {
-  inset: 0 1px 1px;
-  border-radius: 50%;
-  background-color: inherit;
+.inventory:has(input[type="checkbox"]:not(:checked)) .swatch { visibility: hidden; }
+@media (hover: hover) {
+  .inventory .swatch:hover { border-color: rgba(255, 255, 255, 0.6); }
 }
-.inventory .swatch::after {
-  inset: 2.5px 3.5px 3.5px;
-  background: #000;
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M2 22l1.5-6.5L14 5l5 5L8.5 20.5z M15.5 3.5l2-2a1.4 1.4 0 0 1 2 0l3 3a1.4 1.4 0 0 1 0 2l-2 2z'/%3E%3C/svg%3E") center / contain no-repeat;
-}
-.inventory:hover .swatch::before,
-.inventory:hover .swatch::after,
-.inventory .swatch.popover-open::before,
-.inventory .swatch.popover-open::after { opacity: 1; }
 
+/* On a line of its own, so every row has the same two lines however wide the panel. */
 .inventory .span {
+  display: block;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -513,8 +838,29 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   border: 0;
   cursor: pointer;
 }
-.credit:hover { color: var(--accent); }
-.inventory .credit { margin-top: 2px; }
+@media (hover: hover) {
+  .credit:hover { color: var(--accent); }
+}
+
+/* The scale's edit button opens the editor. */
+#legend-edit {
+  flex: none;
+  padding: 0 7px;
+  font: inherit;
+  font-size: calc(11px * var(--text-scale));
+  line-height: 1.5;
+  color: var(--text);
+  /* Outlined without fill, as About is. */
+  background-color: transparent;
+  border-radius: 4px;
+}
+/* While the editor or the color picker is open, its button keeps its hover look. */
+#legend-edit[aria-expanded="true"] {
+  background-color: rgba(255, 255, 255, 0.24);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+.inventory .swatch.popover-open { border-color: rgba(255, 255, 255, 0.6); }
+.inventory .credit { margin-top: calc((var(--line) - 18px) / 2); }
 
 /* Position outside the scrolling panel; see ui.js. */
 .popover {
@@ -529,7 +875,7 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
 }
 .credit-popover {
   width: 320px;
-  font-size: 11px;
+  font-size: calc(11px * var(--text-scale));
   line-height: 1.5;
 }
 .credit-popover a { color: var(--accent); }
@@ -537,7 +883,7 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
 .credit-popover strong {
   display: block;
   margin-bottom: 5px;
-  font-size: 11px;
+  font-size: calc(11px * var(--text-scale));
   font-weight: 400;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -564,20 +910,30 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   border-bottom-color: var(--border);
 }
 
+/* Picker choices (attachPicker): a quiet outline on hover, white for the current one. */
+.choice {
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: border-color 0.14s ease;
+}
+@media (hover: hover) {
+  .choice:hover { border-color: rgba(255, 255, 255, 0.3); }
+}
+.choice[aria-pressed="true"] { border-color: #fff; }
+
 .palette-popover {
   display: grid;
-  grid-template-columns: repeat(3, 18px);
-  gap: 8px;
+  grid-template-columns: repeat(3, 22px);
+  gap: 6px;
 }
+/* Padding keeps the outline clear of the color. */
 .palette-popover .chip {
-  width: 18px;
-  height: 18px;
-  padding: 0;
-  border: 2px solid transparent;
+  width: 22px;
+  height: 22px;
+  padding: 2px;
+  background-clip: content-box;
   border-radius: 50%;
-  cursor: pointer;
 }
-.palette-popover .chip[aria-pressed="true"] { border-color: var(--text); }
 
 .credit-popover .cite {
   display: inline-block;
@@ -585,28 +941,7 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   color: var(--text);
 }
 
-#inventories-toggle,
-#extras-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  margin-bottom: 8px;
-  padding: 0;
-  font: inherit;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--muted);
-  background: none;
-  border: 0;
-  cursor: pointer;
-}
-#inventories-toggle:hover,
-#extras-toggle:hover { color: var(--text); }
-
 #extras .control:last-child { margin-bottom: 0; }
-#extras-section { margin-bottom: 0; }
 
 .maplibregl-popup-content hr {
   height: 0;
@@ -617,7 +952,7 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
 
 .maplibregl-popup-content .pop-head {
   margin-bottom: 4px;
-  font-size: 11px;
+  font-size: calc(11px * var(--text-scale));
   font-weight: 400;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -625,5 +960,446 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
 }
 .maplibregl-popup-content .pk { color: var(--text); }
 .maplibregl-popup-content > div + .pop-head { margin-top: 7px; }
-/* Reserve close-button space on the first heading only. */
-.maplibregl-popup-content .pop-head:first-child { padding-right: 16px; }
+
+/*
+ * About GLACE: a modal dialog, centered over the dimmed map, 16px clear of the
+ * viewport edges on small screens. It fades in; closing is immediate.
+ */
+#about {
+  position: fixed;
+  inset: 0;
+  width: min(640px, 100vw - 32px);
+  max-height: min(80dvh, 100dvh - 32px);
+  margin: auto;
+  padding: 0;
+  /* Built like the panel: this shell clips the glass, the sheet's body scrolls over it. */
+  overflow: hidden;
+  color: var(--text);
+  background: none;
+  border: 0;
+  border-radius: var(--surface-radius);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+}
+#about[open] {
+  display: flex;
+  flex-direction: column;
+  transition: opacity 0.18s ease-out, transform 0.18s ease-out;
+  @starting-style {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+#about::backdrop { background: rgba(6, 9, 14, 0.5); }
+/* The header stays in place; only the body below its rule scrolls. */
+#about .sheet {
+  position: relative;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-size: calc(13px * var(--text-scale));
+  line-height: 1.55;
+}
+#about header {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+/* At the top, 10px from the edges as on the panel, however tall the heading grows. */
+#about header .close { align-self: flex-start; }
+#about .body {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 16px 18px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.28) transparent;
+}
+#about h2,
+#about h3 {
+  margin: 0;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--text);
+}
+#about h2 { font-size: calc(20px * var(--text-scale)); }
+#about h3 {
+  margin: 20px 0 6px;
+  font-size: calc(15px * var(--text-scale));
+  color: var(--accent-blue);
+}
+#about .body > :first-child { margin-top: 10px; }
+#about p { margin: 0 0 8px; }
+#about ul { margin: 0 0 8px; padding-left: 18px; }
+#about li + li { margin-top: 3px; }
+#about strong { font-weight: 600; }
+#about a { color: var(--accent); }
+#about :is(a, .close):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  #panel-shell,
+  #notices { transition: none; }
+  #about[open] {
+    transition-duration: 0.1s;
+    @starting-style { transform: none; }
+  }
+}
+
+/*
+ * The scale editor, a non-modal dialog: beside the panel, over it in a narrow
+ * window, and in its place on phones. The map stays live around it.
+ */
+#scale-editor {
+  position: fixed;
+  z-index: 3;
+  width: 300px;
+  /* Clear of the map controls: its 316px offset and their 64px column. */
+  max-width: calc(100vw - 316px - 64px);
+  max-height: calc(100dvh - 24px);
+  /* Right of the panel: its 12px margin, 292px width and a 12px gap. */
+  inset: 12px auto auto 316px;
+  margin: 0;
+  padding: 0;
+  /* Built like the panel: this shell clips the glass, the sheet scrolls over it. */
+  overflow: hidden;
+  color: var(--text);
+  background: none;
+  border: 0;
+  border-radius: var(--surface-radius);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+}
+/* The direction stays on the closed editor, which keeps its display while it slides out. */
+#scale-editor { flex-direction: column; }
+#scale-editor[open] { display: flex; }
+/* The header stays in place; only the body below it scrolls. */
+#scale-editor .sheet {
+  position: relative;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+#scale-editor header {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px 8px;
+}
+#scale-editor .body {
+  min-height: 0;
+  /* Hidden across, so the handles at the axis ends cannot add a scrollbar. */
+  overflow: hidden auto;
+  padding: 0 16px 16px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.28) transparent;
+}
+#scale-editor h2,
+#scale-editor h3 {
+  margin: 0;
+  font-size: calc(11px * var(--text-scale));
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+#scale-editor h3 { margin: 18px 0 8px; }
+/* The editor's title outranks the headings below it. */
+#scale-editor h2 { color: var(--text); }
+
+/* A band's channel letter in its color, then the band it shows. */
+#scale-editor .band-name { margin: 0 0 6px; }
+#scale-editor .band-name .channel { margin-right: 6px; font-weight: 600; color: var(--tint); }
+#scale-editor .band + .band { margin-top: 16px; }
+
+/*
+ * The histogram's handles and shading read --low and --high, the limits'
+ * positions on its axis. The whole chart is the drag target. False color
+ * tints the bars with the channel's color.
+ */
+#scale-editor .histogram {
+  position: relative;
+  height: 64px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 4px 4px 0 0;
+  cursor: crosshair;
+  /* A vertical swipe scrolls the editor; js/rasters.js drags only across. */
+  touch-action: pan-y;
+  user-select: none;
+}
+#bands.channels .histogram { height: 48px; }
+#scale-editor .histogram.dragging { cursor: grabbing; }
+#scale-editor .histogram svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+#scale-editor .bars { fill: var(--tint, #fff); fill-opacity: 0.5; shape-rendering: crispEdges; }
+#scale-editor .shade {
+  position: absolute;
+  inset-block: 0;
+  background: rgba(0, 0, 0, 0.45);
+}
+#scale-editor .shade.low { left: 0; width: var(--low); }
+#scale-editor .shade.high { left: var(--high); right: 0; }
+#scale-editor .handle {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  transform: translate(-50%, -50%);
+}
+#scale-editor .handle.low { left: var(--low); }
+#scale-editor .handle.high { left: var(--high); }
+#scale-editor .note {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: calc(11px * var(--text-scale));
+  color: var(--muted);
+  pointer-events: none;
+}
+/* The ramp as drawn: the end colors hold beyond the limits. */
+#scale-editor .band-bar {
+  height: 8px;
+  border: 1px solid var(--border);
+  border-radius: 0 0 3px 3px;
+}
+
+#scale-editor .limits {
+  /* No taller than the panel's segmented buttons. */
+  --field-height: calc(28px * var(--text-scale));
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+#bands.channels .limits { margin-top: 8px; }
+/* The field draws the box; the unit inside it is not typed but focuses the field. */
+#scale-editor .field {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 6px;
+  height: var(--field-height);
+  padding: 0 9px 0 8px;
+  line-height: calc(var(--field-height) - 2px);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  cursor: text;
+}
+#scale-editor .field:focus-within { border-color: #fff; }
+#scale-editor .field:has([aria-invalid="true"]) { border-color: #e0524f; }
+#scale-editor .field .caption {
+  flex: none;
+  font-size: calc(11px * var(--text-scale));
+  color: var(--muted);
+}
+#scale-editor .field .unit {
+  flex: none;
+  font-size: calc(12px * var(--text-scale));
+  color: var(--muted);
+}
+/* On touch screens 16px, below which iOS zooms into a field. */
+#scale-editor input {
+  flex: 1;
+  width: 0;
+  min-width: 0;
+  padding: 0;
+  font: inherit;
+  font-size: calc(13px * var(--text-scale));
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  background: none;
+  border: 0;
+  outline: none;
+}
+/* Why a typed limit was refused, in the invalid field's red, lightened for text. */
+#limits-hint {
+  margin: 8px 0 0;
+  font-size: calc(11px * var(--text-scale));
+  color: #f08a87;
+}
+
+/* The presets and, at the end, Reset: all act on every band. */
+#scale-editor .presets { display: flex; gap: 6px; margin-top: 12px; }
+/* Farther from false color's last band than the bands are apart: they act on all three. */
+#bands.channels + .presets { margin-top: 26px; }
+#scale-editor .presets button {
+  padding: 2px 9px;
+  font: inherit;
+  font-size: calc(11px * var(--text-scale));
+  line-height: 1.6;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.13);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  cursor: pointer;
+}
+#range-reset {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+}
+#scale-editor .presets button[aria-disabled="true"] {
+  opacity: 0.35;
+  cursor: default;
+}
+/* Empty while every limit is accepted. */
+#limits-hint:empty { margin: 0; }
+@media (hover: hover) {
+  #scale-editor .presets button:hover:not([aria-disabled="true"]) {
+    background: rgba(255, 255, 255, 0.24);
+  }
+}
+
+#cmap-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 8px;
+}
+.cmap-option {
+  display: grid;
+  grid-template-columns: 48px auto;
+  gap: 8px;
+  align-items: center;
+  padding: 4px 6px;
+  font: inherit;
+  font-size: calc(12px * var(--text-scale));
+  color: var(--text);
+  text-align: left;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.cmap-option .ramp { height: 10px; border-radius: 3px; border: 1px solid var(--border); }
+.cmap-option[aria-pressed="true"] { border-color: #fff; }
+@media (hover: hover) {
+  .cmap-option:hover:not([aria-pressed="true"]) { border-color: rgba(255, 255, 255, 0.3); }
+}
+
+/* A window too narrow for both puts the editor over the panel. */
+@media (max-width: 680px) {
+  #scale-editor {
+    left: 12px;
+    max-width: calc(100vw - 12px - 64px);
+  }
+}
+
+@media (pointer: coarse) and (max-width: 640px) {
+  /*
+   * Docked to the bottom like the panel's sheet, above the keyboard while a
+   * field has focus (js/rasters.js sets --keyboard-inset). The panel returns
+   * on close, and the map's corners and the status line make room.
+   */
+  #scale-editor {
+    bottom: var(--keyboard-inset, 0px);
+    top: auto;
+    left: 0;
+    right: 0;
+    width: auto;
+    max-width: none;
+    /* At most 60% of the screen, and clear of its top above the keyboard. */
+    max-height: min(60dvh, calc(100dvh - var(--keyboard-inset, 0px) - 24px));
+    padding-bottom: env(safe-area-inset-bottom);
+    border-radius: var(--surface-radius) var(--surface-radius) 0 0;
+    /* Slides up from the bottom edge and back down; display waits for the slide. */
+    transition: translate 220ms ease-out, display 220ms;
+    transition-behavior: allow-discrete;
+  }
+  #scale-editor:not([open]) { translate: 0 100%; }
+  @starting-style {
+    #scale-editor[open] { translate: 0 100%; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #scale-editor { transition: none; }
+  }
+  #scale-editor .sheet { border-radius: inherit; }
+  /* The panel's sheet slides out under the editor and back, compact or open. */
+  body:has(#scale-editor[open]) #panel-shell {
+    transform: translateY(100%);
+    visibility: hidden;
+  }
+  body:has(#scale-editor[open]) #map :is(.maplibregl-ctrl-scale, .maplibregl-ctrl-attrib) {
+    visibility: hidden;
+  }
+  /* The status line moves to the top. */
+  body:has(#scale-editor[open]) #notices {
+    top: calc(12px + env(safe-area-inset-top));
+    bottom: auto;
+    transition: none;
+  }
+  /* Three columns keep the editor low, so more of the map shows below it. */
+  #cmap-options { grid-template-columns: repeat(3, 1fr); }
+  .cmap-option { grid-template-columns: 36px auto; gap: 6px; }
+}
+
+/*
+ * Touch: larger targets for a fingertip, about 40px or more. Invisible ::after
+ * areas enlarge small buttons without moving the layout; the rest grow in place.
+ */
+@media (pointer: coarse) {
+  :root { --text-scale: 1.15; --box: 20px; --ctrl-radius: var(--surface-radius); }
+
+  :is(#scale-editor, #about) .close,
+  #legend-edit,
+  .credit,
+  .inventory .swatch,
+  #tabs [role="tab"] { position: relative; }
+  :is(#scale-editor, #about) .close::after,
+  #legend-edit::after,
+  .credit::after,
+  .inventory .swatch::after,
+  #tabs [role="tab"]::after {
+    content: "";
+    position: absolute;
+    inset: -11px;
+  }
+  .credit { width: 24px; height: 24px; }
+  .credit svg { width: 18px; height: 18px; }
+  .credit::after { inset: -10px; }
+  .inventory .swatch::after { inset: -8px; }
+  /* Taller, not wider, so neighboring pills keep apart. */
+  #tabs [role="tab"]::after { inset: -9px 0; }
+  /* 44px tall, from the band's top edge. */
+  #sheet-handle::after { inset: -12px -28px -28px; }
+  #about-open { padding-block: 11px; }
+
+  .segmented button { padding-block: 10px; }
+
+  input[type="checkbox"]:checked { background-size: 16px; }
+  /* Wider spacing keeps the swatch's tap area off the checkbox and the next row. */
+  .inventory { gap: 12px; margin-bottom: 14px; }
+  .inventory .credit { margin-top: calc((var(--line) - 24px) / 2); }
+  /* Rows tile without overlapping: 19px label + 14px row margin. */
+  .control.checkbox > label { padding-block: 7px; margin-block: -7px; }
+
+  /* A taller input is a taller grip; the negative margin keeps the spacing. */
+  input[type="range"] { height: 32px; margin-block: -8px; }
+
+  .cmap-option { padding-block: 10px; }
+  #scale-editor input { font-size: 16px; }
+  #scale-editor .histogram { height: 80px; }
+  #bands.channels .histogram { height: 56px; }
+  /* Taller tap areas for the low buttons; their row has room above and below. */
+  #scale-editor .presets button { position: relative; }
+  #scale-editor .presets button::after {
+    content: "";
+    position: absolute;
+    inset: -8px -3px;
+  }
+  #scale-editor .handle { width: 20px; height: 20px; }
+  .palette-popover { grid-template-columns: repeat(3, 36px); }
+  .palette-popover .chip { width: 36px; height: 36px; padding: 3px; }
+  .credit-popover { line-height: 1.7; }
+
+  .maplibregl-ctrl-group button { width: 40px; height: 40px; }
+}

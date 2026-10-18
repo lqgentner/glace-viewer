@@ -12,28 +12,87 @@ import test from "node:test";
 
 import { installBrowser, load, REPO, settle } from "./helpers/browser.js";
 
-/* The collapsed state has to be reachable without running any JavaScript. The
- * module that decides it is deferred, so when this was `hidden` set from
- * app.js, a phone showed the full-height panel for a frame before it snapped
- * shut. Guarding the stylesheet rather than the DOM because that frame is the
- * bug, and no DOM assertion can see it. */
-test("a narrow screen is collapsed by the stylesheet, before any script runs", () => {
-  const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
-  const narrow = css.slice(css.indexOf("@media (max-width: 640px)"));
-  const rule = narrow.slice(0, narrow.indexOf("#panel-body") + 200);
+/* Every rule of the narrow media blocks, as one string. */
+function narrowRules(css) {
+  const blocks = [];
+  for (let at = css.indexOf("@media (pointer: coarse) and (max-width: 640px) {"); at !== -1; ) {
+    let depth = 0;
+    let end = css.indexOf("{", at);
+    do {
+      if (css[end] === "{") depth += 1;
+      if (css[end] === "}") depth -= 1;
+      end += 1;
+    } while (depth > 0);
+    blocks.push(css.slice(at, end));
+    at = css.indexOf("@media (pointer: coarse) and (max-width: 640px) {", end);
+  }
+  return blocks.join("\n");
+}
 
-  assert.match(rule, /#panel:not\(\.expanded\) #panel-body \{[^}]*display: none/);
+/* The compact sheet has to be reachable without running any JavaScript. The
+ * module that decides it is deferred, so a state set from a script would show
+ * the open sheet for a frame before it slid shut. Guarding the stylesheet
+ * rather than the DOM because that frame is the bug, and no DOM assertion can
+ * see it. */
+test("a narrow screen starts with the sheet compact, before any script runs", () => {
+  const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+  const narrow = narrowRules(css);
+  const rule = (selector) => {
+    const start = narrow.indexOf(`\n  ${selector} {`);
+    assert.notEqual(start, -1, `no narrow rule for ${selector}`);
+    return narrow.slice(start, narrow.indexOf("}", start));
+  };
+
+  assert.match(rule("#panel-shell"), /bottom: 0;/);
+  assert.match(rule("#panel-shell"), /top: auto;/);
+  assert.match(rule("#panel-shell:not(.expanded)"), /transform: translateY\([^;]*var\(--sheet-visible/);
   assert.doesNotMatch(
-    rule,
-    /#panel\.collapsed #panel-body \{[^}]*display: none[^}]*\}\s*$/,
-    "the default must not depend on a class only the script adds",
+    narrow,
+    /#panel:not\(\.expanded\)|\.collapsed/,
+    "the compact sheet hides its content by translation, not by display",
   );
+
+  // The band drags the sheet; the content scrolls until it is at its top.
+  assert.match(rule("#panel-nav"), /touch-action: none/);
+  // A long press on the band selects nothing and opens no callout.
+  assert.match(rule("#panel-nav"), /user-select: none;\s*-webkit-user-select: none;\s*-webkit-touch-callout: none;/);
+  // Safari may reject pinch-zoom; the plain pan-y before it stands then.
+  assert.match(rule("#panel-body"), /touch-action: pan-y;\s*touch-action: pan-y pinch-zoom;/);
+  assert.match(rule("#panel-body"), /overscroll-behavior-y: contain/);
+
+  // The map's furniture rides the sheet's top edge.
+  assert.match(
+    narrow,
+    /\.maplibregl-ctrl-bottom-left,\s*#map \.maplibregl-ctrl-bottom-right \{[^}]*bottom: var\(--sheet-visible/,
+  );
+  assert.match(
+    rule("#notices"),
+    /bottom: calc\(var\(--sheet-visible, 133px\) \+ 12px \+ 36px \* \(1 - var\(--sheet-progress, 0\)\)\)/,
+    "the notices clear the scale bar and the credit on the compact sheet",
+  );
+  assert.match(
+    narrow,
+    /:is\(\.maplibregl-ctrl-scale, \.maplibregl-ctrl-attrib\) \{[^}]*opacity: calc\(1 - var\(--sheet-progress/,
+    "the scale bar and the credit fade as the sheet opens",
+  );
+  assert.match(
+    narrow,
+    /body:has\(#panel-shell\.expanded:not\(\.dragging\)\) #map :is\([^)]*\) \{[^}]*visibility: hidden/,
+    "and are hidden once it is open",
+  );
+
+  // A tap anywhere on the compact band opens the sheet; Edit waits for it.
+  assert.match(rule("#panel-shell:not(.expanded) #sheet-handle"), /position: static/);
+  assert.match(rule("#panel-shell:not(.expanded) #sheet-handle::after"), /inset: 0;/);
+  assert.match(rule("#panel-nav"), /position: relative/);
+  assert.match(rule("#legend-edit"), /opacity: var\(--sheet-progress, 0\)/);
+  assert.match(rule("#panel-shell:not(.expanded):not(.dragging) #legend-edit"), /visibility: hidden/);
 });
 
 /* On a viewport too short for the controls, whichever box scrolls decides
- * whether the collapse button can be reached at all. Stylesheet again, because
+ * whether the handle can be reached at all. Stylesheet again, because
  * jsdom lays nothing out. */
-test("the controls scroll under the header rather than taking it with them", () => {
+test("the controls scroll under the band rather than taking it with them", () => {
   const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
   const block = (selector) => {
     const start = css.indexOf(`\n${selector} {`);
@@ -45,7 +104,7 @@ test("the controls scroll under the header rather than taking it with them", () 
   assert.doesNotMatch(block("#panel"), /overflow-y: auto/);
 });
 
-test("a narrow viewport opens with the panel collapsed", async () => {
+test("a narrow viewport opens with the sheet compact", async () => {
   const page = installBrowser({
     narrow: true,
     files: { "data/inventories.json": path.join(REPO, "data", "inventories.json") },
@@ -55,16 +114,19 @@ test("a narrow viewport opens with the panel collapsed", async () => {
   await load("js/app.js");
   await settle();
 
-  assert.ok(el("panel").classList.contains("collapsed"), "the controls do not cover the map");
-  assert.equal(el("panel-toggle").getAttribute("aria-expanded"), "false");
-  assert.match(el("panel-toggle").getAttribute("aria-label"), /show/i);
+  const expanded = () => el("panel-shell").classList.contains("expanded");
+  assert.equal(expanded(), false, "the controls do not cover the map");
+  assert.equal(el("sheet-handle").getAttribute("aria-expanded"), "false");
+  assert.match(el("sheet-handle").getAttribute("aria-label"), /show/i);
 
-  // The title bar is what is left, so the reader can still see what this is
-  // and get the controls back. The heading is the wordmark, so what names the
-  // page here is the image's alt text.
+  // The wordmark is what names the page, through the image's alt text.
   assert.equal(el("title").querySelector("img").alt, "GLACE");
 
-  el("panel-toggle").click();
-  assert.ok(el("panel").classList.contains("expanded"), "and a tap brings them back");
-  assert.match(el("panel-toggle").getAttribute("aria-label"), /hide/i);
+  el("sheet-handle").click();
+  assert.ok(expanded(), "and a tap brings them up");
+  assert.equal(el("sheet-handle").getAttribute("aria-expanded"), "true");
+  assert.match(el("sheet-handle").getAttribute("aria-label"), /hide/i);
+
+  el("sheet-handle").click();
+  assert.equal(expanded(), false, "and lowers them again");
 });

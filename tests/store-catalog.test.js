@@ -1,8 +1,7 @@
 /*
- * Exercise the page against fixtures copied from
- * https://data.source.coop/lqgentner/glace-ch, with item geometry reduced. Cover
- * archive/style joins and the polarization, QA, and RGB panel choices. A separate
- * process isolates the map singleton.
+ * Exercise the page against the glace-alps catalog's mosaics, copied with item
+ * geometry removed. Cover item/style joins and the polarization, QA, and
+ * false-color panel choices. A separate process isolates the map singleton.
  */
 
 import assert from "node:assert/strict";
@@ -13,17 +12,29 @@ import test from "node:test";
 import { captureWarnings, installBrowser, load, REPO, settle } from "./helpers/browser.js";
 
 const FIXTURES = path.join(REPO, "tests", "fixtures", "store");
-const collection = JSON.parse(fs.readFileSync(path.join(FIXTURES, "collection.json"), "utf8"));
 
-/* Where each document is looked for. The style and the item are reached through
- * the collection's own asset and links, so these URLs are the catalog's to
- * decide rather than this page's. */
-const YEARS = [2021, 2022, 2023, 2024];
+/* The years the collection links an item for. */
+const YEARS = JSON.parse(fs.readFileSync(path.join(FIXTURES, "collection.json"), "utf8"))
+  .links.filter((link) => link.rel === "item")
+  .map((link) => Number(/\d{4}/.exec(link.href)[0]));
+const items = new Map(
+  YEARS.map((year) => [
+    year,
+    JSON.parse(fs.readFileSync(path.join(FIXTURES, `item-${year}.json`), "utf8")),
+  ]),
+);
+/* Where each document is looked for. Items are reached through the
+ * collection's links and styles through their document's own asset, so these
+ * URLs are the catalog's to decide rather than this page's. */
 const CATALOG = {
   "http://localhost/tiles/mosaics/collection.json": path.join(FIXTURES, "collection.json"),
+  "http://localhost/tiles/mosaics/styles/default.json": path.join(FIXTURES, "style-default.json"),
   ...Object.fromEntries(
     YEARS.flatMap((year) => [
-      [`http://localhost/tiles/mosaics/styles/${year}.json`, path.join(FIXTURES, `style-${year}.json`)],
+      [
+        `http://localhost/tiles/mosaics/${year}/styles/default.json`,
+        path.join(FIXTURES, `style-${year}.json`),
+      ],
       [`http://localhost/tiles/mosaics/${year}/item.json`, path.join(FIXTURES, `item-${year}.json`)],
     ]),
   ),
@@ -48,17 +59,22 @@ const pick = async (row, value) => {
   await settle();
 };
 
-const archives = collection.links.filter((link) => link.rel === "pmtiles");
+/* Visual asset keys, such as coh12_vv_qa_num_viz, by year. */
+const archives = [...items].flatMap(([year, item]) =>
+  Object.entries(item.assets)
+    .filter(([, asset]) => asset.roles.includes("visual"))
+    .map(([key]) => ({ key, year })),
+);
 
 test("the store's catalog loads without complaint", () => {
   assert.deepEqual(warnings, [], "every archive is one the panel has a control for");
 });
 
-test("the seven-value polarization field becomes two rows", () => {
+test("the six-value polarization field becomes two rows", () => {
   const fields = new Set(
-    archives.map((link) => /^glace-[a-z0-9]+_(.+)-\d{4}$/.exec(link["pmtiles:layers"][0])[1]),
+    archives.map(({ key }) => /^[a-z0-9]+_(.+)_viz$/.exec(key)[1]),
   );
-  assert.equal(fields.size, 7);
+  assert.equal(fields.size, 6);
 
   assert.deepEqual(
     [...el("pol").children].map((b) => b.dataset.value),
@@ -72,8 +88,8 @@ test("the seven-value polarization field becomes two rows", () => {
   );
   assert.equal(el("quantity-row").hidden, false, "there is more than one to choose from");
 
-  // 14 archives per year, 2 products x (2 x 3 + RGB), over four published years.
-  assert.equal(archives.length, 56);
+  // 12 archives per year, 2 products x 2 x 3.
+  assert.equal(archives.length, YEARS.length * 12);
   assert.deepEqual(
     [...el("product").children].map((b) => b.dataset.value),
     ["COH12", "RTC"],
@@ -83,14 +99,14 @@ test("the seven-value polarization field becomes two rows", () => {
 test("the page opens on the measurement, not on a QA raster", () => {
   const { map } = page;
   assert.equal(buttons(el, "quantity")[""].getAttribute("aria-checked"), "true");
-  assert.equal(map.getLayer("glace-coh12_vv-2024")?.layout.visibility, "visible");
+  assert.equal(map.getLayer("glace-coh12_vv-2026")?.layout.visibility, "visible");
 });
 
-test("a source names the archive the collection linked, and declares no bounds", () => {
-  const source = page.map.getSource("glace-coh12_vv-2024");
+test("a source names the archive the item lists, and declares no bounds", () => {
+  const source = page.map.getSource("glace-coh12_vv-2026");
   assert.equal(
     source.url,
-    "pmtiles://https://data.source.coop/lqgentner/glace-ch/mosaics/2024/coh12_vv_viz.pmtiles",
+    "pmtiles://http://localhost/tiles/mosaics/2026/coh12_vv_viz.pmtiles",
   );
   assert.deepEqual([source.minzoom, source.maxzoom], [5, 13], "the zooms the style states");
   // Both of these are in the archive's own header, and a spec that named either
@@ -99,62 +115,69 @@ test("a source names the archive the collection linked, and declares no bounds",
   assert.equal(source.attribution, undefined);
 });
 
+test("an archive is read through the shared, cached reader", async () => {
+  // The same reader serves MapLibre's pmtiles:// requests and false color.
+  const { archive, protocol } = await load("js/archive.js");
+  const url = "http://localhost/tiles/mosaics/2026/coh12_vv_viz.pmtiles";
+  assert.ok(protocol.get(url), "registered before the source asks for it");
+  assert.equal(protocol.get(url), archive(url));
+});
+
 test("a QA raster is its own archive, drawn in the same slot", async () => {
   const { map } = page;
   await pick("quantity", "QA_NUM");
 
   assert.equal(
-    map.getSource("glace-coh12_vv_qa_num-2024").url,
-    "pmtiles://https://data.source.coop/lqgentner/glace-ch/mosaics/2024/coh12_vv_qa_num_viz.pmtiles",
+    map.getSource("glace-coh12_vv_qa_num-2026").url,
+    "pmtiles://http://localhost/tiles/mosaics/2026/coh12_vv_qa_num_viz.pmtiles",
   );
-  assert.equal(map.getLayer("glace-coh12_vv_qa_num-2024").layout.visibility, "visible");
+  assert.equal(map.getLayer("glace-coh12_vv_qa_num-2026").layout.visibility, "visible");
   assert.equal(
-    map.getLayer("glace-coh12_vv-2024").layout.visibility,
+    map.getLayer("glace-coh12_vv-2026").layout.visibility,
     "none",
     "the measurement is hidden rather than torn down",
   );
-  assert.ok(map.indexOf("glace-coh12_vv_qa_num-2024") < map.indexOf("places"));
+  assert.ok(map.indexOf("glace-coh12_vv_qa_num-2026") < map.indexOf("places"));
 });
 
-test("a QA raster brings its own ramp, stretch and color-map credit", async () => {
+test("a QA raster brings its own color map and stretch", async () => {
   await pick("quantity", "QA_NUM");
-  // 0-90 rather than the observed 26-30 of recent years, and shared by both
+  // 0-70 rather than the observed 26-30 of recent years, and shared by both
   // products: 2021 reaches 58 because S1B was still flying, 2026 flies three
   // satellites, and one ceiling for every year and both products is what keeps
   // the difference legible.
-  assert.equal(el("legend-min").textContent, "0.0");
-  assert.equal(el("legend-max").textContent, "90.0");
+  const units = () => [...el("legend-labels").querySelectorAll(".unit")].map((u) => u.textContent);
+  assert.deepEqual([el("legend-min").textContent, el("legend-max").textContent], ["0.0", "70.0"]);
+  assert.deepEqual(units(), ["", ""]);
+  assert.equal(el("cmap").textContent, "color map glasgow", "the QA layer's own map");
+  assert.ok(el("cmap").classList.contains("visually-hidden"), "named for screen readers only");
   assert.deepEqual(
     [...el("layer-info").children].map((line) => line.textContent),
-    ["Number of contributing observations", "2024-07-09 to 2024-10-07"],
+    ["Number of contributing observations", "2026-07-03 to 2026-10-01"],
   );
 
   await pick("quantity", "QA_CQM");
   // A sequential ramp over the measured one-sided range: CQM is a composite
   // quality indicator where higher is better, and 0 dB is not a meaningful middle.
-  assert.equal(el("legend-min").textContent, "-3.0 dB");
-  assert.equal(el("legend-max").textContent, "10.0 dB");
+  assert.deepEqual([el("legend-min").textContent, el("legend-max").textContent], ["-2.5", "4.0"]);
+  assert.deepEqual(units(), [" dB", " dB"]);
   assert.deepEqual(
     [...el("layer-info").children].map((line) => line.textContent),
-    ["Composite quality map (higher is better)", "2024-07-09 to 2024-10-07"],
+    ["Composite quality map (higher is better)", "2026-07-03 to 2026-10-01"],
   );
-
-  el("legend-credit").querySelector("button.credit").click();
-  const popover = page.window.document.querySelector(".credit-popover");
-  assert.match(popover.textContent, /Colormap: glasgow/, "the QA layer's own map");
-  el("legend-credit").querySelector("button.credit").click();
+  assert.equal(el("cmap").textContent, "color map glasgow");
 });
 
 test("the acquisition window comes from the year's STAC item", () => {
   // The only thing read out of a third document, and the one field of it the
   // panel shows.
-  const item = JSON.parse(fs.readFileSync(path.join(FIXTURES, "item-2024.json"), "utf8"));
-  assert.equal(item.properties.start_datetime, "2024-07-09T00:00:00Z");
-  assert.equal(item.properties.end_datetime, "2024-10-07T00:00:00Z");
+  const item = JSON.parse(fs.readFileSync(path.join(FIXTURES, "item-2026.json"), "utf8"));
+  assert.equal(item.properties.start_datetime, "2026-07-03T00:00:00Z");
+  assert.equal(item.properties.end_datetime, "2026-10-01T00:00:00Z");
 });
 
-test("the false color and the QA rasters gray each other, but stay reachable", async () => {
-  // The store publishes no RGB QA raster and no QA false color. The button
+test("false color and the QA rasters gray each other, but stay reachable", async () => {
+  // False color is composed only from the measurements, never from QA. The button
   // still says so by going gray, but the click is accepted rather than refused:
   // whichever of the two is pressed wins, and the other row follows it.
   await pick("quantity", "QA_CQM");
@@ -170,7 +193,7 @@ test("the false color and the QA rasters gray each other, but stay reachable", a
     "true",
     "and the quantity fell back to the measurement",
   );
-  assert.equal(page.map.getLayer("glace-coh12_rgb-2024").layout.visibility, "visible");
+  assert.equal(page.map.getLayer("glace-coh12_rgb-2026").layout.visibility, "visible");
 });
 
 test("and the other way round: a QA button pressed on false color resets it", async () => {
@@ -186,31 +209,42 @@ test("and the other way round: a QA button pressed on false color resets it", as
     "true",
     "VV is the leftmost polarization that has one",
   );
-  assert.equal(page.map.getLayer("glace-coh12_vv_qa_num-2024").layout.visibility, "visible");
+  assert.equal(page.map.getLayer("glace-coh12_vv_qa_num-2026").layout.visibility, "visible");
 });
 
-test("the false color names its channels and the stretch each was baked with", async () => {
+test("false color is composed, names its channels, and credits the data", async () => {
   await pick("pol", "RGB");
   assert.equal(el("legend-bar").hidden, true, "there is no ramp to show");
   assert.equal(el("legend-channels").hidden, false);
 
   const cells = [...el("legend-channels").children].map((node) => node.textContent);
-  // The build's own record of what went into each channel, published in the
-  // style. This page holds no stretch of its own, so it is the only way numbers
-  // reach that legend.
+  // Red and green repeat the single-band default stretches; blue's range is the
+  // page's own.
   assert.deepEqual(cells.filter(Boolean), [
+    "R",
     "VV",
-    "0.10 to 0.75",
+    "0.10 to 0.70",
+    "G",
     "VH",
     "0.10 to 0.55",
+    "B",
     "VV / VH",
     "0.80 to 2.60",
   ]);
-  assert.equal(
-    page.map.getSource("glace-coh12_rgb-2024").url,
-    "pmtiles://https://data.source.coop/lqgentner/glace-ch/mosaics/2024/coh12_rgb_viz.pmtiles",
-    "the pre-styled archive the store publishes",
-  );
+  // One line names the channels; their limits are for screen readers, the
+  // scale editor shows them.
+  const shown = (selector) =>
+    [...el("legend-channels").querySelectorAll(selector)].filter((node) => !node.closest(".visually-hidden"));
+  assert.equal(shown(".swatch").length, 3);
+  assert.deepEqual(shown(".channel").map((node) => node.textContent), ["R", "G", "B"]);
+  assert.deepEqual(shown(".band").map((node) => node.textContent), ["VV", "VH", "VV / VH"]);
+  assert.equal(shown(".range").length, 0);
+  assert.equal(el("legend-channels").querySelectorAll(".visually-hidden > .range").length, 3);
+  const source = page.map.getSource("glace-coh12_rgb-2026");
+  assert.equal(source.type, "raster");
+  assert.deepEqual(source.tiles, ["glace-rgb://glace-coh12_rgb-2026/{z}/{x}/{y}"]);
+  assert.match(source.attribution, /Copernicus Sentinel data 2026/, "it has no archive to credit");
+  assert.equal(page.map.getLayer("glace-coh12_rgb-2026").paint["raster-opacity"], 1);
 
   // Backscatter's third channel is a difference, because it is read in dB.
   await pick("product", "RTC");
@@ -222,8 +256,7 @@ test("going back to a single-band layer restores the ramp", async () => {
   await pick("pol", "VV");
   assert.equal(el("legend-bar").hidden, false);
   assert.equal(el("legend-channels").hidden, true);
-  assert.equal(el("legend-min").textContent, "0.10");
-  assert.equal(el("legend-max").textContent, "0.75");
+  assert.deepEqual([el("legend-min").textContent, el("legend-max").textContent], ["0.10", "0.70"]);
 });
 
 test("every archive the store published is reachable", async () => {
@@ -234,17 +267,16 @@ test("every archive the store published is reachable", async () => {
       await pick("pol", pol);
       for (const [quantity, suffix] of [["", ""], ["QA_NUM", "_qa_num"], ["QA_CQM", "_qa_cqm"]]) {
         await pick("quantity", quantity);
-        const id = `glace-${product.toLowerCase()}_${pol.toLowerCase()}${suffix}-2024`;
+        const id = `glace-${product.toLowerCase()}_${pol.toLowerCase()}${suffix}-2026`;
         assert.equal(el("status").hidden, true, id);
         assert.equal(map.getLayer(id)?.layout.visibility, "visible", id);
       }
     }
   }
-  // The twelve above, plus the two false-color archives the tests before this
-  // one selected: a layer is created once and kept, so this is every archive the
-  // collection links for the year the page sits on, and nothing besides.
+  // The twelve above: a layer is created once and kept, so this is every archive
+  // the item lists for the year the page sits on. Composites have no archive.
   assert.equal(
-    [...map.layers.keys()].filter((id) => id.startsWith("glace-")).length,
-    archives.filter((link) => link.href.includes("/2024/")).length,
+    [...map.layers.keys()].filter((id) => id.startsWith("glace-") && !id.includes("_rgb-")).length,
+    archives.filter(({ year }) => year === 2026).length,
   );
 });

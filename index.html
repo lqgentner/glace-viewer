@@ -3,7 +3,13 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Hashes allow the two inline scripts below; page-assets.test.js checks them.
+         MapLibre may run its worker from a blob, and stores may live on any HTTPS host. -->
+    <meta http-equiv="Content-Security-Policy"
+          content="default-src 'self'; script-src 'self' 'sha256-EBRYpeG+TsgwtWv/EwAQ7BaYsLCLRLfz/4X/WfuUKd8=' 'sha256-6h8qqahDQjUTtzvmhn+n6/MoNHltOJxupIIfNqSXRTI='; style-src 'self'; img-src 'self' data: blob:; connect-src 'self' https: data: blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'none'" />
     <title>GLACE — Sentinel-1 composites, European Alps</title>
+    <meta name="description"
+          content="Explore annual Sentinel-1 coherence and backscatter composites of the European Alps, with glacier inventories, hillshade and 3D terrain." />
 
     <!-- Use relative asset paths for Pages project subpaths. -->
     <link rel="icon" href="assets/favicon.ico" sizes="16x16 32x32 48x48" />
@@ -11,8 +17,46 @@
     <link rel="manifest" href="assets/site.webmanifest" />
     <meta name="theme-color" content="#10141c" />
 
-    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@6.9.0/dist/maplibre-gl.css" />
+    <!-- Start the catalog read before the scripts load. Keep it equal to
+         site-config.js's tilesBase + config.js's mosaicCollection. -->
+    <link rel="preload" href="https://data.source.coop/giuz/glace-alps/mosaics/collection.json"
+          as="fetch" crossorigin />
+    <link rel="preconnect" href="https://api.protomaps.com" crossorigin />
+    <link rel="preconnect" href="https://protomaps.github.io" crossorigin />
+
+    <link rel="stylesheet" href="node_modules/maplibre-gl/dist/maplibre-gl.css" />
     <link rel="stylesheet" href="style.css" />
+
+    <!-- Parse the import map before any module fetch. npm installs the libraries,
+         and scripts/stage-libraries.mjs copies each target's directory for Pages.
+         PMTiles needs the bare fflate mapping. -->
+    <script type="importmap">
+      {
+        "imports": {
+          "maplibre-gl": "./node_modules/maplibre-gl/dist/maplibre-gl.mjs",
+          "pmtiles": "./node_modules/pmtiles/dist/esm/index.js",
+          "fflate": "./node_modules/fflate/esm/browser.js",
+          "@protomaps/basemaps": "./node_modules/@protomaps/basemaps/dist/esm/index.js"
+        }
+      }
+    </script>
+
+    <!-- Fetch modules found only one or two imports deep in parallel with their
+         importers. page-assets.test.js requires every js/ module but app.js here. -->
+    <link rel="modulepreload" href="node_modules/fflate/esm/browser.js" />
+    <link rel="modulepreload" href="js/config.js" />
+    <link rel="modulepreload" href="js/map.js" />
+    <link rel="modulepreload" href="js/overlays.js" />
+    <link rel="modulepreload" href="js/rasters.js" />
+    <link rel="modulepreload" href="js/sheet.js" />
+    <link rel="modulepreload" href="js/ui.js" />
+    <link rel="modulepreload" href="js/archive.js" />
+    <link rel="modulepreload" href="js/composite.js" />
+    <link rel="modulepreload" href="js/sky.js" />
+    <link rel="modulepreload" href="js/store.js" />
+    <link rel="modulepreload" href="js/values.js" />
+    <link rel="modulepreload" href="js/histogram.js" />
+    <link rel="modulepreload" href="js/colormaps.js" />
   </head>
   <body>
     <div id="map"></div>
@@ -22,48 +66,86 @@
     <div id="panel-shell">
       <div id="panel-glass" aria-hidden="true"></div>
       <aside id="panel">
-        <header>
-          <div>
-            <!-- Outlined glyphs need no webfont. -->
-            <h1 id="title">
-              <img src="assets/glace-wordmark.svg" alt="GLACE" width="2074" height="419" />
-            </h1>
-            <p id="subtitle">Sentinel-1 annual summer composites of the European Alps</p>
-          </div>
+        <!-- The navigation band: the handle (phones only), the wordmark, the legend,
+             the tabs. -->
+        <div id="panel-nav">
+          <button type="button" id="sheet-handle" aria-controls="panel-body"
+                  aria-expanded="false"></button>
 
-          <button type="button" id="panel-toggle" aria-expanded="true" aria-controls="panel-body">
-            <span class="chevron" aria-hidden="true"
-                  ><svg viewBox="0 0 12 12" width="12" height="12" fill="none"
-                        stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
-                        stroke-linejoin="round"><path d="M2.5 4.5 6 8 9.5 4.5" /></svg
-                ></span>
-          </button>
-        </header>
+          <!-- Outlined glyphs need no webfont. -->
+          <h1 id="title">
+            <img src="assets/glace-wordmark.svg" alt="GLACE" width="2074" height="419" />
+          </h1>
+
+          <!-- Placeholders under the loading title hold the loaded legend's size.
+               js/rasters.js fills it in, or puts a one-line note in the ramp's
+               place. -->
+          <section id="legend" aria-busy="true">
+            <div class="control-head">
+              <span id="selection-summary">Loading layers…</span>
+              <span id="cmap" class="visually-hidden"></span>
+              <!-- Opens the scale editor. -->
+              <button type="button" id="legend-edit" aria-label="Edit the scale"
+                      aria-controls="scale-editor" aria-expanded="false">Edit</button>
+            </div>
+            <!-- One height for the ramp with its limits, the channel row, or the note. -->
+            <div id="legend-slot">
+              <div id="legend-bar"></div>
+              <div id="legend-labels">
+                <span class="limit"><span id="legend-min">&nbsp;</span><span class="unit"></span
+                  ><span class="visually-hidden" hidden> (custom)</span></span>
+                <span class="limit"><span id="legend-max"></span><span class="unit"></span
+                  ><span class="visually-hidden" hidden> (custom)</span></span>
+              </div>
+              <!-- False-color channel legend, shown in place of the color ramp. -->
+              <div id="legend-channels" hidden></div>
+              <!-- A live region, so a year without the layer is announced. Empty, it
+                   takes no room. -->
+              <p id="legend-note" aria-live="polite"></p>
+            </div>
+          </section>
+
+          <div id="tabs" role="tablist" aria-label="Controls">
+            <button type="button" role="tab" id="tab-layers" aria-controls="raster-controls"
+                    aria-selected="true">Layers</button>
+            <button type="button" role="tab" id="tab-inventories"
+                    aria-controls="inventories-section" aria-selected="false">Inventories</button>
+            <button type="button" role="tab" id="tab-map" aria-controls="extras"
+                    aria-selected="false">Map</button>
+          </div>
+        </div>
 
         <div id="panel-body">
 
-          <!-- Hide raster controls together when the catalog is unavailable. -->
-          <div id="raster-controls">
-            <section class="control">
-              <label for="product">Product</label>
-              <div id="product" class="segmented" role="radiogroup" aria-label="Product"></div>
-            </section>
-
-            <!-- Hide the Layer row when the catalog offers only one quantity. -->
-            <section class="control" id="quantity-row" hidden>
-              <label for="quantity">Layer</label>
-              <div id="quantity" class="segmented" role="radiogroup" aria-label="Layer"></div>
-            </section>
-
-            <section class="control">
-              <label for="pol">Polarization</label>
-              <div id="pol" class="segmented" role="radiogroup" aria-label="Polarization"></div>
-            </section>
+          <!-- While the catalog loads, the controls are invisible placeholders the size
+               of the loaded ones, under a loading line, so the panel keeps its size.
+               js/rasters.js fills them in, or hides their tab if the catalog fails. -->
+          <div id="raster-controls" role="tabpanel" aria-labelledby="tab-layers" aria-busy="true">
+            <p id="raster-loading">Loading layers…</p>
 
             <section class="control">
               <label for="year">Year <output id="year-value"></output></label>
               <input type="range" id="year" step="1" />
-              <div id="year-ticks" class="ticks"></div>
+              <div id="year-ticks" class="ticks"><span>&nbsp;</span></div>
+            </section>
+
+            <section class="control">
+              <label for="product">Product</label>
+              <div id="product" class="segmented" role="radiogroup" aria-label="Product"
+                ><button type="button" disabled>&nbsp;</button></div>
+            </section>
+
+            <section class="control">
+              <label for="pol">Polarization</label>
+              <div id="pol" class="segmented" role="radiogroup" aria-label="Polarization"
+                ><button type="button" disabled>&nbsp;</button></div>
+            </section>
+
+            <!-- Hidden when the catalog offers only one quantity. -->
+            <section class="control" id="quantity-row">
+              <label for="quantity">Layer</label>
+              <div id="quantity" class="segmented" role="radiogroup" aria-label="Layer"
+                ><button type="button" disabled>&nbsp;</button></div>
             </section>
 
             <section class="control">
@@ -71,97 +153,232 @@
               <input type="range" id="opacity" min="0" max="100" value="100" step="1" />
             </section>
 
-            <section id="legend" class="control">
-              <div class="control-head">
-                <label>Scale</label>
-                <!-- js/rasters.js supplies the selected color map's credit. -->
-                <span id="legend-credit"></span>
-              </div>
-              <div id="legend-bar"></div>
-              <div id="legend-labels"><span id="legend-min"></span><span id="legend-max"></span></div>
-              <!-- RGB channel legend, shown in place of the color ramp. -->
-              <div id="legend-channels" hidden></div>
-            </section>
-
-            <p id="layer-info"></p>
+            <!-- The default layer's four lines: product, detail, method, dates. -->
+            <p id="layer-info">&nbsp;<br />&nbsp;<br />&nbsp;<br />&nbsp;</p>
           </div>
 
-          <hr />
-
-          <section class="control" id="inventories-section" hidden>
-
-            <button type="button" id="inventories-toggle" aria-expanded="false"
-                    aria-controls="inventories">
-              <span>Glacier inventories</span><span class="chevron up" aria-hidden="true"
-                    ><svg viewBox="0 0 12 12" width="12" height="12" fill="none"
-                          stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
-                          stroke-linejoin="round"><path d="M2.5 4.5 6 8 9.5 4.5" /></svg
-                  ></span>
-            </button>
-            <div id="inventories" hidden></div>
+          <!-- Its tab hides if the inventory index cannot be read or lists none. -->
+          <section id="inventories-section" role="tabpanel" aria-labelledby="tab-inventories"
+                   hidden>
+            <div id="inventories"><p class="loading">Loading inventories…</p></div>
           </section>
 
-          <!-- Hide this separator with empty inventories. -->
-          <hr id="inventories-rule" />
+          <section id="extras" role="tabpanel" aria-labelledby="tab-map" hidden>
+            <section class="control">
+              <div id="basemap-style" class="segmented" role="radiogroup" aria-label="Basemap"></div>
+            </section>
 
-          <section class="control" id="extras-section">
+            <section class="control checkbox">
+              <input type="checkbox" id="basemap" checked />
+              <label for="basemap">Basemap labels</label>
+            </section>
 
-            <button type="button" id="extras-toggle" aria-expanded="false" aria-controls="extras">
-              <span>Map options</span><span class="chevron up" aria-hidden="true"
-                    ><svg viewBox="0 0 12 12" width="12" height="12" fill="none"
-                          stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
-                          stroke-linejoin="round"><path d="M2.5 4.5 6 8 9.5 4.5" /></svg
-                  ></span>
-            </button>
-            <div id="extras" hidden>
-              <section class="control">
-                <div id="basemap-style" class="segmented" role="radiogroup" aria-label="Basemap"></div>
-              </section>
+            <section class="control checkbox" id="hillshade-row">
+              <input type="checkbox" id="hillshade" />
+              <label for="hillshade">Terrain shading</label>
+            </section>
+            <section class="control" id="hillshade-strength-row" hidden>
+              <label for="hillshade-strength">
+                Shading strength <output id="hillshade-strength-value">55%</output>
+              </label>
+              <input type="range" id="hillshade-strength" min="0" max="100" value="55" step="1" />
+            </section>
 
-              <section class="control checkbox" id="hillshade-row">
-                <input type="checkbox" id="hillshade" />
-                <label for="hillshade">Hillshade</label>
-              </section>
-              <section class="control" id="hillshade-strength-row" hidden>
-                <label for="hillshade-strength">
-                  Hillshade strength <output id="hillshade-strength-value">55%</output>
-                </label>
-                <input type="range" id="hillshade-strength" min="0" max="100" value="55" step="1" />
-              </section>
-
-              <section class="control checkbox">
-                <input type="checkbox" id="grid" />
-                <label for="grid">Catalog tile grid</label>
-              </section>
-
-              <section class="control checkbox">
-                <input type="checkbox" id="basemap" checked />
-                <label for="basemap">Basemap labels</label>
-              </section>
-            </div>
+            <section class="control checkbox" id="grid-row">
+              <input type="checkbox" id="grid" />
+              <label for="grid">Catalog tile grid</label>
+            </section>
           </section>
+
+          <!-- Ends the scrolling content, after whichever tab is open. -->
+          <button type="button" id="about-open" aria-haspopup="dialog"
+                  aria-controls="about">About this map</button>
         </div>
       </aside>
     </div>
 
-    <div id="status" hidden></div>
+    <!-- Messages and the way back, over the map: at the top beside the panel, at
+         the bottom on narrow screens. -->
+    <div id="notices">
+      <div id="status" hidden></div>
+      <button type="button" id="home" hidden
+        ><svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor"
+              stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"
+          ><path d="M2 16 7.5 6l3 5 2-3L18 16Z" /></svg
+        ><span></span></button>
+    </div>
+    <!-- Announces what the status line shows, except progress. -->
+    <div id="status-live" class="visually-hidden" role="status"></div>
 
-    <!-- Parse the import map before loading modules. MapLibre loads sibling chunks
-         and a worker; PMTiles needs the bare fflate mapping. Keep lerc on its
-         package CDN and cogReaderUrl's ?external=lerc in sync: esm.sh's process
-         polyfill makes the LERC loader choose Node and fail in the browser. -->
-    <script type="importmap">
-      {
-        "imports": {
-          "maplibre-gl": "https://unpkg.com/maplibre-gl@6.9.0/dist/maplibre-gl.mjs",
-          "pmtiles": "https://unpkg.com/pmtiles@4.5.0/dist/esm/index.js",
-          "fflate": "https://unpkg.com/fflate@0.8.3/esm/browser.js",
-          "@protomaps/basemaps": "https://unpkg.com/@protomaps/basemaps@5.7.2/dist/esm/index.js",
-          "lerc": "https://cdn.jsdelivr.net/npm/lerc@4.2.0/LercDecode.es.js"
-        }
-      }
-    </script>
+    <!-- The scale editor: changes apply to the map as they are made. Beside the panel
+         on wide screens; on narrow ones it takes the panel's place. -->
+    <dialog id="scale-editor" aria-labelledby="scale-editor-title">
+      <div class="glass" aria-hidden="true"></div>
+      <div class="sheet">
+        <header>
+          <h2 id="scale-editor-title">Edit scale</h2>
+          <button type="button" class="close" aria-label="Close" title="Close" autofocus
+            ><svg viewBox="0 0 12 12" width="12" height="12" fill="none" stroke="currentColor"
+                  stroke-width="1.8" stroke-linecap="round" aria-hidden="true"
+              ><path d="M3 3 9 9M9 3 3 9" /></svg
+          ></button>
+        </header>
 
+        <!-- Only this scrolls; the header and its close button stay. -->
+        <div class="body">
+          <!-- One block per band, from #band-template: a value-encoded layer has one,
+               false color three. -->
+          <div id="bands"></div>
+
+          <!-- These act on every band at once. -->
+          <div class="presets">
+            <button type="button" id="range-percentile"
+                    title="Limits at the 2nd and 98th percentiles of the values in view">2–98%</button>
+            <button type="button" id="range-extent"
+                    title="Limits at the lowest and highest values in view">Min/Max</button>
+            <button type="button" id="range-reset"
+                    title="Reset to the default limits; the color map stays"
+              ><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor"
+                    stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"
+                    aria-hidden="true"
+                ><path d="M3.5 8a4.5 4.5 0 1 0 1.3-3.2" /><path d="M4.5 2.3v2.8h2.8" /></svg
+              >Reset</button>
+          </div>
+          <!-- Shown only while a typed limit is refused, to say why. -->
+          <p id="limits-hint" role="status"></p>
+
+          <div id="cmap-section">
+            <h3 id="cmap-options-title">Color map</h3>
+            <div id="cmap-options" role="group" aria-labelledby="cmap-options-title"></div>
+          </div>
+        </div>
+      </div>
+    </dialog>
+    <!-- About GLACE: modal, closed by its button, Esc or a click outside. js/app.js
+         fills in the catalog's years. -->
+    <dialog id="about" closedby="any" aria-labelledby="about-title">
+      <div class="glass" aria-hidden="true"></div>
+      <div class="sheet">
+        <header>
+          <h2 id="about-title">About GLACE</h2>
+          <button type="button" class="close" aria-label="Close" title="Close" autofocus
+            ><svg viewBox="0 0 12 12" width="12" height="12" fill="none" stroke="currentColor"
+                  stroke-width="1.8" stroke-linecap="round" aria-hidden="true"
+              ><path d="M3 3 9 9M9 3 3 9" /></svg
+          ></button>
+        </header>
+
+        <!-- Only the text scrolls; the header and its close button stay. -->
+        <div class="body">
+          <p>GLACE is a dataset of annual Sentinel-1 summer composites of the European Alps.
+            It was primarily made for glacier mapping. Debris-covered glaciers are hard to separate from the
+            rock around them for humans and machine learning models alike. Interferometric
+            Synthetic Aperture Radar (InSAR) can separate them, because glacier flow lowers the
+            interferometric coherence between repeated observations.</p>
+
+          <h3>The dataset</h3>
+          <p>For each summer <span id="about-years">since 2015</span>, GLACE provides two
+            measurements, in VV and VH polarization, at 10 m grid spacing:</p>
+          <ul>
+            <li><strong>Coherence (COH12):</strong> how similar the radar phase stays between
+              two acquisitions 12 days apart. Flowing ice usually has lower coherence than
+              stable terrain.</li>
+            <li><strong>Backscatter (RTC):</strong> the strength of the radar echo,
+              radiometrically corrected for terrain (gamma-nought).</li>
+          </ul>
+          <p>Each measurement comes with two quality bands, an observation count (QA: Count)
+            and a composite quality map (QA: Quality).</p>
+
+          <h3>How it was made</h3>
+          <p>Sentinel-1 SLC bursts are processed to 12-day coherence and terrain-corrected
+            backscatter. Each year's composite uses all ascending and descending acquisitions
+            in the 90-day window with the least snow cover, measured by the MODIS snow index
+            (NDSI). The acquisitions are combined by local resolution weighting (LRW;
+            <a href="https://doi.org/10.1109/TGRS.2021.3055562" target="_blank"
+            rel="noopener">Small et al., 2022</a>): at each pixel, acquisitions that resolve
+            the slope more finely receive a higher weight. This reduces shadow, layover and
+            foreshortening artifacts in steep terrain. GLACE is, to our knowledge, the first
+            to apply LRW to coherence.</p>
+
+          <h3>Getting the data</h3>
+          <p>The composites are cloud-optimized GeoTIFFs, available as a STAC catalog on
+            <a href="https://source.coop/giuz/glace-alps" target="_blank" rel="noopener">Source
+            Cooperative</a>, licensed CC BY 4.0. You can browse the catalog with the
+            <a href="https://browser.portolan-sdi.org/#/external/data.source.coop/giuz/glace-alps/catalog.json"
+            target="_blank" rel="noopener">Portolan/STAC browser</a>. This map shows lossy
+            8-bit previews, so use the GeoTIFFs for analysis.</p>
+
+          <h3>About this map</h3>
+          <p>This map visualizes the GLACE dataset. The data is streamed from Source Cooperative. All streaming,
+            decoding and rendering happens in your browser, with no application server
+            required. Click the map to read a value. Share a view by copying the page URL:
+            the address keeps the extent and selections.</p>
+          <p>Built with:</p>
+          <ul>
+            <li><a href="https://maplibre.org" target="_blank" rel="noopener">MapLibre GL
+              JS</a>: map rendering</li>
+            <li><a href="https://docs.protomaps.com/pmtiles/" target="_blank"
+              rel="noopener">PMTiles</a>: single-file tile archives, read in chunks over HTTP
+              range requests</li>
+            <li><a href="https://protomaps.com" target="_blank" rel="noopener">Protomaps
+              basemaps</a> with <a href="https://www.openstreetmap.org/copyright"
+              target="_blank" rel="noopener">OpenStreetMap</a> data</li>
+            <li><a href="https://mapterhorn.com" target="_blank" rel="noopener">Mapterhorn</a>:
+              digital elevation model tiles</li>
+          </ul>
+          <p>Their licenses are in
+            <a href="assets/third-party-licenses.txt" target="_blank"
+            rel="noopener">third-party-licenses.txt</a>.</p>
+          <p>The color maps are Fabio Crameri's
+            <a href="https://doi.org/10.5281/zenodo.1243862" target="_blank"
+            rel="noopener">Scientific colour maps</a> and matplotlib's viridis, magma and
+            cividis. The viewer is <a href="https://github.com/lqgentner/glace-viewer"
+            target="_blank" rel="noopener">open source</a> under the MIT license.</p>
+
+          <h3>Credits</h3>
+          <p>Contains modified Copernicus Sentinel data
+            <span id="about-credit-years">2015–2026</span>. GLACE is produced at the
+            Department of Geography, University of Zurich. Credits for the basemaps, terrain
+            and glacier inventories are shown on the map and beside each inventory. A dataset
+            citation will be added with the preprint.</p>
+
+          <h3>Feedback</h3>
+          <p>Problems or suggestions? Report them in the
+            <a href="https://github.com/lqgentner/glace-catalog/issues" target="_blank"
+            rel="noopener">dataset's issue tracker</a> or, for the web map, the
+            <a href="https://github.com/lqgentner/glace-viewer/issues" target="_blank"
+            rel="noopener">viewer's issue tracker</a>.</p>
+        </div>
+      </div>
+    </dialog>
+    <!-- A band of the scale editor: the values in view over every code its archive
+         can draw (or a ratio's axis), with the limits as handles. The fields are the
+         same limits for keyboards. -->
+    <template id="band-template">
+      <section class="band">
+        <h3 class="band-name"><span class="channel"></span><span class="name"></span></h3>
+        <div class="histogram" role="img" aria-label="Histogram of the values in view">
+          <svg viewBox="0 0 255 64" preserveAspectRatio="none" aria-hidden="true"
+            ><path class="bars" /></svg>
+          <div class="shade low"></div>
+          <div class="shade high"></div>
+          <!-- Behind the handles, so they stay in reach while it shows. -->
+          <span class="note"></span>
+          <div class="handle low" aria-hidden="true"></div>
+          <div class="handle high" aria-hidden="true"></div>
+        </div>
+        <div class="band-bar"></div>
+        <!-- The inputs' accessible names, with band and unit, are set with the band. -->
+        <div class="limits">
+          <label class="field"><span class="caption">Min</span><input class="vmin"
+            autocomplete="off" spellcheck="false" aria-describedby="limits-hint"
+            /><span class="unit"></span></label>
+          <label class="field"><span class="caption">Max</span><input class="vmax"
+            autocomplete="off" spellcheck="false" aria-describedby="limits-hint"
+            /><span class="unit"></span></label>
+        </div>
+      </section>
+    </template>
     <!-- Expose library globals before app.js so tests can substitute fakes. -->
     <script type="module">
       import * as maplibregl from "maplibre-gl";
@@ -169,8 +386,9 @@
       import * as basemaps from "@protomaps/basemaps";
       Object.assign(globalThis, { maplibregl, pmtiles, basemaps });
     </script>
-    <!-- Load deployment overrides before application modules. -->
-    <script src="site-config.js"></script>
+    <!-- Load deployment overrides before application modules: deferred scripts and
+         modules run in document order. -->
+    <script defer src="site-config.js"></script>
     <script type="module" src="js/app.js"></script>
   </body>
 </html>

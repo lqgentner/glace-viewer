@@ -4,7 +4,7 @@
  */
 
 const DEFAULTS = {
-  /* Catalog root for raster metadata and the tile-grid index. */
+  /* Catalog root for raster metadata and the tile grid. */
   tilesBase: "tiles",
   /* Generated inventory archives, served alongside the page. */
   inventoryBase: "data",
@@ -12,18 +12,8 @@ const DEFAULTS = {
   /* Raster inventory and style links, relative to tilesBase. */
   mosaicCollection: "mosaics/collection.json",
 
-  /* GeoParquet tile-grid index, relative to tilesBase. */
-  gridIndex: "tiles/items.parquet",
-
-  /*
-   * Loaded on demand by the unused COG protocol. Keep ?external=lerc aligned with
-   * the import map in index.html. Keep executable library URLs out of query
-   * parameters.
-   */
-  cogReaderUrl: "https://esm.sh/@developmentseed/geotiff@0.7.0?external=lerc",
-
-  /* Loaded on demand for the tile grid; also excluded from query overrides. */
-  hyparquetUrl: "https://esm.sh/hyparquet@1.30.1",
+  /* Vector PMTiles of the MGRS tile grid, relative to tilesBase. */
+  gridArchive: "tiles/grid.pmtiles",
 
   /* Protomaps hosted TileJSON. Manage the API key in the Protomaps dashboard. */
   basemapUrl: "https://api.protomaps.com/tiles/v4.json?key=54af1e244a8f1599",
@@ -47,9 +37,12 @@ const DEFAULTS = {
 
   /*
    * Opening view over Aletsch, overridden by the URL hash. minZoom limits how small
-   * the globe can appear.
+   * the globe can appear; maxZoom keeps a pitched camera clear of the terrain.
    */
-  initialView: { center: [8.03, 46.51], zoom: 10, minZoom: 1, maxZoom: 14 },
+  initialView: { center: [8.03, 46.51], zoom: 10, minZoom: 1, maxZoom: 13 },
+
+  /* Where the map's home button flies, shown while the catalog is out of view. */
+  overview: { center: [9.548, 46.01], zoom: 6.64, label: "Back to the Alps" },
 };
 
 /* Only viewing endpoints and flavor are query-configurable. */
@@ -69,6 +62,7 @@ const settings = {
   ...site,
   // Merged a key deeper, so naming one field of either does not drop the rest.
   initialView: { ...DEFAULTS.initialView, ...site.initialView },
+  overview: { ...DEFAULTS.overview, ...site.overview },
   terrainCredit: { ...DEFAULTS.terrainCredit, ...site.terrainCredit },
 };
 
@@ -84,10 +78,7 @@ export const MOSAIC_COLLECTION_URL = `${TILES_BASE}/${settings.mosaicCollection}
 export const INVENTORY_BASE = String(settings.inventoryBase).replace(/\/$/, "");
 export const INVENTORY_INDEX_URL = `${INVENTORY_BASE}/inventories.json`;
 
-export const COG_READER_URL = settings.cogReaderUrl;
-export const HYPARQUET_URL = settings.hyparquetUrl;
-
-export const GRID_INDEX_URL = `${TILES_BASE}/${settings.gridIndex}`;
+export const GRID_ARCHIVE_URL = `${TILES_BASE}/${settings.gridArchive}`;
 
 export const BASEMAP_URL = settings.basemapUrl;
 export const BASEMAP_FLAVOR = settings.basemapFlavor;
@@ -98,3 +89,4 @@ export const TERRAIN_TILEJSON = settings.terrainTilejson;
 export const TERRAIN_CREDIT = settings.terrainCredit;
 
 export const INITIAL_VIEW = settings.initialView;
+export const OVERVIEW = settings.overview;

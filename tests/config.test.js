@@ -21,10 +21,10 @@ test("built-in defaults", async () => {
   assert.equal(config.TILES_BASE, "tiles");
   assert.equal(config.MOSAIC_COLLECTION_URL, "tiles/mosaics/collection.json");
   assert.equal(config.INVENTORY_INDEX_URL, "data/inventories.json");
-  assert.equal(config.GRID_INDEX_URL, "tiles/tiles/items.parquet");
+  assert.equal(config.GRID_ARCHIVE_URL, "tiles/tiles/grid.pmtiles");
   assert.equal(config.BASEMAP_FLAVOR, "dark");
   assert.match(config.WORLD_IMAGERY_URL, /World_Imagery\/MapServer\/tile\/\{z\}\/\{y\}\/\{x\}/);
-  assert.deepEqual(config.INITIAL_VIEW, { center: [8.03, 46.51], zoom: 10, minZoom: 1, maxZoom: 14 });
+  assert.deepEqual(config.INITIAL_VIEW, { center: [8.03, 46.51], zoom: 10, minZoom: 1, maxZoom: 13 });
 });
 
 test("an empty site config changes nothing", async () => {
@@ -40,14 +40,14 @@ test("site config repoints the archives, and everything derived follows", async 
     site: {
       tilesBase: "https://s3.example/glace/",
       mosaicCollection: "collections/mosaics.json",
-      gridIndex: "items/tiles.parquet",
+      gridArchive: "items/grid.pmtiles",
       worldImageryUrl: "https://imagery.example/{z}/{x}/{y}.jpg",
     },
   });
   // The trailing slash is trimmed, so the joins below cannot double it.
   assert.equal(config.TILES_BASE, "https://s3.example/glace");
   assert.equal(config.MOSAIC_COLLECTION_URL, "https://s3.example/glace/collections/mosaics.json");
-  assert.equal(config.GRID_INDEX_URL, "https://s3.example/glace/items/tiles.parquet");
+  assert.equal(config.GRID_ARCHIVE_URL, "https://s3.example/glace/items/grid.pmtiles");
   assert.equal(config.WORLD_IMAGERY_URL, "https://imagery.example/{z}/{x}/{y}.jpg");
 });
 
@@ -55,7 +55,7 @@ test("a partial nested override keeps the rest of the object", async () => {
   const view = await load({ site: { initialView: { zoom: 8 } } });
   assert.equal(view.INITIAL_VIEW.zoom, 8);
   assert.deepEqual(view.INITIAL_VIEW.center, [8.03, 46.51]);
-  assert.equal(view.INITIAL_VIEW.maxZoom, 14);
+  assert.equal(view.INITIAL_VIEW.maxZoom, 13);
 
   const credit = await load({ site: { terrainCredit: { citation: "© Someone" } } });
   assert.equal(credit.TERRAIN_CREDIT.citation, "© Someone");
@@ -81,17 +81,15 @@ test("an empty query parameter does not blank a setting", async () => {
 test("deployment-only settings are not reachable from the address bar", async () => {
   const config = await load({
     search:
-      "?gridIndex=nope&mosaicCollection=nope&hyparquetUrl=http://evil&cogReaderUrl=http://evil" +
+      "?gridArchive=nope&mosaicCollection=nope" +
       "&inventoryBase=/etc&initialView=x&terrainTilejson=http://evil",
   });
-  // The two reader URLs are imported and executed, so they matter most here.
-  assert.equal(config.GRID_INDEX_URL, "tiles/tiles/items.parquet");
+  assert.equal(config.GRID_ARCHIVE_URL, "tiles/tiles/grid.pmtiles");
   assert.equal(config.MOSAIC_COLLECTION_URL, "tiles/mosaics/collection.json");
-  assert.match(config.HYPARQUET_URL, /^https:\/\/esm\.sh\//);
-  assert.match(config.COG_READER_URL, /^https:\/\/esm\.sh\//);
+  assert.equal("COG_READER_URL" in config, false, "the COG reader is gone");
   assert.equal(config.INVENTORY_BASE, "data");
   assert.equal(config.TERRAIN_TILEJSON, "https://tiles.mapterhorn.com/tilejson.json");
-  assert.deepEqual(config.INITIAL_VIEW, { center: [8.03, 46.51], zoom: 10, minZoom: 1, maxZoom: 14 });
+  assert.deepEqual(config.INITIAL_VIEW, { center: [8.03, 46.51], zoom: 10, minZoom: 1, maxZoom: 13 });
 });
 
 test("a misspelled setting warns instead of silently doing nothing", async () => {
@@ -108,6 +106,6 @@ test("the committed site-config.js names the store, and sets nothing else", asyn
   const source = fs.readFileSync(path.join(REPO, "site-config.js"), "utf8");
   new Function("window", source)(window);
   assert.deepEqual(window.GLACE_CONFIG, {
-    tilesBase: "https://data.source.coop/lqgentner/glace-ch",
+    tilesBase: "https://data.source.coop/giuz/glace-alps",
   });
 });

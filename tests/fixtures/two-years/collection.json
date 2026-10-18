@@ -49,67 +49,78 @@
       "type": "text/html"
     },
     {
-      "rel": "pmtiles",
-      "href": "https://tiles.example/glace/mosaics/pmtiles/2022/coh12_vv.pmtiles",
-      "type": "application/vnd.pmtiles",
-      "title": "coh12_vv web-map tiles, 2022",
-      "pmtiles:layers": [
-        "glace-coh12_vv-2022"
-      ]
+      "rel": "item",
+      "href": "./2022/item.json",
+      "type": "application/geo+json"
     },
     {
-      "rel": "pmtiles",
-      "href": "https://tiles.example/glace/mosaics/pmtiles/2022/coh12_vh.pmtiles",
-      "type": "application/vnd.pmtiles",
-      "title": "coh12_vh web-map tiles, 2022",
-      "pmtiles:layers": [
-        "glace-coh12_vh-2022"
-      ]
-    },
-    {
-      "rel": "pmtiles",
-      "href": "https://tiles.example/glace/mosaics/pmtiles/2022/rtc_vv.pmtiles",
-      "type": "application/vnd.pmtiles",
-      "title": "rtc_vv web-map tiles, 2022",
-      "pmtiles:layers": [
-        "glace-rtc_vv-2022"
-      ]
-    },
-    {
-      "rel": "pmtiles",
-      "href": "https://tiles.example/glace/mosaics/pmtiles/2023/coh12_vv.pmtiles",
-      "type": "application/vnd.pmtiles",
-      "title": "coh12_vv web-map tiles, 2023",
-      "pmtiles:layers": [
-        "glace-coh12_vv-2023"
-      ]
-    },
-    {
-      "rel": "pmtiles",
-      "href": "https://tiles.example/glace/mosaics/pmtiles/2023/coh12_vh.pmtiles",
-      "type": "application/vnd.pmtiles",
-      "title": "coh12_vh web-map tiles, 2023",
-      "pmtiles:layers": [
-        "glace-coh12_vh-2023"
-      ]
-    },
-    {
-      "rel": "pmtiles",
-      "href": "https://tiles.example/glace/mosaics/pmtiles/2023/rtc_vv.pmtiles",
-      "type": "application/vnd.pmtiles",
-      "title": "rtc_vv web-map tiles, 2023",
-      "pmtiles:layers": [
-        "glace-rtc_vv-2023"
-      ]
-    },
-    {
-      "rel": "pmtiles",
-      "href": "https://tiles.example/glace/mosaics/pmtiles/2023/rtc_vh.pmtiles",
-      "type": "application/vnd.pmtiles",
-      "title": "rtc_vh web-map tiles, 2023",
-      "pmtiles:layers": [
-        "glace-rtc_vh-2023"
-      ]
+      "rel": "item",
+      "href": "./2023/item.json",
+      "type": "application/geo+json"
     }
-  ]
+  ],
+  "renders": {
+    "coh12_vv": {
+      "title": "Coherence VV",
+      "assets": [
+        "coh12_vv"
+      ],
+      "rescale": [
+        [
+          0.1,
+          0.75
+        ]
+      ],
+      "colormap_name": "magma",
+      "resampling": "average",
+      "nodata": "nan"
+    },
+    "coh12_vh": {
+      "title": "Coherence VH",
+      "assets": [
+        "coh12_vh"
+      ],
+      "rescale": [
+        [
+          0.1,
+          0.55
+        ]
+      ],
+      "colormap_name": "magma",
+      "resampling": "average",
+      "nodata": "nan"
+    },
+    "rtc_vv": {
+      "title": "Backscatter VV",
+      "assets": [
+        "rtc_vv"
+      ],
+      "expression": "10*log10(rtc_vv_b1)",
+      "rescale": [
+        [
+          -14.5,
+          -4.5
+        ]
+      ],
+      "colormap_name": "gray",
+      "resampling": "average",
+      "nodata": "nan"
+    },
+    "rtc_vh": {
+      "title": "Backscatter VH",
+      "assets": [
+        "rtc_vh"
+      ],
+      "expression": "10*log10(rtc_vh_b1)",
+      "rescale": [
+        [
+          -21.0,
+          -11.0
+        ]
+      ],
+      "colormap_name": "gray",
+      "resampling": "average",
+      "nodata": "nan"
+    }
+  }
 }

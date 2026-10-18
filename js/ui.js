@@ -1,7 +1,14 @@
 /*
- * Map-independent DOM helpers, status messages, controls, and popovers. External
- * metadata must enter through nodes or textContent, never HTML interpolation.
+ * Map-independent DOM helpers, status messages, controls, tabs, and popovers.
+ * External metadata must enter through nodes or textContent, never HTML
+ * interpolation.
  */
+
+/*
+ * A phone: a touch screen at most 640px wide. Match the query in style.css. A
+ * narrow desktop window keeps the side panel, which suits a mouse.
+ */
+export const PHONE = window.matchMedia("(pointer: coarse) and (max-width: 640px)");
 
 export const el = (id) => document.getElementById(id);
 
@@ -40,6 +47,34 @@ function externalLink(url, label) {
   return h("a", { href: url, target: "_blank", rel: "noopener noreferrer" }, text);
 }
 
+/* ---------- choices in the URL ---------- */
+
+/*
+ * The panel's choices live in the query string, beside the deployment
+ * parameters; MapLibre keeps the camera in the hash. Writes are batched because
+ * browsers limit how often history.replaceState may run.
+ */
+const URL_DELAY_MS = 300;
+const pendingParams = new Map();
+let urlTimer = null;
+
+export const urlParam = (name) => new URLSearchParams(location.search).get(name);
+
+/** Set query parameters soon; null removes one. */
+export function setUrlParams(params) {
+  for (const [name, value] of Object.entries(params)) pendingParams.set(name, value);
+  urlTimer ??= setTimeout(() => {
+    urlTimer = null;
+    const url = new URL(location.href);
+    for (const [name, value] of pendingParams) {
+      if (value === null || value === undefined) url.searchParams.delete(name);
+      else url.searchParams.set(name, String(value));
+    }
+    pendingParams.clear();
+    history.replaceState(history.state, "", url);
+  }, URL_DELAY_MS);
+}
+
 /* ---------- status line ---------- */
 
 /*
@@ -66,15 +101,27 @@ function paintStatus() {
   const node = el("status");
   node.hidden = !top;
   node.textContent = top ? top.message : "";
+  el("status-live").textContent = top && top.level !== "busy" ? top.message : "";
 }
 
 /* ---------- segmented controls ---------- */
 
 /*
  * Accept values or {value, label, title} entries. data-value preserves the catalog
- * value when the display label differs.
+ * value when the display label differs. As a radio group, the arrow keys select
+ * the next choice that is not disabled, and Tab stops at the checked one.
  */
 export function buildSegmented(node, entries, onSelect) {
+  node.onkeydown = (event) => {
+    const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[event.key];
+    if (!step) return;
+    event.preventDefault();
+    const choices = [...node.children].filter((button) => !button.disabled);
+    const at = choices.indexOf(document.activeElement);
+    const next = choices[(at + step + choices.length) % choices.length];
+    next.click();
+    next.focus();
+  };
   node.replaceChildren(
     ...entries.map((entry) => {
       const pair = entry !== null && typeof entry === "object";
@@ -89,21 +136,70 @@ export function buildSegmented(node, entries, onSelect) {
       });
     }),
   );
+  rove(node);
 }
 
-/* ---------- collapsible sections ---------- */
+/**
+ * Make the checked or selected choice, or else the first enabled one, the
+ * group's tab stop. Hidden choices are skipped.
+ */
+export function rove(node) {
+  const buttons = [...node.children].filter((button) => !button.hidden);
+  const on = (button) =>
+    button.getAttribute("aria-checked") === "true" || button.getAttribute("aria-selected") === "true";
+  const stop = buttons.find(on) ?? buttons.find((button) => !button.disabled);
+  for (const button of node.children) button.tabIndex = button === stop ? 0 : -1;
+}
 
-/* Initial state lives in markup: aria-expanded, hidden, and the chevron's up class. */
-export function collapsible(toggleId, bodyId) {
-  const toggle = el(toggleId);
-  const body = el(bodyId);
-  toggle.addEventListener("click", () => {
-    const open = toggle.getAttribute("aria-expanded") === "true";
-    toggle.setAttribute("aria-expanded", String(!open));
-    // `up` marks the collapsed state, here and on the panel's own toggle.
-    toggle.querySelector(".chevron").classList.toggle("up", open);
-    body.hidden = open;
+/* ---------- tabs ---------- */
+
+/*
+ * A tab list whose tabs name their panels with aria-controls. The left and right
+ * arrow keys select the next visible tab, Home and End the first and last, and
+ * Tab stops at the selected one.
+ */
+export function buildTabs(list) {
+  for (const tab of list.children) tab.addEventListener("click", () => selectTab(tab));
+  list.addEventListener("keydown", (event) => {
+    const tabs = [...list.children].filter((tab) => !tab.hidden);
+    const at = tabs.indexOf(document.activeElement);
+    const next = {
+      ArrowRight: tabs[(at + 1) % tabs.length],
+      ArrowLeft: tabs[(at - 1 + tabs.length) % tabs.length],
+      Home: tabs[0],
+      End: tabs.at(-1),
+    }[event.key];
+    if (!next) return;
+    event.preventDefault();
+    selectTab(next);
+    next.focus();
   });
+  rove(list);
+}
+
+/** Select `tab` and show its panel alone, from the top of the panels' container. */
+export function selectTab(tab) {
+  const panel = el(tab.getAttribute("aria-controls"));
+  if (tab.getAttribute("aria-selected") !== "true" && panel.parentElement) {
+    panel.parentElement.scrollTop = 0;
+  }
+  for (const other of tab.parentElement.children) {
+    const selected = other === tab;
+    other.setAttribute("aria-selected", String(selected));
+    el(other.getAttribute("aria-controls")).hidden = !selected;
+  }
+  rove(tab.parentElement);
+}
+
+/** Hide or show a tab; hiding the selected one selects the first still shown. */
+export function hideTab(tab, hidden) {
+  tab.hidden = hidden;
+  if (hidden && tab.getAttribute("aria-selected") === "true") {
+    const first = [...tab.parentElement.children].find((other) => !other.hidden);
+    if (first) selectTab(first);
+  } else {
+    rove(tab.parentElement);
+  }
 }
 
 /* ---------- popovers ---------- */
@@ -115,74 +211,56 @@ export function collapsible(toggleId, bodyId) {
 
 const POPOVER_GAP_PX = 10;
 const POPOVER_MARGIN_PX = 8;
-const POPOVER_HIDE_DELAY_MS = 180;
 
 let popover = null;
 let popoverAnchor = null;
-let popoverTimer = null;
-// Set while focus is handed back to a button, so its focus handler does not reopen the box.
-let refocusing = false;
 
 /**
- * Open `build()` in a popover over `button` on click, and on hover and focus
- * unless `hover` is false. An `autofocus` element inside takes the focus.
+ * Open `build()` in a popover over `button` on click; a second click closes it.
+ * Hover does not open it, so a tap behaves as a click does. An `autofocus`
+ * element inside takes the focus.
  *
  * @param {object} [options]
  * @param {string} [options.className]  Styles the box.
  * @param {number} [options.caretAt]    Where along the box the caret sits, 0-1.
- * @param {boolean} [options.hover]     Whether hover and focus open it too.
  */
 export function attachPopover(button, build, options = {}) {
-  const { className = "", caretAt = 0.5, hover = true } = options;
-  const show = () => showPopover(button, build, className, caretAt, hover);
-  // Support pointer hover, keyboard focus, and touch clicks.
-  if (hover) {
-    button.addEventListener("mouseenter", show);
-    button.addEventListener("focus", () => refocusing || show());
-    button.addEventListener("mouseleave", scheduleHidePopover);
-    button.addEventListener("blur", scheduleHidePopover);
-  }
+  const { className = "", caretAt = 0.5 } = options;
+  button.setAttribute("aria-expanded", "false");
+  button.setAttribute("aria-controls", "popover");
   button.addEventListener("click", (event) => {
     event.preventDefault();
     if (popoverAnchor === button) hidePopover();
-    else show();
+    else showPopover(button, build, className, caretAt);
   });
 }
 
 /* Optionally return focus from the closing popover to its trigger. */
 export function hidePopover({ refocus = false } = {}) {
-  clearTimeout(popoverTimer);
   const anchor = popoverAnchor;
   const focusInside = popover?.contains(document.activeElement);
   anchor?.classList.remove("popover-open");
+  anchor?.setAttribute("aria-expanded", "false");
   popover?.remove();
   popover = null;
   popoverAnchor = null;
-  if (refocus && focusInside) {
-    refocusing = true;
-    anchor.focus();
-    refocusing = false;
-  }
+  if (refocus && focusInside) anchor.focus();
 }
 
-/* Allow pointer travel from the trigger and keep the box open while hovered. */
-function scheduleHidePopover() {
-  clearTimeout(popoverTimer);
-  popoverTimer = setTimeout(() => {
-    if (!popover?.matches(":hover")) hidePopover();
-  }, POPOVER_HIDE_DELAY_MS);
-}
-
-function showPopover(anchor, build, className, caretAt, hover) {
-  clearTimeout(popoverTimer);
-  if (popoverAnchor === anchor) return;
+function showPopover(anchor, build, className, caretAt) {
   hidePopover();
 
-  const box = h("div", { class: `popover ${className}` }, build());
-  if (hover) {
-    box.addEventListener("mouseenter", () => clearTimeout(popoverTimer));
-    box.addEventListener("mouseleave", scheduleHidePopover);
-  }
+  const box = h(
+    "div",
+    {
+      id: "popover",
+      class: `popover ${className}`,
+      role: "dialog",
+      "aria-label": anchor.getAttribute("aria-label"),
+      tabIndex: -1,
+    },
+    build(),
+  );
   document.body.append(box);
 
   // Measured after insertion: the height depends on how far the content wraps.
@@ -202,9 +280,11 @@ function showPopover(anchor, build, className, caretAt, hover) {
   box.style.setProperty("--caret-x", `${markX - left}px`);
 
   anchor.classList.add("popover-open");
+  anchor.setAttribute("aria-expanded", "true");
   popover = box;
   popoverAnchor = anchor;
-  box.querySelector("[autofocus]")?.focus();
+  // Into the box, so Tab reaches its links and Escape returns.
+  (box.querySelector("[autofocus]") ?? box.querySelector("a[href]") ?? box).focus();
 }
 
 // A scroll or resize moves the mark out from under the box.
@@ -220,6 +300,43 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && popover) hidePopover({ refocus: true });
 });
 
+/* ---------- pickers ---------- */
+
+/**
+ * A popover of choices, shared by the color-map and outline-color
+ * pickers, styled by the .choice rules. The current choice is pressed and takes
+ * the focus; picking one closes the popover and returns focus to the button
+ * before `onPick` runs.
+ *
+ * @param {() => {value: *, current: boolean, label: string, class?: string,
+ *                 style?: object, content?: Node[]}[]} choices
+ * @param {(value: *) => void} onPick
+ * @param {{className?: string, caretAt?: number}} [options]  as for attachPopover
+ */
+export function attachPicker(button, choices, onPick, { className = "", caretAt } = {}) {
+  const build = () =>
+    choices().map((choice) =>
+      h(
+        "button",
+        {
+          type: "button",
+          class: choice.class ? `choice ${choice.class}` : "choice",
+          style: choice.style,
+          "aria-label": choice.label,
+          "aria-pressed": String(choice.current),
+          dataset: { value: String(choice.value) },
+          autofocus: choice.current,
+          onclick: () => {
+            hidePopover({ refocus: true });
+            onPick(choice.value);
+          },
+        },
+        ...(choice.content ?? []),
+      ),
+    );
+  attachPopover(button, build, { className, caretAt });
+}
+
 /* ---------- attribution popover ---------- */
 
 /* Static MapLibre attribution glyph. No external text reaches this HTML parser. */
@@ -229,14 +346,14 @@ INFO_ICON.innerHTML =
   'fill-rule="evenodd" aria-hidden="true"><path d="M4 10a6 6 0 1 0 12 0 6 6 0 1 0-12 0' +
   'm5-3a1 1 0 1 0 2 0 1 1 0 1 0-2 0m0 3a1 1 0 1 1 2 0v3a1 1 0 1 1-2 0"/></svg>';
 
-export function creditButton(title, credit) {
+export function creditButton(title, credit, about = "attribution and license") {
   const button = h(
     "button",
     {
       type: "button",
       class: "credit",
-      title: `${title} — attribution and license`,
-      "aria-label": `${title}: attribution and license`,
+      title: `${title} — ${about}`,
+      "aria-label": `${title}: ${about}`,
     },
     INFO_ICON.content.firstElementChild.cloneNode(true),
   );

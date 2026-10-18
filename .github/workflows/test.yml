@@ -19,5 +19,6 @@ jobs:
       - uses: prefix-dev/setup-pixi@v0.10.2
         with:
           cache: true
-      # Run both suites; the JavaScript task installs jsdom from the npm lockfile.
+      # Run both suites; the JavaScript task installs the page's libraries and jsdom
+      # from the npm lockfile.
       - run: pixi run --locked test

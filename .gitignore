@@ -9,9 +9,8 @@ data/*.pmtiles
 tiles
 _site/
 
-# Dev-only: the page loads js/ directly and has no runtime dependencies.
-# `.pixi/` is the environment pixi.lock describes; `node_modules/` is jsdom for
-# `npm test` and nothing else.
+# `.pixi/` is the environment pixi.lock describes; `node_modules/` holds the
+# page's libraries, which the deploy copies, and the test dependencies.
 .pixi/
 node_modules/
 
@@ -19,3 +18,4 @@ __pycache__/
 .DS_Store
 
 .dmypy*.json
+.superpowers/
