@@ -75,7 +75,7 @@ function initControls() {
   initSheet();
 
   const basemapOptions = [
-    { value: "vector", label: "Vector" },
+    { value: "vector", label: "Standard" },
     { value: "imagery", label: "Imagery" },
   ];
   const selectBasemap = (value) => {

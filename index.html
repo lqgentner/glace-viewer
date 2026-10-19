@@ -151,6 +151,7 @@
             <section class="control">
               <label for="opacity">Layer opacity <output id="opacity-value">100%</output></label>
               <input type="range" id="opacity" min="0" max="100" value="100" step="1" />
+              <div class="ticks"><span>0%</span><span>100%</span></div>
             </section>
 
             <!-- The default layer's four lines: product, detail, method, dates. -->
@@ -165,6 +166,7 @@
 
           <section id="extras" role="tabpanel" aria-labelledby="tab-map" hidden>
             <section class="control">
+              <label for="basemap-style">Basemap</label>
               <div id="basemap-style" class="segmented" role="radiogroup" aria-label="Basemap"></div>
             </section>
 
@@ -179,9 +181,10 @@
             </section>
             <section class="control" id="hillshade-strength-row" hidden>
               <label for="hillshade-strength">
-                Shading strength <output id="hillshade-strength-value">55%</output>
+                Shading strength <output id="hillshade-strength-value">60%</output>
               </label>
-              <input type="range" id="hillshade-strength" min="0" max="100" value="55" step="1" />
+              <input type="range" id="hillshade-strength" min="0" max="100" value="60" step="1" />
+              <div class="ticks"><span>0%</span><span>100%</span></div>
             </section>
 
             <section class="control checkbox" id="grid-row">

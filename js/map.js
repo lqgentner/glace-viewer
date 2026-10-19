@@ -224,7 +224,7 @@ function ensureTerrainSource() {
 
 const HILLSHADE_LAYER = "hillshade";
 
-const hillshade = { on: false, strength: 0.55 };
+const hillshade = { on: false, strength: 0.6 };
 
 /*
  * MapLibre has no blend modes or hillshade-opacity. Transparent highlights and

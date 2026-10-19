@@ -209,7 +209,7 @@ test("the viewer", async (t) => {
     const buttons = [...el("basemap-style").children];
     assert.deepEqual(
       buttons.map((button) => button.textContent),
-      ["Vector", "Imagery"],
+      ["Standard", "Imagery"],
     );
     assert.equal(buttons[0].getAttribute("aria-checked"), "true");
     assert.equal(map.getSource("world-imagery"), undefined, "imagery is lazy");
