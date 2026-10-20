@@ -94,6 +94,8 @@ html, body {
   /* Keep the shadow outside the clipped panel. */
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
   z-index: 2;
+  /* The body's content measures from this width; see #panel-body. */
+  container-type: inline-size;
 }
 
 /*
@@ -129,6 +131,8 @@ body:has(#scale-editor[open]) #panel-glass { right: -12px; }
 #panel::after {
   content: "";
   position: absolute;
+  /* Above the scrolling body, which Safari may composite over it. */
+  z-index: 1;
   inset: 0;
   border: 1px solid var(--border);
   border-radius: inherit;
@@ -192,7 +196,9 @@ body:has(#scale-editor[open]) #panel-glass { right: -12px; }
   flex: none;
   padding: 3px 14px;
   font: inherit;
-  font-size: calc(12px * var(--text-scale));
+  /* Larger than the controls below, as their headings. */
+  font-size: calc(14px * var(--text-scale));
+  font-weight: 500;
   color: var(--muted);
   background: transparent;
   border: 1px solid transparent;
@@ -205,15 +211,15 @@ body:has(#scale-editor[open]) #panel-glass { right: -12px; }
   #tabs [role="tab"]:hover { color: var(--text); }
 }
 /*
- * The body spans the panel, so its native scrollbar sits inside the panel's
- * edge. A stable gutter prevents reflow; left padding preserves focus rings.
- * Firefox uses the standard thin scrollbar with the remaining space supplied by
- * padding.
+ * The content spans the panel less 16px a side, so a classic scrollbar's gutter
+ * takes part of the right padding and an overlay one none; the stable gutter
+ * prevents reflow. The overhang into the padding must not scroll sideways.
  */
 #panel-body {
   min-height: 0;
+  overflow-x: hidden;
   overflow-y: auto;
-  padding: 14px 5px 16px 16px;
+  padding: 14px 16px 16px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   /* Opaque fallback for browsers without backdrop-filter. */
   background: var(--panel);
@@ -221,31 +227,7 @@ body:has(#scale-editor[open]) #panel-glass { right: -12px; }
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.28) transparent;
 }
-
-/*
- * Reset standard scrollbar properties in Blink/WebKit to enable the pseudo-
- * elements. A transparent border insets the thumb within a 16px gutter; Firefox
- * keeps the standard rules above.
- */
-@supports selector(::-webkit-scrollbar) {
-  #panel-body {
-    padding-right: 0;
-    scrollbar-width: auto;
-    scrollbar-color: auto;
-  }
-  #panel-body::-webkit-scrollbar { width: 16px; }
-  #panel-body::-webkit-scrollbar-track { background: transparent; }
-  #panel-body::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.28);
-    background-clip: content-box;
-    border: 5px solid transparent;
-    border-radius: 8px;
-  }
-  #panel-body::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.45);
-    background-clip: content-box;
-  }
-}
+#panel-body > * { width: calc(100cqw - 32px); }
 
 /* The glass tints replace the opaque fallbacks above. */
 @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
@@ -302,7 +284,6 @@ body:has(#scale-editor[open]) #panel-glass { right: -12px; }
 /* Outlined without fill, across the end of the scrolling content. */
 #about-open {
   display: block;
-  width: 100%;
   margin: 16px 0 0;
   padding: 6px 12px;
   font: inherit;
@@ -702,7 +683,6 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
     height: 66dvh;
     max-height: none;
     border-radius: var(--surface-radius) var(--surface-radius) 0 0;
-    padding-bottom: env(safe-area-inset-bottom);
     transform: translateY(calc(var(--sheet-travel, 0px) * (1 - var(--sheet-progress, 0))));
     transition: transform 220ms ease-out, visibility 220ms;
   }
@@ -726,6 +706,8 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
   }
   #panel-body {
     flex: 1;
+    /* Inside the body, so its tint covers the safe area. */
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
     /* For Safari, which may reject pinch-zoom. */
     touch-action: pan-y;
     touch-action: pan-y pinch-zoom;
@@ -1309,7 +1291,6 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
     max-width: none;
     /* At most 60% of the screen, and clear of its top above the keyboard. */
     max-height: min(60dvh, calc(100dvh - var(--keyboard-inset, 0px) - 24px));
-    padding-bottom: env(safe-area-inset-bottom);
     border-radius: var(--surface-radius) var(--surface-radius) 0 0;
     /* Slides up from the bottom edge and back down; display waits for the slide. */
     transition: translate 220ms ease-out, display 220ms;
@@ -1323,6 +1304,8 @@ input[type="range"] { width: 100%; margin: 0; accent-color: #fff; }
     #scale-editor { transition: none; }
   }
   #scale-editor .sheet { border-radius: inherit; }
+  /* Inside the body, so the sheet's tint covers the safe area. */
+  #scale-editor .body { padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
   /* The panel's sheet slides out under the editor and back, compact or open. */
   body:has(#scale-editor[open]) #panel-shell {
     transform: translateY(100%);
