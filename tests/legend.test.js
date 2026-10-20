@@ -196,6 +196,13 @@ test("the histogram counts the view and its handles drag the limits", async () =
   assert.equal(chart().style.getPropertyValue("--low"), position(0.1));
 
   // A press moves the nearer handle, which then follows the pointer.
+  press("pointerdown", at(0.2));
+  assert.equal(chart().dataset.moving, "low", "the moving handle is marked for its color");
+  press("pointerup", at(0.2));
+  assert.equal(chart().dataset.moving, undefined, "until release");
+  press("pointerdown", at(0.2));
+  press("pointercancel", at(0.2));
+  assert.equal(chart().dataset.moving, undefined, "or a canceled press");
   await drag(at(0.2), at(0.3));
   assert.equal(ramp(ID).first, 0.3);
   assert.equal(el("vmin-0").value, "0.30");
@@ -234,7 +241,9 @@ test("a touch drags only across, so a swipe up or down scrolls the editor", asyn
   assert.equal(el("vmin-0").value, "0.30", "a tap moves the nearer handle");
 
   touch("pointerdown", at(0.3));
+  assert.equal(chart().dataset.moving, undefined, "a touch marks no handle before it moves across");
   touch("pointermove", at(0.4), 2);
+  assert.equal(chart().dataset.moving, "low");
   touch("pointerup", at(0.4), 2);
   await settle();
   assert.equal(el("vmin-0").value, "0.40", "and a drag across follows the finger");

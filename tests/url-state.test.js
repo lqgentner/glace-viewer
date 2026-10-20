@@ -38,6 +38,7 @@ test("a link opens on its year, layer, opacity, limits and basemap", async () =>
   assert.equal(map.getLayer(ID).layout.visibility, "visible");
   assert.deepEqual([checked("product"), checked("pol"), el("year-value").textContent], ["RTC", "VV", "2022"]);
   assert.equal(el("opacity").value, "40");
+  assert.equal(el("opacity").style.getPropertyValue("--fill"), "40%", "the track fills to the linked value");
   assert.equal(el("opacity-value").textContent, "40%");
   assert.equal(map.getLayer(ID).paint["color-relief-opacity"], 0.4);
   assert.deepEqual([el("legend-min").textContent, el("legend-max").textContent], ["-20.0", "0.0"]);

@@ -10,7 +10,19 @@ import { archive } from "./archive.js";
 import { FALSE_COLOUR, channelValues, compositeLayers, compositeTiles, restretch } from "./composite.js";
 import { isNonEmptyString, readStore } from "./store.js";
 import { COLOR_MAPS } from "./colormaps.js";
-import { PHONE, buildSegmented, clearStatus, el, h, hideTab, rove, setStatus, setUrlParams, urlParam } from "./ui.js";
+import {
+  PHONE,
+  buildSegmented,
+  clearStatus,
+  el,
+  fillRange,
+  h,
+  hideTab,
+  rove,
+  setStatus,
+  setUrlParams,
+  urlParam,
+} from "./ui.js";
 import { decodePixel, step } from "./values.js";
 import { codeAt, codeRange, compositeCounts, histogramPath, pixelAt, viewCounts } from "./histogram.js";
 
@@ -381,6 +393,7 @@ function restoreFromUrl() {
   if (Number.isInteger(opacity) && opacity >= 0 && opacity <= 100) {
     state.opacity = opacity / 100;
     el("opacity").value = opacity;
+    fillRange(el("opacity"));
     el("opacity-value").textContent = `${opacity}%`;
   }
 
@@ -861,6 +874,9 @@ function initHistogram(node, at) {
     }
   };
 
+  // style.css colors the handle being moved.
+  const hold = () => (node.dataset.moving = dragging === "vmin" ? "low" : "high");
+
   node.addEventListener("pointerdown", (event) => {
     const layer = editing();
     const fraction = fractionAt(event);
@@ -876,7 +892,10 @@ function initHistogram(node, at) {
     node.setPointerCapture?.(event.pointerId);
     node.classList.add("dragging");
     if (event.pointerType === "touch") touch = { x: event.clientX, y: event.clientY };
-    else follow(layer, fraction);
+    else {
+      hold();
+      follow(layer, fraction);
+    }
   });
   node.addEventListener("pointermove", (event) => {
     const layer = editing();
@@ -886,6 +905,7 @@ function initHistogram(node, at) {
       const across = Math.abs(event.clientX - touch.x);
       if (across < ACROSS || across < Math.abs(event.clientY - touch.y)) return;
       touch = null;
+      hold();
     }
     follow(layer, fraction);
   });
@@ -893,6 +913,7 @@ function initHistogram(node, at) {
     dragging = null;
     touch = null;
     node.classList.remove("dragging");
+    delete node.dataset.moving;
   };
   node.addEventListener("pointerup", (event) => {
     const layer = editing();
@@ -1081,6 +1102,7 @@ function syncControls() {
   }
   el("year-value").textContent = state.year;
   el("year").value = state.axes.years.indexOf(state.year);
+  fillRange(el("year"));
   el("year").setAttribute("aria-valuetext", String(state.year));
   for (const id of ["product", "quantity", "pol"]) rove(el(id));
 }

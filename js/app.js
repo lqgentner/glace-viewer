@@ -19,6 +19,7 @@ import {
   buildTabs,
   creditButton,
   el,
+  fillRange,
   rove,
   setUrlParams,
   urlParam,
@@ -73,6 +74,10 @@ function initControls() {
   initAbout();
   buildTabs(el("tabs"));
   initSheet();
+  for (const slider of document.querySelectorAll('input[type="range"]')) {
+    fillRange(slider);
+    slider.addEventListener("input", () => fillRange(slider));
+  }
 
   const basemapOptions = [
     { value: "vector", label: "Standard" },

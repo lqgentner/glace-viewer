@@ -151,6 +151,14 @@ export function rove(node) {
   for (const button of node.children) button.tabIndex = button === stop ? 0 : -1;
 }
 
+/** Fill a slider's track up to its knob; style.css draws the fill from --fill. */
+export function fillRange(input) {
+  const min = Number(input.min || 0);
+  const max = Number(input.max || 100);
+  const share = max > min ? (Number(input.value) - min) / (max - min) : 0;
+  input.style.setProperty("--fill", `${share * 100}%`);
+}
+
 /* ---------- tabs ---------- */
 
 /*

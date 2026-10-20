@@ -355,6 +355,7 @@ test("the viewer", async (t) => {
     await settle();
     assert.equal(map.getLayer("glace-rtc_vv-2023").paint["color-relief-opacity"], 0.4);
     assert.equal(el("opacity-value").textContent, "40%");
+    assert.equal(el("opacity").style.getPropertyValue("--fill"), "40%", "the track fills to the knob");
   });
 
   await t.test("a new layer inherits the current opacity", async () => {
@@ -369,6 +370,7 @@ test("the viewer", async (t) => {
     await settle();
 
     assert.equal(el("year-value").textContent, "2022");
+    assert.equal(el("year").style.getPropertyValue("--fill"), "0%");
     assert.equal(el("legend-note").textContent, "No Backscatter VH layer for 2022");
     assert.equal(el("layer-info").textContent, "");
     assert.equal(
