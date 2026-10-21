@@ -72,7 +72,7 @@ const quantityOf = (value) => QUANTITIES.find((quantity) => quantity.value === v
 
 /* Default color maps are the viewer's choice; the catalog's style ramp is not read. */
 const PRODUCT_CMAP = { COH12: "cmc.lipari", RTC: "cmc.navia" };
-const QA_CMAP = "cmc.glasgow";
+const QA_CMAP = "cmc.oslo";
 
 export function defaultCmap(layer) {
   const { quantity } = splitPolarization(layer.polarization);
