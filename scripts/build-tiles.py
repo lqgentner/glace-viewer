@@ -92,7 +92,7 @@ def main() -> int:
         return 1
 
     index_path = args.data_dir / "inventories.json"
-    index = json.loads(index_path.read_text())
+    index = json.loads(index_path.read_text(encoding="utf-8"))
     try:
         entries = validate(index)
     except ValueError as error:
