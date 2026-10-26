@@ -105,7 +105,7 @@
       "source_layer": "sgi2023",
       "min_zoom": 4,
       "max_zoom": 14,
-      "features": 1299,
+      "features": 1289,
       "simplify_m": 10.0,
       "has_names": true,
       "attribution": "Glacier Monitoring Switzerland (GLAMOS)",
