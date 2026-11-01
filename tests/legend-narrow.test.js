@@ -97,7 +97,7 @@ test("the stylesheet docks the editor and clears the map's corners", () => {
   assert.match(sheet, /transform: translateY\(100%\)/);
   assert.match(sheet, /visibility: hidden/);
   assert.doesNotMatch(sheet, /display/);
-  assert.match(block("body:has(#scale-editor[open]) #map :is(.maplibregl-ctrl-scale, .maplibregl-ctrl-attrib)"), /visibility: hidden/);
+  assert.match(block("body:has(#scale-editor[open]) #map .status-line"), /visibility: hidden/);
   const notices = block("body:has(#scale-editor[open]) #notices");
   assert.match(notices, /top: calc\(.*env\(safe-area-inset-top\).*\)/);
   assert.match(notices, /bottom: auto/);

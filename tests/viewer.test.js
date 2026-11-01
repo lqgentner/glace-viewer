@@ -68,13 +68,15 @@ test("the viewer", async (t) => {
     el("tab-layers").click();
   });
 
-  await t.test("the scale bar sits at the bottom left, the collapsed credit at the right", () => {
+  await t.test("the scale bar and the credits share one status line at the bottom right", () => {
     const isA = (cls) => (c) => c instanceof globalThis.maplibregl[cls];
-    const scale = map.controls.find(isA("ScaleControl"));
-    const credit = map.controls.find(isA("AttributionControl"));
-    assert.equal(map.positions.get(scale), "bottom-left");
-    assert.equal(map.positions.get(credit), "bottom-right");
-    assert.equal(credit.options.compact, true, "collapsed as on narrow maps");
+    assert.equal(map.controls.find(isA("ScaleControl")), undefined);
+    assert.equal(map.controls.find(isA("AttributionControl")), undefined);
+    const line = page.control(".status-line");
+    assert.ok(line.querySelector(".scale-bar") && line.querySelector(".credits"));
+    const status = map.controls.find((c) => c.container === line);
+    assert.equal(map.positions.get(status), "bottom-right");
+    assert.match(line.textContent, /Basemap© OpenStreetMap contributors, Protomaps/);
   });
 
   await t.test("rotating onto a narrow screen lowers it to the compact sheet", async () => {
@@ -213,8 +215,9 @@ test("the viewer", async (t) => {
       "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
     ]);
     assert.equal(source.type, "raster");
-    assert.match(source.attribution, /^© Esri, Maxar/, "worded like the credits it sits beside");
-    assert.doesNotMatch(source.attribution, /maplibre\.org/, "the renderer is not Esri's to credit");
+    assert.equal(source.attribution, undefined, "the status line credits Esri's sources in view");
+    map.fire("styledata", { dataType: "style" });
+    assert.match(page.control(".status-line").textContent, /ImageryPowered by Esri/);
     assert.ok(visible(map, "world-imagery"));
     assert.equal(map.getSky()["atmosphere-blend"], 0.8, "a stronger atmosphere over imagery");
     assert.equal(map.getLayer("earth").layout.visibility, "none");
@@ -260,19 +263,14 @@ test("the viewer", async (t) => {
     );
   });
 
-  await t.test("the renderer is credited by the control, not by a basemap", async () => {
+  await t.test("the renderer is credited by the status line, not by a basemap", async () => {
     /* A source is handed its attribution only once its TileJSON resolves, so
      * every credit riding on one is conditional on that request — which is why
      * the renderer's cannot. It is drawing whether the basemap loaded, failed,
      * or was swapped for the imagery. */
-    const attribution = map.controls.find(
-      (control) => control instanceof globalThis.maplibregl.AttributionControl,
-    );
-    assert.match(attribution.options.customAttribution, /maplibre\.org/);
-
-    for (const id of ["protomaps", "world-imagery"]) {
-      assert.doesNotMatch(map.getSource(id).attribution, /maplibre\.org/, `${id} does not repeat it`);
-    }
+    const renderer = [...page.control(".status-line").querySelectorAll("a")].find((a) => a.textContent === "MapLibre");
+    assert.equal(renderer.href, "https://maplibre.org/");
+    assert.doesNotMatch(map.getSource("protomaps").attribution, /maplibre\.org/, "the basemap does not repeat it");
   });
 
   await t.test("data draws under the hillshade, and both under the labels", async () => {
@@ -446,6 +444,8 @@ test("the viewer", async (t) => {
     change(el("inv-sgi2023"), true);
     await settle();
     assert.ok(map.getSource("inv-sgi2023"));
+    /* Its archive has no credit of its own, so the source names the inventory's. */
+    assert.equal(map.getSource("inv-sgi2023").attribution, "Glacier Monitoring Switzerland (GLAMOS)");
     assert.ok(map.getLayer("inv-line-sgi2023-casing") && map.getLayer("inv-line-sgi2023"));
     // Added last of all, and still under the labels rather than on top of them.
     assert.ok(map.indexOf("inv-line-sgi2023") < map.indexOf("places"));

@@ -14,6 +14,7 @@ import {
 } from "./config.js";
 import { protocol } from "./archive.js";
 import { compositeProtocol } from "./composite.js";
+import { StatusControl } from "./status.js";
 import { el, setStatus } from "./ui.js";
 
 /* Raster archives are read through the shared, cached readers of js/archive.js. */
@@ -124,17 +125,8 @@ function createMap() {
 export const map = createMap();
 
 map.addControl(new maplibregl.NavigationControl({ visualizePitch: false }), "top-right");
-// Keep scale-bar placement aligned with the panel clearance in style.css.
-map.addControl(new maplibregl.ScaleControl({ maxWidth: 120, unit: "metric" }), "bottom-left");
-map.addControl(
-  new maplibregl.AttributionControl({
-    /* Collapsed on every screen, as MapLibre does on its own on narrow maps. */
-    compact: true,
-    /* Keep the renderer credit visible even if the basemap TileJSON fails. */
-    customAttribution: '<a href="https://maplibre.org">MapLibre</a>',
-  }),
-  "bottom-right",
-);
+/* The scale bar and the credits, MapLibre's among them, in one line of text. */
+map.addControl(new StatusControl(), "bottom-right");
 
 map.on("error", (event) => {
   if (event.error) console.warn("maplibre:", event.error.message);
@@ -183,8 +175,7 @@ function ensureWorldImagery() {
       tiles: [WORLD_IMAGERY_URL],
       tileSize: 256,
       maxzoom: 19,
-      // Tile templates have no TileJSON attribution to inherit.
-      attribution: "© Esri, Maxar, Earthstar Geographics, and the GIS User Community",
+      // The status line credits Esri and the imagery's sources in view.
     });
   }
   if (!map.getLayer(WORLD_IMAGERY_LAYER)) {

@@ -63,21 +63,21 @@ test("a narrow screen starts with the sheet compact, before any script runs", ()
   // The map's furniture rides the sheet's top edge.
   assert.match(
     narrow,
-    /\.maplibregl-ctrl-bottom-left,\s*#map \.maplibregl-ctrl-bottom-right \{[^}]*bottom: var\(--sheet-visible/,
+    /#map \.maplibregl-ctrl-bottom-right \{[^}]*bottom: var\(--sheet-visible/,
   );
   assert.match(
     rule("#notices"),
-    /bottom: calc\(var\(--sheet-visible, 133px\) \+ 12px \+ 36px \* \(1 - var\(--sheet-progress, 0\)\)\)/,
-    "the notices clear the scale bar and the credit on the compact sheet",
+    /bottom: calc\(var\(--sheet-visible, 133px\) \+ 12px \+ 52px \* \(1 - var\(--sheet-progress, 0\)\)\)/,
+    "the notices clear the credits' info button and its margin on the compact sheet",
   );
   assert.match(
     narrow,
-    /:is\(\.maplibregl-ctrl-scale, \.maplibregl-ctrl-attrib\) \{[^}]*opacity: calc\(1 - var\(--sheet-progress/,
-    "the scale bar and the credit fade as the sheet opens",
+    /#map \.status-line \{[^}]*opacity: calc\(1 - var\(--sheet-progress/,
+    "the credits fade as the sheet opens",
   );
   assert.match(
     narrow,
-    /body:has\(#panel-shell\.expanded:not\(\.dragging\)\) #map :is\([^)]*\) \{[^}]*visibility: hidden/,
+    /body:has\(#panel-shell\.expanded:not\(\.dragging\)\) #map \.status-line \{[^}]*visibility: hidden/,
     "and are hidden once it is open",
   );
 

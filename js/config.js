@@ -23,9 +23,13 @@ const DEFAULTS = {
   /* Esri's XYZ endpoint uses a tile template rather than TileJSON. */
   worldImageryUrl:
     "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+  /* Who contributed World Imagery where, for the credits; Esri's own SDKs read it. */
+  worldImageryAttribution: "https://static.arcgis.com/attribution/World_Imagery",
 
   /* Mapterhorn global terrain, terrarium-encoded, 512 px WEBP tiles. */
   terrainTilejson: "https://tiles.mapterhorn.com/tilejson.json",
+  /* Which elevation sources Mapterhorn used in each tile, for the credits. */
+  terrainCoverage: "https://download.mapterhorn.com/coverage-index.pmtiles",
   terrainCredit: {
     title: "Mapterhorn Terrain Tiles",
     citation: "© Mapterhorn",
@@ -84,8 +88,10 @@ export const BASEMAP_URL = settings.basemapUrl;
 export const BASEMAP_FLAVOR = settings.basemapFlavor;
 export const BASEMAP_ASSETS = settings.basemapAssets;
 export const WORLD_IMAGERY_URL = settings.worldImageryUrl;
+export const WORLD_IMAGERY_ATTRIBUTION = settings.worldImageryAttribution;
 
 export const TERRAIN_TILEJSON = settings.terrainTilejson;
+export const TERRAIN_COVERAGE = settings.terrainCoverage;
 export const TERRAIN_CREDIT = settings.terrainCredit;
 
 export const INITIAL_VIEW = settings.initialView;

@@ -72,6 +72,7 @@ A gitignored `tiles` symlink to the catalog root also works. The root is above
 | `js/histogram.js` | Archive codes or composite channels counted over the view, drawn as the scale editor's bars; the pixel under a click |
 | `js/overlays.js` | Inventory controls, overlay lifecycle, grid layers, popups with the raster's value |
 | `js/ui.js` | DOM helpers, status messages, choices in the URL, segmented controls, popovers, pickers |
+| `js/status.js` | The status line: scale bar and grouped credits, with the terrain and imagery sources in view |
 | `sw.js` | Service worker: stale-while-revalidate for JSON reads |
 | `scripts/serve.py` | Development HTTP server and local catalog mount |
 | `scripts/stage-libraries.mjs` | Copies the import map's library directories into the Pages site |
@@ -193,10 +194,22 @@ because it has no TileJSON.
   rasters.
 - Adjust label colors through the Protomaps flavor before generating layers.
   Labels have their own visibility toggle, including over World Imagery.
-- Keep the renderer credit on the attribution control. Source attribution
-  replaces TileJSON attribution; it does not append to it. The combined
-  OpenStreetMap/Protomaps string preserves their order when MapLibre sorts
-  credits by length.
+- `js/status.js` credits each source a visible layer or the terrain draws,
+  from its `attribution` once its metadata arrives, grouped by source ID:
+  Layers, Inventories, Basemap, Imagery, Terrain, then MapLibre's credit,
+  which depends on no source. Source attribution replaces TileJSON
+  attribution; it does not append to it. An inventory's archive has no credit,
+  so its source names the one in `inventories.json`. Attribution HTML is
+  parsed in an inert template into text and web links, split at `|`.
+- Terrain credits the TileJSON's `© Mapterhorn`, then the producers of the
+  elevation sources in view, read after each move from Mapterhorn's coverage
+  index (`terrainCoverage`, zooms 4 to 12, at most 16 tiles, coarser for a
+  wide view). Past 15 sources, Mapterhorn's link stands alone.
+- Imagery credits "Powered by Esri", as Esri asks of interactive maps, then
+  the contributors in view from Esri's list (`worldImageryAttribution`),
+  fetched once and filtered on each move at Esri's tile level, one deeper than
+  MapLibre's zoom. Until it arrives, past 15 contributors, or with none in
+  view, the service's own sources follow instead.
 
 The globe projection transitions to Mercator at close zooms. MapLibre draws the
 atmosphere around the globe from the style's `sky`, fainter over the vector
@@ -273,17 +286,19 @@ Hover styles sit under `@media (hover: hover)`. The `(pointer: coarse)` block
 at the end of `style.css` holds the touch sizes, mostly as invisible `::after`
 tap areas that leave the layout alone. It also raises `--text-scale`, so write
 every font size as a multiple of it and text grows uniformly on touch screens.
-The scale bar sits at the bottom left and the credit at the bottom right. On
-phones both ride the sheet's top edge and fade as it opens. `#notices` rides
-above them and moves to the top while the scale editor is open. The attribution
-is compact on every screen, as MapLibre makes it on narrow maps; the OSMF
-attribution guidelines allow that. MapLibre anchors the value popup, so it
+The status line holds the scale bar and the credits in one line of text in
+the map's bottom right corner, clear of the panel. On phones it draws no scale
+bar and folds the credits into an info button: open at load, folded on the
+first drag of the map, as MapLibre's compact attribution does; the OSMF
+attribution guidelines allow that. It rides the sheet's top edge and fades as
+the sheet opens. `#notices` rides above it and moves to the top while the
+scale editor is open. MapLibre anchors the value popup, so it
 shifts sideways near an edge; on phones its `padding` is the sheet's visible
 height, so near the sheet it opens upward.
 
 The legend only displays. Its Edit button toggles `#scale-editor`, a non-modal
 `<dialog>`: beside the panel, or docked to the bottom on phones, where it stays
-above the keyboard and hides the scale bar and credit. There it slides up as the panel's
+above the keyboard and hides the status line. There it slides up as the panel's
 sheet slides out, and back down as the sheet returns at the height it had. The
 sheet stays laid out, hidden by `visibility`, so it keeps its measured height;
 the editor keeps `flex-direction` while closed, because `display` lingers for

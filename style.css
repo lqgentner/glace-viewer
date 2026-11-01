@@ -67,8 +67,7 @@ html, body {
   top: 12px;
   left: 12px;
   width: 292px;
-  /* Reserve bottom clearance for the scale bar in js/map.js. */
-  max-height: calc(100% - 52px);
+  max-height: calc(100% - 24px);
 
   display: flex;
   flex-direction: column;
@@ -490,33 +489,31 @@ input[type="range"]:disabled { cursor: default; opacity: 0.4; }
 #hillshade-strength-row { margin-top: -6px; padding-left: 22px; }
 
 /*
- * MapLibre's controls, attribution and scale bar take the panel's glass and its
- * 12px inset. The map ID outranks MapLibre's rules, including its corners for
- * focused buttons. Small and unscrolled, each blurs its own backdrop. The
- * outline is inset and drawn over the buttons, so the sizes stay MapLibre's.
+ * MapLibre's controls and the status line take the panel's glass; the controls
+ * also take its 12px inset. The map ID outranks MapLibre's rules, including its
+ * corners for focused buttons. Small and unscrolled, each blurs its own
+ * backdrop. The outline is inset and drawn over the buttons, so the sizes stay
+ * MapLibre's.
  */
 #map .maplibregl-ctrl-top-right .maplibregl-ctrl { margin: 12px 12px 0 0; }
-#map .maplibregl-ctrl-bottom-left .maplibregl-ctrl { margin: 0 0 12px 12px; }
-/* The left margin keeps the expanded attribution off the edge of a narrow screen. */
-#map .maplibregl-ctrl-bottom-right .maplibregl-ctrl { margin: 0 12px 12px; }
-#map :is(.maplibregl-ctrl-group, .maplibregl-ctrl-attrib, .maplibregl-ctrl-scale) {
+#map :is(.maplibregl-ctrl-group, .status-line) {
   color: var(--text);
   background-color: var(--panel);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
 }
-#map :is(.maplibregl-ctrl-group, .maplibregl-ctrl-attrib) {
+#map .maplibregl-ctrl-group {
   outline: 1px solid var(--border);
   outline-offset: -1px;
 }
 @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
-  #map :is(.maplibregl-ctrl-group, .maplibregl-ctrl-attrib, .maplibregl-ctrl-scale) {
+  #map :is(.maplibregl-ctrl-group, .status-line) {
     -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
       brightness(var(--glass-brightness));
     backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
       brightness(var(--glass-brightness));
     background-color: hsl(var(--glass-tint) / var(--glass-alpha));
   }
-  #map :is(.maplibregl-ctrl-group, .maplibregl-ctrl-attrib) {
+  #map .maplibregl-ctrl-group {
     outline-color: rgba(255, 255, 255, 0.14);
   }
 }
@@ -538,8 +535,8 @@ input[type="range"]:disabled { cursor: default; opacity: 0.4; }
  * Replace MapLibre's blue focus glow, which the info button keeps even after a
  * click, with the panel's accent ring, for keyboard focus only.
  */
-#map :is(.maplibregl-ctrl-group button, .maplibregl-ctrl-attrib-button):focus { box-shadow: none; }
-#map :is(.maplibregl-ctrl-group button, .maplibregl-ctrl-attrib-button):focus-visible {
+#map .maplibregl-ctrl-group button:focus { box-shadow: none; }
+#map :is(.maplibregl-ctrl-group button, .credits-button):focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
@@ -565,19 +562,48 @@ input[type="range"]:disabled { cursor: default; opacity: 0.4; }
   color: var(--text);
 }
 
-/* The attribution: text and links in --muted, and a light info button. */
-#map .maplibregl-ctrl-attrib { color: var(--muted); }
-#map .maplibregl-ctrl-attrib a { color: inherit; }
-#map .maplibregl-ctrl-attrib-button {
-  background-color: transparent;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='%23e6eaf2' fill-rule='evenodd' viewBox='0 0 20 20'%3E%3Cpath d='M4 10a6 6 0 1 0 12 0 6 6 0 1 0-12 0m5-3a1 1 0 1 0 2 0 1 1 0 1 0-2 0m0 3a1 1 0 1 1 2 0v3a1 1 0 1 1-2 0'/%3E%3C/svg%3E");
+/*
+ * The status line: the scale bar and the credits run as one text in the map's
+ * bottom right corner, as wide as the text and clear of the panel. A long line
+ * wraps inside a group rather than between groups.
+ */
+#map .maplibregl-ctrl-bottom-right .status-line {
+  margin: 0;
+  max-width: calc(100vw - 316px);
+  padding: 2px 8px;
+  border-top-left-radius: 8px;
+  font-size: calc(11px * var(--text-scale));
+  line-height: 16px;
 }
-#map .maplibregl-compact-show .maplibregl-ctrl-attrib-button {
-  background-color: rgba(255, 255, 255, 0.13);
+.status-line a { color: inherit; }
+.status-line .scale {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 16px;
+  margin-right: 12px;
+  vertical-align: top;
 }
-
-/* The scale bar keeps its ruler: open at the top, in a light line. */
-#map .maplibregl-ctrl-scale { border-color: rgba(255, 255, 255, 0.6); }
+/* The scale bar keeps MapLibre's ruler: open at the top, in a light line. */
+.status-line .scale-bar {
+  display: inline-block;
+  height: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-top: 0;
+}
+.credits-box { display: inline; }
+.credits-button { display: none; }
+/* Each group names what it credits: "Layers", "Basemap" and so on. */
+.status-line .credit-label {
+  margin-right: 4px;
+  color: var(--muted);
+  font-weight: 600;
+}
+.status-line .credit-group + .credit-group::before {
+  content: "|";
+  margin: 0 8px;
+  color: var(--muted);
+}
 
 .ticks {
   display: flex;
@@ -788,20 +814,72 @@ input[type="range"]:disabled { cursor: default; opacity: 0.4; }
   #legend-edit { opacity: var(--sheet-progress, 0); }
   #panel-shell:not(.expanded):not(.dragging) #legend-edit { visibility: hidden; }
 
-  /* The map's bottom corners and the notices ride the sheet's top edge. */
-  #map .maplibregl-ctrl-bottom-left,
+  /* The map's bottom corner and the notices ride the sheet's top edge. */
   #map .maplibregl-ctrl-bottom-right { bottom: var(--sheet-visible, 133px); }
-  /* The scale bar and the credit fade as the sheet opens, and hide once it is open. */
-  #map :is(.maplibregl-ctrl-scale, .maplibregl-ctrl-attrib) {
-    opacity: calc(1 - var(--sheet-progress, 0));
+  /* The credits fade as the sheet opens, and hide once it is open. */
+  #map .status-line { opacity: calc(1 - var(--sheet-progress, 0)); }
+  body:has(#panel-shell.expanded:not(.dragging)) #map .status-line { visibility: hidden; }
+  /*
+   * The status line drops its scale bar and folds its credits into an info
+   * button, round like the map's controls, which grows into the credits from
+   * the corner: open, the box holds the text to the button's left.
+   */
+  #map .maplibregl-ctrl-bottom-right .status-line {
+    margin: 0 12px 12px;
+    max-width: calc(100% - 24px);
+    padding: 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    font-size: calc(12px * var(--text-scale));
   }
-  body:has(#panel-shell.expanded:not(.dragging)) #map :is(.maplibregl-ctrl-scale, .maplibregl-ctrl-attrib) {
-    visibility: hidden;
+  .status-line .scale { display: none; }
+  #map .credits-box {
+    display: block;
+    position: relative;
+    min-height: 40px;
+    border-radius: 20px;
+    background-color: var(--panel);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+    outline: 1px solid var(--border);
+    outline-offset: -1px;
+  }
+  @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+    #map .credits-box {
+      -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
+        brightness(var(--glass-brightness));
+      backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
+        brightness(var(--glass-brightness));
+      background-color: hsl(var(--glass-tint) / var(--glass-alpha));
+      outline-color: rgba(255, 255, 255, 0.14);
+    }
+  }
+  #map .credits-box.open {
+    display: flex;
+    align-items: center;
+    padding: 6px 40px 6px 14px;
+  }
+  #map .credits-box:not(.open) { width: 40px; }
+  .credits-box:not(.open) .credits { display: none; }
+  .credits-button {
+    display: block;
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='%23e6eaf2' fill-rule='evenodd' viewBox='0 0 20 20'%3E%3Cpath d='M4 10a6 6 0 1 0 12 0 6 6 0 1 0-12 0m5-3a1 1 0 1 0 2 0 1 1 0 1 0-2 0m0 3a1 1 0 1 1 2 0v3a1 1 0 1 1-2 0'/%3E%3C/svg%3E") center / 24px no-repeat;
+    cursor: pointer;
   }
   #notices {
     top: auto;
-    /* Above the scale bar and the credit, which fade out as the sheet opens. */
-    bottom: calc(var(--sheet-visible, 133px) + 12px + 36px * (1 - var(--sheet-progress, 0)));
+    /* Above the credits' info button, which fades out as the sheet opens. */
+    bottom: calc(var(--sheet-visible, 133px) + 12px + 52px * (1 - var(--sheet-progress, 0)));
     left: 12px;
     right: 12px;
     transition: bottom 220ms ease-out;
@@ -1363,9 +1441,7 @@ input[type="range"]:disabled { cursor: default; opacity: 0.4; }
     transform: translateY(100%);
     visibility: hidden;
   }
-  body:has(#scale-editor[open]) #map :is(.maplibregl-ctrl-scale, .maplibregl-ctrl-attrib) {
-    visibility: hidden;
-  }
+  body:has(#scale-editor[open]) #map .status-line { visibility: hidden; }
   /* The status line moves to the top. */
   body:has(#scale-editor[open]) #notices {
     top: calc(12px + env(safe-area-inset-top));

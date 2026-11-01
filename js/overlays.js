@@ -140,6 +140,8 @@ function inventoryOverlay(entry) {
       map.addSource(this.sourceId, {
         type: "vector",
         url: `pmtiles://${INVENTORY_BASE}/${entry.url}`,
+        /* The archive carries no credit, so the source names the inventory's. */
+        attribution: entry.attribution,
       });
       /*
        * Unfilled outlines preserve the raster beneath; dark casing improves
