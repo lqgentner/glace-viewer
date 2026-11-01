@@ -247,6 +247,14 @@ class FakeMap {
     (layer.paint ??= {})[key] = value;
   }
 
+  setSky(sky) {
+    this.sky = sky;
+  }
+
+  getSky() {
+    return this.sky ?? this.options.style?.sky;
+  }
+
   // Every lazy source in these tests is answered from disk or not at all, so
   // "has it finished" is only ever asked after the test fires `sourcedata`.
   isSourceLoaded() {

@@ -48,22 +48,27 @@ for (const field of LABEL_FIELDS) {
   if (`${field}_halo` in flavor) flavor[`${field}_halo`] = labelHalo;
 }
 const basemapLayers = basemaps.layers("protomaps", flavor, { lang: "en" });
+
+/*
+ * MapLibre's own atmosphere around the globe, per basemap: fainter over the
+ * vector basemap, which its haze pales. The sky and fog stay clear, as with no
+ * sky at all, so a tilted view close in shows the space behind the canvas.
+ */
+const ATMOSPHERE = { vector: 0.5, imagery: 0.8 };
+const sky = (basemap) => ({
+  "sky-color": "transparent",
+  "horizon-color": "transparent",
+  "fog-color": "transparent",
+  "fog-ground-blend": 1,
+  "atmosphere-blend": ATMOSPHERE[basemap] ?? ATMOSPHERE.vector,
+});
+
 const style = {
   version: 8,
   /* MapLibre interpolates from globe at z11 to Mercator at z12. */
   projection: { type: "globe" },
-  /*
-   * MapLibre's own atmosphere around the globe, at half strength so its haze
-   * pales the dark basemap less. The sky and fog stay clear, as with no sky at
-   * all, so a tilted view close in shows the space behind the canvas.
-   */
-  sky: {
-    "sky-color": "transparent",
-    "horizon-color": "transparent",
-    "fog-color": "transparent",
-    "fog-ground-blend": 1,
-    "atmosphere-blend": 0.5,
-  },
+  /* The vector basemap shows until setBasemap() reads the URL. */
+  sky: sky("vector"),
   glyphs: `${BASEMAP_ASSETS}/fonts/{fontstack}/{range}.pbf`,
   sprite: `${BASEMAP_ASSETS}/sprites/v4/${BASEMAP_FLAVOR}`,
   sources: {
@@ -206,6 +211,7 @@ export async function setBasemap(value) {
   if (map.getLayer(WORLD_IMAGERY_LAYER)) {
     map.setLayoutProperty(WORLD_IMAGERY_LAYER, "visibility", imagery ? "visible" : "none");
   }
+  map.setSky(sky(value));
 }
 
 /* ---------- basemap labels ---------- */

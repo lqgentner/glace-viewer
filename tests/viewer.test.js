@@ -216,6 +216,7 @@ test("the viewer", async (t) => {
     assert.match(source.attribution, /^© Esri, Maxar/, "worded like the credits it sits beside");
     assert.doesNotMatch(source.attribution, /maplibre\.org/, "the renderer is not Esri's to credit");
     assert.ok(visible(map, "world-imagery"));
+    assert.equal(map.getSky()["atmosphere-blend"], 0.8, "a stronger atmosphere over imagery");
     assert.equal(map.getLayer("earth").layout.visibility, "none");
     assert.equal(map.getLayer("water").layout.visibility, "none");
     assert.equal(map.getLayer("places").layout.visibility, "none", "the label toggle still wins");
@@ -232,6 +233,7 @@ test("the viewer", async (t) => {
     assert.equal(map.getLayer("world-imagery").layout.visibility, "none");
     assert.equal(map.getLayer("earth").layout.visibility, "visible");
     assert.equal(map.getLayer("water").layout.visibility, "visible");
+    assert.equal(map.getSky()["atmosphere-blend"], 0.5, "a fainter one over the vector basemap");
   });
 
   await t.test("each layer credits the source it is actually drawing", async () => {

@@ -199,8 +199,9 @@ because it has no TileJSON.
   credits by length.
 
 The globe projection transitions to Mercator at close zooms. MapLibre draws the
-atmosphere around the globe from the style's `sky`; its sky and fog colors stay
-transparent, so the space in `style.css` shows behind the canvas.
+atmosphere around the globe from the style's `sky`, fainter over the vector
+basemap than over imagery; `setBasemap()` switches it. Its sky and fog colors
+stay transparent, so the space in `style.css` shows behind the canvas.
 
 ## Controls and external text
 
