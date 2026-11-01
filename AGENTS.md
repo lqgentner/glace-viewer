@@ -59,7 +59,7 @@ A gitignored `tiles` symlink to the catalog root also works. The root is above
 
 | Location | Responsibility |
 | --- | --- |
-| `index.html`, `style.css` | Page structure, initial control values, responsive panel and sheet, sky appearance |
+| `index.html`, `style.css` | Page structure, initial control values, responsive panel and sheet, the space behind the globe |
 | `js/app.js` | Startup and control event wiring |
 | `js/config.js`, `site-config.js` | Resolved settings and deployment overrides |
 | `js/map.js` | Map singleton, style readiness, draw order, basemap, labels, terrain |
@@ -72,7 +72,6 @@ A gitignored `tiles` symlink to the catalog root also works. The root is above
 | `js/histogram.js` | Archive codes or composite channels counted over the view, drawn as the scale editor's bars; the pixel under a click |
 | `js/overlays.js` | Inventory controls, overlay lifecycle, grid layers, popups with the raster's value |
 | `js/ui.js` | DOM helpers, status messages, choices in the URL, segmented controls, popovers, pickers |
-| `js/sky.js` | Globe silhouette measurements for CSS |
 | `sw.js` | Service worker: stale-while-revalidate for JSON reads |
 | `scripts/serve.py` | Development HTTP server and local catalog mount |
 | `scripts/stage-libraries.mjs` | Copies the import map's library directories into the Pages site |
@@ -199,12 +198,9 @@ because it has no TileJSON.
   OpenStreetMap/Protomaps string preserves their order when MapLibre sorts
   credits by length.
 
-The globe projection transitions to Mercator at close zooms. `getProjection()`
-reports the configured projection, so its type alone cannot determine whether
-space is visible. `js/sky.js` samples the visible horizon using MapLibre's
-camera defaults and writes CSS properties on movement. Keep this event-driven;
-there is no animation loop. Changes to the camera's field of view or globe
-scaling require revisiting the silhouette calculation and `sky.test.js`.
+The globe projection transitions to Mercator at close zooms. MapLibre draws the
+atmosphere around the globe from the style's `sky`; its sky and fog colors stay
+transparent, so the space in `style.css` shows behind the canvas.
 
 ## Controls and external text
 
@@ -365,7 +361,6 @@ Use the relevant suites when changing behavior:
 | Choices in the URL | `url-state`, `url-state-invalid` |
 | The sheet and tabs | `sheet`, `legend-narrow` |
 | Startup failures, viewport, camera, labels | `viewer-degraded`, `viewer-degraded-bare`, `viewer-no-webgl`, `viewer-narrow`, `viewer-3d-restore`, `viewer-light-flavor` |
-| Globe calculations | `sky` |
 | Static assets, libraries, CSP, preloads, staging | `page-assets`, `stage-libraries` |
 | Server or inventory build | `test_serve.py`, `test_build_tiles.py` |
 

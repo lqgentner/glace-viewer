@@ -35,29 +35,13 @@ html, body {
   background: var(--bg);
 }
 
-#map { position: absolute; inset: 0; }
-
-/*
- * js/sky.js supplies the globe disc for this CSS halo behind the transparent map
- * canvas. Opacity falls exponentially beyond the limb; the sky class is absent when
- * the globe fills the viewport.
- */
-#map.sky {
-  background:
-    radial-gradient(
-      var(--globe-rx) var(--globe-ry) at var(--globe-x) var(--globe-y),
-      transparent 100%,
-      rgba(178, 196, 228, 0.42) 100%,
-      rgba(178, 196, 228, 0.33) 110%,
-      rgba(178, 196, 228, 0.23) 125%,
-      rgba(178, 196, 228, 0.14) 150%,
-      rgba(178, 196, 228, 0.07) 180%,
-      rgba(178, 196, 228, 0.03) 220%,
-      rgba(178, 196, 228, 0.01) 260%,
-      transparent 300%
-    ),
-    radial-gradient(ellipse at center, #141a28, var(--bg) 70%);
+/* Space, behind the transparent map canvas around the globe and its atmosphere. */
+#map {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, #141a28, var(--bg) 70%);
 }
+
 
 /*
  * Frosted glass for the panel and the scale editor, adapted from

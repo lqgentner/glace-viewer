@@ -14,7 +14,6 @@ import {
 } from "./config.js";
 import { protocol } from "./archive.js";
 import { compositeProtocol } from "./composite.js";
-import { installSky } from "./sky.js";
 import { el, setStatus } from "./ui.js";
 
 /* Raster archives are read through the shared, cached readers of js/archive.js. */
@@ -53,6 +52,18 @@ const style = {
   version: 8,
   /* MapLibre interpolates from globe at z11 to Mercator at z12. */
   projection: { type: "globe" },
+  /*
+   * MapLibre's own atmosphere around the globe, at half strength so its haze
+   * pales the dark basemap less. The sky and fog stay clear, as with no sky at
+   * all, so a tilted view close in shows the space behind the canvas.
+   */
+  sky: {
+    "sky-color": "transparent",
+    "horizon-color": "transparent",
+    "fog-color": "transparent",
+    "fog-ground-blend": 1,
+    "atmosphere-blend": 0.5,
+  },
   glyphs: `${BASEMAP_ASSETS}/fonts/{fontstack}/{range}.pbf`,
   sprite: `${BASEMAP_ASSETS}/sprites/v4/${BASEMAP_FLAVOR}`,
   sources: {
@@ -107,7 +118,6 @@ function createMap() {
 
 export const map = createMap();
 
-installSky(map, map.getContainer());
 map.addControl(new maplibregl.NavigationControl({ visualizePitch: false }), "top-right");
 // Keep scale-bar placement aligned with the panel clearance in style.css.
 map.addControl(new maplibregl.ScaleControl({ maxWidth: 120, unit: "metric" }), "bottom-left");

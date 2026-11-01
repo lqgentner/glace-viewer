@@ -91,16 +91,8 @@ test("the viewer", async (t) => {
     assert.ok(map.options.zoom < 11, "the opening view is inside the round part");
   });
 
-  await t.test("the sky comes out once the globe no longer fills the viewport", async () => {
-    // jsdom lays nothing out, so the map's box is given a size by hand.
-    Object.defineProperty(el("map"), "clientWidth", { value: 1600, configurable: true });
-    Object.defineProperty(el("map"), "clientHeight", { value: 1000, configurable: true });
-    map.zoom = 1;
-    map.fire("move");
-    assert.ok(el("map").classList.contains("sky"), "the halo and stars are painted");
-    map.zoom = 10;
-    map.fire("move");
-    assert.equal(el("map").classList.contains("sky"), false, "and not over a glacier");
+  await t.test("MapLibre draws the atmosphere around the globe", async () => {
+    assert.equal(map.options.style.sky["atmosphere-blend"], 0.5);
   });
 
   await t.test("controls answer before the style has loaded", async () => {

@@ -155,18 +155,6 @@ class FakeMap {
     return this.getContainer();
   }
 
-  /* A plate carrée about the center, scaled like the mercator equator: no
-   * globe, no perspective, but enough to tell a whole earth from a glacier —
-   * which is all js/sky.js asks of it. */
-  project([lng, lat]) {
-    const element = this.getContainer();
-    const scale = (512 * 2 ** this.zoom) / 360;
-    return {
-      x: element.clientWidth / 2 + (lng - this.center.lng) * scale,
-      y: element.clientHeight / 2 - (lat - this.center.lat) * scale,
-    };
-  }
-
   flyTo(options) {
     if (options.center) this.center = { lng: options.center[0], lat: options.center[1] };
     if (options.zoom !== undefined) this.zoom = options.zoom;
