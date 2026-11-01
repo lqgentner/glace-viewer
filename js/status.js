@@ -249,7 +249,7 @@ export class StatusControl {
           h(
             "span",
             { class: "credit-group" },
-            label ? h("span", { class: "credit-label" }, label) : null,
+            label ? h("span", { class: "credit-label" }, `${label}:`) : null,
             ...items.flatMap((entry, i) => (i ? [", ", item(entry)] : [item(entry)])),
           ),
         ),

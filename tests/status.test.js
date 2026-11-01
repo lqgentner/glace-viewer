@@ -84,7 +84,7 @@ function mount({ zoom = 11 } = {}) {
     [...node.querySelectorAll(".credit-group")].map((group) => {
       const label = group.querySelector(".credit-label")?.textContent;
       const text = [...group.childNodes].filter((n) => !n.classList?.contains("credit-label")).map((n) => n.textContent).join("");
-      return label ? `${label}: ${text}` : text;
+      return label ? `${label} ${text}` : text;
     });
   const group = (label) => groups().find((g) => g.startsWith(`${label}:`));
   return { map, node, show, groups, group };
@@ -126,6 +126,11 @@ test("the credits name what the map draws, in groups, and MapLibre last", () => 
   ], "an archive whose metadata has not arrived credits nothing yet");
   show("inv-line-agi5", false);
   assert.deepEqual(groups(), ["Basemap: © OpenStreetMap contributors, Protomaps", "MapLibre"]);
+});
+
+test("each group's name ends in a colon", () => {
+  const { node } = mount();
+  assert.equal(node.querySelector(".credit-label").textContent, "Basemap:");
 });
 
 test("a source's credit shows once its metadata arrives", () => {
@@ -309,4 +314,15 @@ test("phones show no scale bar, and fold the credits into the info button", () =
   assert.match(phone, /\.status-line \.scale\s*\{[^}]*display:\s*none/);
   assert.match(phone, /\.credits-box:not\(\.open\) \.credits\s*\{[^}]*display:\s*none/);
   assert.match(css, /\.credits-button\s*\{[^}]*display:\s*none/, "desktop shows the credits without the button");
+});
+
+test("the status line's text is all white and regular weight", () => {
+  const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+  const rules = [...css.matchAll(/([^{}]*\.(?:credit-label|credit-group|status-line)[^{}]*)\{([^}]*)\}/g)];
+  assert.ok(rules.length > 0);
+  for (const [, selector, body] of rules) {
+    assert.doesNotMatch(body, /font-weight/, `${selector.trim()} sets no weight`);
+    assert.doesNotMatch(body, /var\(--muted\)/, `${selector.trim()} is not muted`);
+  }
+  assert.match(css, /\.status-line \.scale-bar\s*\{[^}]*border: 1px solid var\(--text\)/, "the scale bar matches the text");
 });

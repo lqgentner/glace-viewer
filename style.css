@@ -584,25 +584,20 @@ input[type="range"]:disabled { cursor: default; opacity: 0.4; }
   margin-right: 12px;
   vertical-align: top;
 }
-/* The scale bar keeps MapLibre's ruler: open at the top, in a light line. */
+/* The scale bar keeps MapLibre's ruler: open at the top, in the text's color. */
 .status-line .scale-bar {
   display: inline-block;
   height: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  border: 1px solid var(--text);
   border-top: 0;
 }
 .credits-box { display: inline; }
 .credits-button { display: none; }
-/* Each group names what it credits: "Layers", "Basemap" and so on. */
-.status-line .credit-label {
-  margin-right: 4px;
-  color: var(--muted);
-  font-weight: 600;
-}
+/* Each group names what it credits: "Layers:", "Basemap:" and so on. */
+.status-line .credit-label { margin-right: 4px; }
 .status-line .credit-group + .credit-group::before {
   content: "|";
   margin: 0 8px;
-  color: var(--muted);
 }
 
 .ticks {

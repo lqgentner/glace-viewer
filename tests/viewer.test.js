@@ -76,7 +76,7 @@ test("the viewer", async (t) => {
     assert.ok(line.querySelector(".scale-bar") && line.querySelector(".credits"));
     const status = map.controls.find((c) => c.container === line);
     assert.equal(map.positions.get(status), "bottom-right");
-    assert.match(line.textContent, /Basemap© OpenStreetMap contributors, Protomaps/);
+    assert.match(line.textContent, /Basemap:© OpenStreetMap contributors, Protomaps/);
   });
 
   await t.test("rotating onto a narrow screen lowers it to the compact sheet", async () => {
@@ -217,7 +217,7 @@ test("the viewer", async (t) => {
     assert.equal(source.type, "raster");
     assert.equal(source.attribution, undefined, "the status line credits Esri's sources in view");
     map.fire("styledata", { dataType: "style" });
-    assert.match(page.control(".status-line").textContent, /ImageryPowered by Esri/);
+    assert.match(page.control(".status-line").textContent, /Imagery:Powered by Esri/);
     assert.ok(visible(map, "world-imagery"));
     assert.equal(map.getSky()["atmosphere-blend"], 0.8, "a stronger atmosphere over imagery");
     assert.equal(map.getLayer("earth").layout.visibility, "none");
