@@ -235,7 +235,11 @@ export class StatusControl {
     let reading = false;
     let drawn = "";
 
-    const item = ({ text, href }) => (href ? h("a", { href, target: "_blank", rel: "noopener" }, text) : h("span", {}, text));
+    /* A no-break space keeps "©" on the line of the name it belongs to. */
+    const item = ({ text: raw, href }) => {
+      const text = raw.replaceAll("© ", "©\u00a0");
+      return href ? h("a", { href, target: "_blank", rel: "noopener" }, text) : h("span", {}, text);
+    };
     /* MapLibre draws Esri's 256 px tiles one level deeper than its own zoom. */
     const imageryInView = () =>
       contributors && imageryContributors(contributors, view(), Math.round(map.getZoom()) + 1);

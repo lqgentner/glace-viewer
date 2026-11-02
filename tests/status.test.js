@@ -84,7 +84,8 @@ function mount({ zoom = 11 } = {}) {
     [...node.querySelectorAll(".credit-group")].map((group) => {
       const label = group.querySelector(".credit-label")?.textContent;
       const text = [...group.childNodes].filter((n) => !n.classList?.contains("credit-label")).map((n) => n.textContent).join("");
-      return label ? `${label} ${text}` : text;
+      /* Read with plain spaces; the no-break space after "©" has its own test. */
+      return (label ? `${label} ${text}` : text).replaceAll("\u00a0", " ");
     });
   const group = (label) => groups().find((g) => g.startsWith(`${label}:`));
   return { map, node, show, groups, group };
@@ -274,6 +275,17 @@ test("with hillshade or 3D, the terrain credits Mapterhorn, then the elevation s
   map.fire("terrain");
   await settle();
   assert.equal(terrain(), "Terrain: © Mapterhorn, © USGS", "3D draws the terrain without the hillshade");
+});
+
+test("a copyright sign stays on the line of the name it belongs to", async () => {
+  const { show, node } = mount();
+  answer = () => ({ usgs: producer("USGS", 10) });
+  show("hillshade");
+  await settle();
+  const signs = [...node.querySelectorAll(".credit-group > :not(.credit-label)")].map((n) => n.textContent).filter((t) => t.includes("©"));
+  assert.ok(signs.length >= 3, "the basemap's and the terrain's");
+  for (const text of signs) assert.doesNotMatch(text, /© /, `"${text}" breaks after ©`);
+  for (const text of signs) assert.match(text, /©\u00a0/);
 });
 
 test("the scale bar follows the camera", () => {

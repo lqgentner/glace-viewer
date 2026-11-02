@@ -76,7 +76,7 @@ test("the viewer", async (t) => {
     assert.ok(line.querySelector(".scale-bar") && line.querySelector(".credits"));
     const status = map.controls.find((c) => c.container === line);
     assert.equal(map.positions.get(status), "bottom-right");
-    assert.match(line.textContent, /Basemap:© OpenStreetMap contributors, Protomaps/);
+    assert.match(line.textContent, /Basemap:©\u00a0OpenStreetMap contributors, Protomaps/);
   });
 
   await t.test("rotating onto a narrow screen lowers it to the compact sheet", async () => {
