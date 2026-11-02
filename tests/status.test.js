@@ -316,6 +316,26 @@ test("phones show no scale bar, and fold the credits into the info button", () =
   assert.match(css, /\.credits-button\s*\{[^}]*display:\s*none/, "desktop shows the credits without the button");
 });
 
+test("off the phone the scale and the credits sit in two columns, top-aligned, and the phone keeps its layout", () => {
+  const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+  const columns = /\n@media not all and \(pointer: coarse\) and \(max-width: 640px\) \{\n  #map \.status-line \{\s*display:\s*flex;\s*align-items:\s*flex-start;\s*\}[^@]*?\n\}\n/.exec(css);
+  assert.ok(columns, "a rule for every layout but the phone's lays out the status line as a row, top-aligned");
+  assert.match(columns[0], /\.status-line \.scale\s*\{\s*flex:\s*none;\s*\}/, "the scale keeps its width");
+  assert.match(columns[0], /\.status-line \.credits-box\s*\{\s*min-width:\s*0;\s*\}/, "the credits column narrows and wraps");
+  const rest = css.slice(0, columns.index) + css.slice(columns.index + columns[0].length);
+  assert.doesNotMatch(rest, /\.status-line\s*\{[^}]*display:\s*(inline-)?flex/, "nowhere else, so the phone's box lays out as before");
+  assert.doesNotMatch(rest, /\.status-line \.scale\s*\{[^}]*vertical-align/, "no inline alignment left over");
+  assert.doesNotMatch(rest, /(^|\n)\.credits-box\s*\{\s*display:\s*inline;/, "the credits are a column, not inline text");
+});
+
+test("no space separates the credit groups, so the credits wrap inside a group, not between groups", () => {
+  const { node } = mount();
+  const list = node.querySelector(".credits");
+  assert.ok(list.children.length > 1);
+  assert.equal(list.childNodes.length, list.children.length, "no text nodes between the groups");
+  assert.deepEqual([...node.children], [node.querySelector(".scale"), node.querySelector(".credits-box")], "the scale, then the credits column");
+});
+
 test("the status line's text is all white and regular weight", () => {
   const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
   const rules = [...css.matchAll(/([^{}]*\.(?:credit-label|credit-group|status-line)[^{}]*)\{([^}]*)\}/g)];
