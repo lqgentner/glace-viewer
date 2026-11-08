@@ -3,7 +3,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { installBrowser, load } from "./helpers/browser.js";
+import { installBrowser, load, settle } from "./helpers/browser.js";
 
 installBrowser();
 
@@ -62,6 +62,25 @@ test("a failed read is not cached", async () => {
   serve = previous;
   assert.equal((await source.getBytes(0, 3)).data.byteLength, 3, "the next read fetches again");
   assert.equal(count("https://x/c.pmtiles|0|3"), 2);
+});
+
+/* pmtiles keeps a failed header or directory read in its reader, which would leave that part of the map blank. */
+test("a failed read replaces the reader, and the new one reads the old one's bytes from memory", async () => {
+  const url = "https://x/r.pmtiles";
+  const first = archive(url);
+  await first.source.getBytes(0, 4);
+  const previous = serve;
+  serve = async () => { throw new Error("network"); };
+  await assert.rejects(() => first.source.getBytes(8, 4), /network/);
+  serve = previous;
+  await settle();
+
+  const second = archive(url);
+  assert.notEqual(second, first, "a fresh reader");
+  assert.equal(protocol.get(url), second, "MapLibre's reads use it too");
+  await second.source.getBytes(0, 4);
+  assert.equal(count(`${url}|0|4`), 1, "the header is not read again");
+  assert.equal(archive(url), second, "a success keeps it");
 });
 
 test("an aborted caller stops waiting while the shared read completes", async () => {

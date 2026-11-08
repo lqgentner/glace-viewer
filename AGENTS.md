@@ -168,7 +168,9 @@ the `pmtiles://` protocol before its source is added, over a byte cache bounded
 across archives. MapLibre reloads a `raster-dem` source whenever a layer's
 `visibility` changes (only `raster` sources are exempt), so switching layers
 re-requests their tiles; the cache serves those, and composites reuse the bytes
-MapLibre read. It hands out copies, keeps no failed reads, and lets an aborted
+MapLibre read. It hands out copies, keeps no failed reads, replaces a reader
+after a failed read (pmtiles keeps a failed header or directory read in the
+reader, which would leave that part of the map blank), and lets an aborted
 caller stop waiting without canceling a read others share. The composite source carries the style source's credit
 because it has no TileJSON. The catalog's archives, the rasters and the tile
 grid, read with `cache: "no-store"`: Chrome lets one request per URL write a

@@ -62,10 +62,11 @@ function evict() {
   }
 }
 
-/* A pmtiles source that keeps what it reads; failures are not kept. */
+/* A pmtiles source that keeps what it reads; failures are not kept, and call `onFailure`. */
 class CachedSource {
-  constructor(url) {
+  constructor(url, onFailure) {
     this.source = uncachedSource(url);
+    this.onFailure = onFailure;
   }
 
   getKey() {
@@ -101,6 +102,7 @@ class CachedSource {
           if (ranges.get(key) === entry) ranges.delete(key);
           // The archive changed: PMTiles rereads its header, so drop the old one.
           if (error instanceof pmtiles.EtagMismatch) this.forget();
+          this.onFailure();
         },
       );
     }
@@ -114,13 +116,23 @@ class CachedSource {
 
 const readers = new Map();
 
+/*
+ * A reader keeps a failed header or directory read for good, which would
+ * leave its part of the map blank, so a failed read replaces the reader. The
+ * new one reads what the old one had from the byte cache.
+ */
+function register(url) {
+  const reader = new pmtiles.PMTiles(
+    new CachedSource(url, () => {
+      if (readers.get(url) === reader) register(url);
+    }),
+  );
+  readers.set(url, reader);
+  protocol.add(reader);
+  return reader;
+}
+
 /** The shared reader of one archive, registered with the protocol on first use. */
 export function archive(url) {
-  let reader = readers.get(url);
-  if (reader === undefined) {
-    reader = new pmtiles.PMTiles(new CachedSource(url));
-    readers.set(url, reader);
-    protocol.add(reader);
-  }
-  return reader;
+  return readers.get(url) ?? register(url);
 }
