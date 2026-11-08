@@ -563,9 +563,8 @@ input[type="range"]:disabled { cursor: default; opacity: 0.4; }
 }
 
 /*
- * The status line: the scale bar and the credits run as one text in the map's
- * bottom right corner, as wide as the text and clear of the panel. A long line
- * wraps inside a group rather than between groups.
+ * The status line: the scale bar and the credits in the map's bottom right
+ * corner, as wide as the text and clear of the panel.
  */
 #map .maplibregl-ctrl-bottom-right .status-line {
   margin: 0;
@@ -594,8 +593,7 @@ input[type="range"]:disabled { cursor: default; opacity: 0.4; }
 /*
  * Off the phone the scale and the credits sit in two columns, the scale level
  * with the credits' first line, so a credit that wraps stays clear of the
- * scale. No space separates the groups, so a long line wraps inside a group
- * rather than between groups.
+ * scale.
  */
 @media not all and (pointer: coarse) and (max-width: 640px) {
   #map .status-line {
@@ -605,11 +603,32 @@ input[type="range"]:disabled { cursor: default; opacity: 0.4; }
   .status-line .scale { flex: none; }
   .status-line .credits-box { min-width: 0; }
 }
+/*
+ * The credits run as one text that breaks between two credits. Each credit,
+ * with the comma after it, is one box, which wraps inside only when longer
+ * than the line, and a group's label shares its first credit's box.
+ *
+ * A "|" parts two groups. It hangs to the left of the next group's first box,
+ * over the previous group's right margin, which a line break drops: at the
+ * start of a line it hangs outside the credits, which clip it.
+ */
+.status-line .credits {
+  display: block;
+  clip-path: inset(-4px -4px -4px -3px);
+}
+.status-line .credit-box {
+  display: inline-block;
+  max-width: 100%;
+}
 /* Each group names what it credits: "Layers:", "Basemap:" and so on. */
 .status-line .credit-label { margin-right: 4px; }
-.status-line .credit-group + .credit-group::before {
+.status-line .credit-group:not(:last-child) { margin-right: 17px; }
+.status-line .credit-group + .credit-group > .credit-box:first-child::before {
   content: "|";
-  margin: 0 8px;
+  display: inline-block;
+  width: 17px;
+  margin-left: -17px;
+  text-align: center;
 }
 
 .ticks {

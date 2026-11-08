@@ -83,7 +83,7 @@ function mount({ zoom = 11 } = {}) {
   const groups = () =>
     [...node.querySelectorAll(".credit-group")].map((group) => {
       const label = group.querySelector(".credit-label")?.textContent;
-      const text = [...group.childNodes].filter((n) => !n.classList?.contains("credit-label")).map((n) => n.textContent).join("");
+      const text = group.textContent.slice(label?.length ?? 0);
       /* Read with plain spaces; the no-break space after "©" has its own test. */
       return (label ? `${label} ${text}` : text).replaceAll("\u00a0", " ");
     });
@@ -282,7 +282,7 @@ test("a copyright sign stays on the line of the name it belongs to", async () =>
   answer = () => ({ usgs: producer("USGS", 10) });
   show("hillshade");
   await settle();
-  const signs = [...node.querySelectorAll(".credit-group > :not(.credit-label)")].map((n) => n.textContent).filter((t) => t.includes("©"));
+  const signs = [...node.querySelectorAll(".credit-box > :not(.credit-label)")].map((n) => n.textContent).filter((t) => t.includes("©"));
   assert.ok(signs.length >= 3, "the basemap's and the terrain's");
   for (const text of signs) assert.doesNotMatch(text, /© /, `"${text}" breaks after ©`);
   for (const text of signs) assert.match(text, /©\u00a0/);
@@ -340,12 +340,21 @@ test("off the phone the scale and the credits sit in two columns, top-aligned, a
   assert.doesNotMatch(rest, /(^|\n)\.credits-box\s*\{\s*display:\s*inline;/, "the credits are a column, not inline text");
 });
 
-test("no space separates the credit groups, so the credits wrap inside a group, not between groups", () => {
+test("a line breaks only between credits: each is one box, with its comma, the label in the first", () => {
   const { node } = mount();
   const list = node.querySelector(".credits");
   assert.ok(list.children.length > 1);
   assert.equal(list.childNodes.length, list.children.length, "no text nodes between the groups");
+  const basemap = [...list.children].find((group) => group.textContent.startsWith("Basemap:"));
+  assert.deepEqual(
+    [...basemap.querySelectorAll(".credit-box")].map((box) => box.textContent.replaceAll("\u00a0", " ")),
+    ["Basemap:© OpenStreetMap contributors,", "Protomaps"],
+  );
+  assert.ok(basemap.querySelector(".credit-box:first-child > .credit-label"), "the label shares the first credit's box");
   assert.deepEqual([...node.children], [node.querySelector(".scale"), node.querySelector(".credits-box")], "the scale, then the credits column");
+  const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+  assert.match(css, /\.status-line \.credit-box \{[^}]*display: inline-block;/, "a box breaks as a unit");
+  assert.match(css, /\.credit-group \+ \.credit-group > \.credit-box:first-child::before \{[^}]*margin-left: -17px;/, "the | hangs into the margin");
 });
 
 test("the status line's text is all white and regular weight", () => {

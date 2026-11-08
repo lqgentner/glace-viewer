@@ -16,7 +16,12 @@ const WEB = /^https?:\/\//i;
 
 /* Esri asks for "Powered by Esri" on interactive maps, then the data's sources: its copyrightText without "Esri". */
 const ESRI = { text: "Powered by Esri", href: "https://www.esri.com" };
-const ESRI_SOURCES = { text: "Vantor, Earthstar Geographics, and the GIS User Community", href: null };
+/* Three credits, so a line can break between them as between the others. */
+const ESRI_SOURCES = [
+  { text: "Vantor", href: null },
+  { text: "Earthstar Geographics", href: null },
+  { text: "and the GIS User Community", href: null },
+];
 /* Mapterhorn's TileJSON credit, until the TileJSON arrives. */
 const MAPTERHORN = { text: "© Mapterhorn", href: "https://mapterhorn.com/attribution" };
 /* The renderer draws whatever loaded, so its credit depends on no source. */
@@ -162,7 +167,7 @@ export function credits(sources, { producers = null, contributors = null } = {})
   for (const { id, attribution } of sources) {
     const label = groupOf(id);
     const own = creditItems(attribution);
-    if (label === "Imagery") items.get(label).push(ESRI, ...(contributors ?? [ESRI_SOURCES]));
+    if (label === "Imagery") items.get(label).push(ESRI, ...(contributors ?? ESRI_SOURCES));
     else if (label === "Terrain") items.get(label).push(...(own.length ? own : [MAPTERHORN]), ...(producers ?? []));
     else items.get(label).push(...own);
   }
@@ -249,13 +254,26 @@ export class StatusControl {
       const key = JSON.stringify(groups);
       if (key === drawn) return;
       drawn = key;
+      /*
+       * A line breaks between two credits, and inside one only when it is
+       * longer than the line: each credit is one box, holding the comma after
+       * it, and a group's label shares its first credit's box. See style.css.
+       */
       list.replaceChildren(
         ...groups.map(({ label, items }) =>
           h(
             "span",
             { class: "credit-group" },
-            label ? h("span", { class: "credit-label" }, `${label}:`) : null,
-            ...items.flatMap((entry, i) => (i ? [", ", item(entry)] : [item(entry)])),
+            ...items.flatMap((entry, i) => [
+              i ? " " : null,
+              h(
+                "span",
+                { class: "credit-box" },
+                i === 0 && label ? h("span", { class: "credit-label" }, `${label}:`) : null,
+                item(entry),
+                i < items.length - 1 ? "," : null,
+              ),
+            ]),
           ),
         ),
       );
