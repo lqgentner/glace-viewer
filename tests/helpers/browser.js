@@ -127,6 +127,10 @@ class FakeMap {
     return 0;
   }
 
+  isMoving() {
+    return false;
+  }
+
   getCenter() {
     return this.center;
   }

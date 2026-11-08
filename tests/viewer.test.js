@@ -408,7 +408,7 @@ test("the viewer", async (t) => {
   });
 
   await t.test("3D tilts the camera and drapes the map over the shared DEM", async () => {
-    const threeD = page.control(".maplibregl-ctrl-3d");
+    const threeD = page.control(".three-d");
     assert.equal(threeD.textContent, "3D", "the button names what the next press does");
     assert.equal(map.getTerrain(), null);
 

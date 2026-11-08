@@ -67,7 +67,8 @@ html, body {
   top: 12px;
   left: 12px;
   width: 292px;
-  max-height: calc(100% - 24px);
+  /* Above the status line, which can span the window. */
+  max-height: calc(100% - 24px - var(--status-h));
 
   display: flex;
   flex-direction: column;
@@ -489,86 +490,135 @@ input[type="range"]:disabled { cursor: default; opacity: 0.4; }
 #hillshade-strength-row { margin-top: -6px; padding-left: 22px; }
 
 /*
- * MapLibre's controls and the status line take the panel's glass; the controls
- * also take its 12px inset. The map ID outranks MapLibre's rules, including its
- * corners for focused buttons. Small and unscrolled, each blurs its own
- * backdrop. The outline is inset and drawn over the buttons, so the sizes stay
- * MapLibre's.
+ * The map's controls (js/controls.js) and the status line take the panel's
+ * glass. Small and unscrolled, each blurs its own backdrop. The map ID
+ * outranks MapLibre's rules.
  */
-#map .maplibregl-ctrl-top-right .maplibregl-ctrl { margin: 12px 12px 0 0; }
-#map :is(.maplibregl-ctrl-group, .status-line) {
+#map :is(.map-surface, .status-line) {
   color: var(--text);
   background-color: var(--panel);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
 }
-#map .maplibregl-ctrl-group {
+#map .map-surface {
   outline: 1px solid var(--border);
   outline-offset: -1px;
 }
 @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
-  #map :is(.maplibregl-ctrl-group, .status-line) {
+  #map :is(.map-surface, .status-line) {
     -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
       brightness(var(--glass-brightness));
     backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
       brightness(var(--glass-brightness));
     background-color: hsl(var(--glass-tint) / var(--glass-alpha));
   }
-  #map .maplibregl-ctrl-group {
-    outline-color: rgba(255, 255, 255, 0.14);
-  }
-}
-#map .maplibregl-ctrl-group { border-radius: var(--ctrl-radius); }
-#map .maplibregl-ctrl-group button:first-child {
-  border-radius: var(--ctrl-radius) var(--ctrl-radius) 0 0;
-}
-#map .maplibregl-ctrl-group button:last-child {
-  border-radius: 0 0 var(--ctrl-radius) var(--ctrl-radius);
-}
-#map .maplibregl-ctrl-group button:only-child { border-radius: inherit; }
-#map .maplibregl-ctrl-group button + button { border-top-color: rgba(255, 255, 255, 0.14); }
-#map .maplibregl-ctrl button:not(:disabled):active { background-color: rgba(255, 255, 255, 0.13); }
-@media (hover: hover) {
-  #map .maplibregl-ctrl button:not(:disabled):hover { background-color: rgba(255, 255, 255, 0.13); }
+  #map .map-surface { outline-color: rgba(255, 255, 255, 0.14); }
 }
 
 /*
- * Replace MapLibre's blue focus glow, which the info button keeps even after a
- * click, with the panel's accent ring, for keyboard focus only.
+ * A column centered on the compass, in the bottom right corner above the
+ * status line, or the top right on phones; the 12px inset is the panel's.
  */
-#map .maplibregl-ctrl-group button:focus { box-shadow: none; }
-#map :is(.maplibregl-ctrl-group button, .credits-button):focus-visible {
+#map .map-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin: 0 12px 12px 0;
+}
+#map .maplibregl-ctrl-top-right .map-controls { margin: 12px 12px 0 0; }
+#map .map-controls button {
+  display: block;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+#map .map-controls button:not(:disabled):active { background-color: rgba(255, 255, 255, 0.13); }
+@media (hover: hover) {
+  #map .map-controls button:not(:disabled):hover { background-color: rgba(255, 255, 255, 0.13); }
+}
+#map .map-controls button:focus { box-shadow: none; }
+#map :is(.map-controls button, .credits-button):focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
 
-/*
- * MapLibre's icons are dark images; these redraw them in --text, the compass's
- * south half in --muted.
- */
-#map .maplibregl-ctrl-zoom-in .maplibregl-ctrl-icon {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='29' height='29' viewBox='0 0 29 29' fill='%23e6eaf2'%3E%3Cpath d='M14.5 8.5c-.75 0-1.5.75-1.5 1.5v3h-3c-.75 0-1.5.75-1.5 1.5S9.25 16 10 16h3v3c0 .75.75 1.5 1.5 1.5S16 19.75 16 19v-3h3c.75 0 1.5-.75 1.5-1.5S19.75 13 19 13h-3v-3c0-.75-.75-1.5-1.5-1.5'/%3E%3C/svg%3E");
+#map :is(.three-d-group, .zoom) {
+  overflow: hidden;
+  border-radius: var(--ctrl-radius);
 }
-#map .maplibregl-ctrl-zoom-out .maplibregl-ctrl-icon {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='29' height='29' viewBox='0 0 29 29' fill='%23e6eaf2'%3E%3Cpath d='M10 13c-.75 0-1.5.75-1.5 1.5S9.25 16 10 16h9c.75 0 1.5-.75 1.5-1.5S19.75 13 19 13z'/%3E%3C/svg%3E");
-}
-#map .maplibregl-ctrl-compass .maplibregl-ctrl-icon {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='29' height='29' viewBox='0 0 29 29' fill='%23e6eaf2'%3E%3Cpath d='m10.5 14 4-8 4 8z'/%3E%3Cpath fill='%238b95a8' d='m10.5 16 4 8 4-8z'/%3E%3C/svg%3E");
-}
-
-/* MapLibre buttons default to image glyphs; the 3D/2D text needs explicit styling. */
-.maplibregl-ctrl-3d {
-  font: 600 calc(11px * var(--text-scale))/1 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+#map :is(.three-d, .zoom button) {
+  width: 36px;
+  height: 36px;
+  font: 600 calc(12px * var(--text-scale))/1 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   letter-spacing: 0.04em;
-  color: var(--text);
 }
+#map .zoom button { font-size: calc(18px * var(--text-scale)); letter-spacing: 0; }
+
+#map .zoom {
+  display: flex;
+  flex-direction: column;
+}
+#map .zoom button + button { border-top: 1px solid rgba(255, 255, 255, 0.14); }
+
+/*
+ * A 54 x 40 px capsule. Each arrow's button takes half of it, and the needle's
+ * is a 20 px disc over the middle, smaller than the needle so the arrows are
+ * easy to reach. The arrows draw over the buttons and let the pointer through.
+ */
+#map .compass {
+  position: relative;
+  display: flex;
+  width: 54px;
+  height: 40px;
+  border-radius: 20px;
+  overflow: hidden;
+}
+#map .compass-turn { flex: 1; height: 40px; }
+#map .compass .compass-north {
+  position: absolute;
+  left: 17px;
+  top: 10px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.compass-arrows {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.compass-arc {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.compass-head { fill: currentColor; }
+/* Longer than its disc, and lets the pointer through, so only the disc catches a click. */
+.compass-needle {
+  display: block;
+  flex-shrink: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+.needle-north { fill: #e5484d; }
+.needle-south { fill: var(--muted); }
 
 /*
  * The status line: the scale bar and the credits in the map's bottom right
- * corner, as wide as the text and clear of the panel.
+ * corner, as wide as the text, up to the window's width. The panel, the scale
+ * editor and the map's controls stand above it, at --status-h, its height,
+ * which js/status.js measures.
  */
+:root { --status-h: 20px; }
 #map .maplibregl-ctrl-bottom-right .status-line {
   margin: 0;
-  max-width: calc(100vw - 316px);
+  max-width: 100vw;
   padding: 2px 8px;
   border-top-left-radius: 8px;
   font-size: calc(11px * var(--text-scale));
@@ -704,12 +754,12 @@ input[type="range"]:disabled { cursor: default; opacity: 0.4; }
 }
 #layer-info:empty { margin: 0; }
 
-/* Centered between the panel (12px margin, 292px, 12px gap) and the map controls. */
+/* Centered right of the panel (12px margin, 292px, 12px gap). */
 #notices {
   position: absolute;
   top: 12px;
   left: 316px;
-  right: 62px;
+  right: 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -836,6 +886,23 @@ input[type="range"]:disabled { cursor: default; opacity: 0.4; }
   /* On the compact sheet the handle's tap area is the band, so a tap anywhere opens it. */
   #panel-shell:not(.expanded) #sheet-handle { position: static; }
   #panel-shell:not(.expanded) #sheet-handle::after { inset: 0; z-index: 1; }
+  /*
+   * In the top right: 3D is round, and the compass is a round button under it
+   * with the needle alone, shown only while the map is turned, tilted or in
+   * 3D. Phones pinch to zoom.
+   */
+  #map .three-d-group { border-radius: 50%; }
+  #map .compass {
+    order: 1;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    transition: opacity 160ms ease-out, scale 160ms ease-out, visibility 160ms;
+  }
+  #map :is(.compass-turn, .compass-arrows) { display: none; }
+  #map .compass .compass-north { inset: 0; width: 100%; height: 100%; }
+  #map .compass[data-idle] { opacity: 0; scale: 0.6; visibility: hidden; }
+  #map .zoom { display: none; }
   /* Edit shows as the sheet opens. */
   #legend-edit { opacity: var(--sheet-progress, 0); }
   #panel-shell:not(.expanded):not(.dragging) #legend-edit { visibility: hidden; }
@@ -1179,6 +1246,7 @@ input[type="range"]:disabled { cursor: default; opacity: 0.4; }
 @media (prefers-reduced-motion: reduce) {
   #panel-shell,
   #notices { transition: none; }
+  #map .compass { transition: none; }
   #about[open] {
     transition-duration: 0.1s;
     @starting-style { transform: none; }
@@ -1195,7 +1263,7 @@ input[type="range"]:disabled { cursor: default; opacity: 0.4; }
   width: 300px;
   /* Clear of the map controls: its 316px offset and their 64px column. */
   max-width: calc(100vw - 316px - 64px);
-  max-height: calc(100dvh - 24px);
+  max-height: calc(100dvh - 24px - var(--status-h));
   /* Right of the panel: its 12px margin, 292px width and a 12px gap. */
   inset: 12px auto auto 316px;
   margin: 0;
@@ -1538,5 +1606,5 @@ input[type="range"]:disabled { cursor: default; opacity: 0.4; }
   .palette-popover .chip { width: 36px; height: 36px; padding: 3px; }
   .credit-popover { line-height: 1.7; }
 
-  .maplibregl-ctrl-group button { width: 40px; height: 40px; }
+  #map :is(.three-d, .zoom button) { width: 40px; height: 40px; }
 }

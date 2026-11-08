@@ -229,6 +229,13 @@ export class StatusControl {
     const info = h("button", { type: "button", class: "credits-button", "aria-label": "Credits", "aria-expanded": "true" });
     const box = h("div", { class: "credits-box open" }, info, list);
     this.container = h("div", { class: "maplibregl-ctrl status-line" }, scale, box);
+    /* Off the phone the panel and the scale editor end above the status line, whose credits can wrap. */
+    this.resize = globalThis.ResizeObserver
+      ? new ResizeObserver(() =>
+          document.documentElement.style.setProperty("--status-h", `${this.container.offsetHeight}px`),
+        )
+      : null;
+    this.resize?.observe(this.container);
 
     const view = () => {
       const bounds = map.getBounds();
@@ -358,6 +365,7 @@ export class StatusControl {
 
   onRemove() {
     for (const [event, fn] of Object.entries(this.handlers)) this.map.off(event, fn);
+    this.resize?.disconnect();
     this.container.remove();
   }
 }

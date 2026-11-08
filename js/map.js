@@ -14,8 +14,9 @@ import {
 } from "./config.js";
 import { protocol } from "./archive.js";
 import { compositeProtocol } from "./composite.js";
+import { MapControls } from "./controls.js";
 import { StatusControl } from "./status.js";
-import { el, setStatus } from "./ui.js";
+import { el, PHONE, setStatus } from "./ui.js";
 
 /* Raster archives are read through the shared, cached readers of js/archive.js. */
 maplibregl.addProtocol("pmtiles", protocol.tile);
@@ -124,7 +125,6 @@ function createMap() {
 
 export const map = createMap();
 
-map.addControl(new maplibregl.NavigationControl({ visualizePitch: false }), "top-right");
 /* The scale bar and the credits, MapLibre's among them, in one line of text. */
 map.addControl(new StatusControl(), "bottom-right");
 
@@ -289,15 +289,14 @@ const THREE_D_DURATION_MS = 600;
 const TERRAIN_EXAGGERATION = 1;
 
 const view = { threeD: false };
-let threeDButton = null;
 
 /*
  * Set tilt: false when restoring terrain from a pitched hash to preserve its
- * camera.
+ * camera; north: true to face north as the camera levels.
  */
-export async function setThreeD(on, { tilt = true } = {}) {
+export async function setThreeD(on, { tilt = true, north = false } = {}) {
   view.threeD = on;
-  syncThreeDButton();
+  controls.setThreeD(on);
   await styleReady;
   if (on) {
     ensureTerrainSource();
@@ -307,40 +306,61 @@ export async function setThreeD(on, { tilt = true } = {}) {
     map.setTerrain(null);
   }
   // Enable the mesh before animating the camera.
-  if (tilt) map.easeTo({ pitch: on ? THREE_D_PITCH : 0, duration: THREE_D_DURATION_MS });
-}
-
-/* Unlike TerrainControl, this button also changes pitch and displays a text label. */
-class ThreeDControl {
-  onAdd() {
-    this.container = document.createElement("div");
-    this.container.className = "maplibregl-ctrl maplibregl-ctrl-group";
-    threeDButton = document.createElement("button");
-    threeDButton.type = "button";
-    threeDButton.className = "maplibregl-ctrl-3d";
-    threeDButton.addEventListener("click", () => setThreeD(!view.threeD));
-    this.container.append(threeDButton);
-    syncThreeDButton();
-    return this.container;
-  }
-
-  onRemove() {
-    this.container.remove();
-    threeDButton = null;
+  if (tilt) {
+    map.easeTo({ pitch: on ? THREE_D_PITCH : 0, ...(north && { bearing: 0 }), duration: THREE_D_DURATION_MS });
   }
 }
 
-/* The label names the next action. */
-function syncThreeDButton() {
-  if (!threeDButton) return;
-  const action = view.threeD ? "Disable 3D terrain" : "Enable 3D terrain";
-  threeDButton.textContent = view.threeD ? "2D" : "3D";
-  threeDButton.title = action;
-  threeDButton.setAttribute("aria-label", action);
-  threeDButton.setAttribute("aria-pressed", String(view.threeD));
+/*
+ * A tilt by hand past this many degrees turns 3D on; one that ends below it
+ * levels the map and turns 3D off.
+ */
+const TILT_3D = 5;
+let tilts = 0;
+
+/*
+ * MapLibre marks a gesture's or a key's pitchend with its input event; the
+ * page's own camera moves carry none. Act once the camera rests: an ease
+ * started inside pitchend would be cut off by the bearing snap that follows a
+ * gesture, and a touch tilt ends with a second pitchend after its glide. The
+ * last tilt wins.
+ */
+map.on("pitchend", (event) => {
+  if (!event?.originalEvent) return;
+  const tilt = ++tilts;
+  const atRest = () => {
+    if (tilt !== tilts) return;
+    if (map.isMoving()) map.once("moveend", () => setTimeout(atRest, 0));
+    else followTilt(map.getPitch());
+  };
+  setTimeout(atRest, 0);
+});
+
+function followTilt(pitch) {
+  if (pitch >= TILT_3D) {
+    if (!view.threeD) setThreeD(true, { tilt: false });
+    return;
+  }
+  if (view.threeD) setThreeD(false, { tilt: false });
+  if (pitch > 0) map.easeTo({ pitch: 0, duration: THREE_D_DURATION_MS });
 }
 
-map.addControl(new ThreeDControl(), "top-right");
+const controls = new MapControls({
+  onThreeD: (on) => setThreeD(on),
+  onNorth: () => setThreeD(false, { north: true }),
+});
+
+/*
+ * Off the phone the controls stand in the bottom right corner, which MapLibre
+ * stacks, so they ride above the status line as its credits wrap. On phones
+ * that corner rides the sheet, so they stand in the top right.
+ */
+const placeControls = () => {
+  if (controls.map) map.removeControl(controls);
+  map.addControl(controls, PHONE.matches ? "top-right" : "bottom-right");
+};
+placeControls();
+PHONE.addEventListener("change", placeControls);
 
 /* ---------- home ---------- */
 

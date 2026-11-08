@@ -27,7 +27,7 @@ test("a pitched #hash comes back in 3D", async () => {
     55,
     "the shared view is kept as it was, not rounded off to the button's own 60°",
   );
-  assert.equal(page.control(".maplibregl-ctrl-3d").textContent, "2D");
+  assert.equal(page.control(".three-d").textContent, "2D");
 
   // Nothing ticked the hillshade, so the 3D path is what created the DEM.
   assert.ok(map.getSource("terrain"));

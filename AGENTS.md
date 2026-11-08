@@ -72,6 +72,7 @@ A gitignored `tiles` symlink to the catalog root also works. The root is above
 | `js/histogram.js` | Archive codes or composite channels counted over the view, drawn as the scale editor's bars; the pixel under a click |
 | `js/overlays.js` | Inventory controls, overlay lifecycle, grid layers, popups with the raster's value |
 | `js/ui.js` | DOM helpers, status messages, choices in the URL, segmented controls, popovers, pickers |
+| `js/controls.js` | The map's controls: compass, 3D, zoom |
 | `js/status.js` | The status line: scale bar and grouped credits, with the terrain and imagery sources in view |
 | `sw.js` | Service worker: stale-while-revalidate for JSON reads |
 | `scripts/serve.py` | Development HTTP server and local catalog mount |
@@ -189,7 +190,12 @@ would queue, and the data host's responses are `no-cache` anyway.
   transparent highlights and black shadows darken the raster without tinting
   its color map. The strength control changes shadow alpha.
 - The 3D button names its next action and changes both terrain and pitch.
-  Restore terrain for an incoming pitched URL hash without moving the camera.
+  A tilt by hand (a gesture or key, which carries `originalEvent`) past 5°
+  turns 3D on where the camera rests; one ending below levels the map in 2D.
+  The compass's arrows turn the map by 45°, and its needle faces north and
+  leaves 3D. On phones the compass shows only while the map is turned, tilted
+  or in 3D, and there are no zoom buttons. Restore terrain for an incoming
+  pitched URL hash without moving the camera.
   The initial view is used only without a hash; do not fit to catalog bounds.
 - The "Back to the Alps" button flies to the `overview` setting, whose label it
   shows. It appears over the map, with the status line in `#notices`, only while
@@ -289,9 +295,15 @@ Hover styles sit under `@media (hover: hover)`. The `(pointer: coarse)` block
 at the end of `style.css` holds the touch sizes, mostly as invisible `::after`
 tap areas that leave the layout alone. It also raises `--text-scale`, so write
 every font size as a multiple of it and text grows uniformly on touch screens.
-The status line holds the scale bar and the credits in one line of text in
-the map's bottom right corner, clear of the panel. On phones it draws no scale
-bar and folds the credits into an info button: open at load, folded on the
+The status line holds the scale bar and the credits in the map's bottom right
+corner, as wide as its text up to the window's. A line breaks only between
+credits: each is an inline-block box with its comma, the group's label shares
+the first, and the "|" hangs into the previous group's margin. `js/status.js`
+writes its height to `--status-h`, which the panel and the scale editor end
+above. The map's controls are added after it to the same corner, which
+MapLibre stacks, so they ride above it; on phones they move to the top right,
+because that corner rides the sheet. On phones the status line draws no
+scale bar and folds the credits into an info button: open at load, folded on the
 first drag of the map, as MapLibre's compact attribution does; the OSMF
 attribution guidelines allow that. It rides the sheet's top edge and fades as
 the sheet opens. `#notices` rides above it and moves to the top while the
@@ -379,6 +391,7 @@ Use the relevant suites when changing behavior:
 | Overlay loading, retries, popups, the value under a click | `viewer`, `tile-grid`, `ui`, `stale-state`, `readout`, `readout-narrow` |
 | Choices in the URL | `url-state`, `url-state-invalid` |
 | The sheet and tabs | `sheet`, `legend-narrow` |
+| The compass, 3D, zoom and tilting | `controls`, `viewer`, `viewer-3d-restore` |
 | Startup failures, viewport, camera, labels | `viewer-degraded`, `viewer-degraded-bare`, `viewer-no-webgl`, `viewer-narrow`, `viewer-3d-restore`, `viewer-light-flavor` |
 | Static assets, libraries, CSP, preloads, staging | `page-assets`, `stage-libraries` |
 | Server or inventory build | `test_serve.py`, `test_build_tiles.py` |
