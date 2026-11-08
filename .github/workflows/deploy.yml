@@ -47,7 +47,7 @@ jobs:
         run: echo "os=$ImageOS" >> "$GITHUB_OUTPUT"
 
       - id: tippecanoe
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/.local/bin/tippecanoe
           key: tippecanoe-${{ env.TIPPECANOE_VERSION }}-${{ steps.image.outputs.os }}-${{ runner.arch }}
