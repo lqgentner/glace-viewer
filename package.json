@@ -10,16 +10,18 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
+    "serve": "node scripts/serve.mjs",
+    "build-tiles": "node scripts/build-tiles.mjs",
     "test": "node --test"
-  },
-  "devDependencies": {
-    "es-module-lexer": "^3.0.3",
-    "jsdom": "^30.1.2"
   },
   "dependencies": {
     "@protomaps/basemaps": "^5.7.2",
     "fflate": "^0.8.3",
     "maplibre-gl": "^6.13.0",
     "pmtiles": "^4.5.0"
+  },
+  "devDependencies": {
+    "es-module-lexer": "^3.0.3",
+    "jsdom": "^30.1.2"
   }
 }

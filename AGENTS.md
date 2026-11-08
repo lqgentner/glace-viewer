@@ -10,25 +10,25 @@ URLs and verbatim third-party citations.
 
 ## Development and validation
 
-Work from the repository root. Use the environment in `pixi.toml` and
-`pixi.lock`; it supplies Python, Node, and tippecanoe on Linux x86-64 and Apple
-silicon. npm locks the page's libraries and the test dependencies.
+Work from the repository root with the Node version in `.node-version`, after
+`npm ci`. npm locks the page's libraries and the test dependencies. Building
+the inventory overlays also needs tippecanoe on `PATH`; nothing else does.
 
 ```sh
-pixi run --locked build-tiles  # required for local inventory overlays
-pixi run --locked serve       # http://localhost:8000/
-pixi run --locked test        # Python + npm ci + JavaScript tests
+npm run build-tiles  # required for local inventory overlays
+npm run serve        # http://localhost:8000/
+npm test             # node --test: every tests/*.test.js
 ```
 
-For focused checks, use `pixi run --locked test-py` or
-`pixi run --locked test-js`. There is no compilation or bundling. The page's
+Run `node --test tests/<name>.test.js` for a focused check. There is no
+compilation or bundling, and no Python: `scripts/colormaps.py` declares its
+dependencies for `uv run` and runs only when the color maps change. The page's
 libraries are npm `dependencies`, loaded unchanged from `./node_modules/`
-through the import map in `index.html`; `pixi run --locked install`, which
-`serve` and `test-js` run first, puts them there. Dependabot moves them with
-the test dependencies in one monthly PR. A library the page loads must be a
-direct dependency, so npm installs it where the import map looks, and needs
-its license in `assets/third-party-licenses.txt`. Import-map addresses must
-start with `./`, or browsers ignore them.
+through the import map in `index.html`; `npm ci` puts them there. Dependabot
+moves them with the test dependencies in one monthly PR. A library the page
+loads must be a direct dependency, so npm installs it where the import map
+looks, and needs its license in `assets/third-party-licenses.txt`. Import-map
+addresses must start with `./`, or browsers ignore them.
 
 `index.html` carries a Content-Security-Policy that allows only same-origin
 scripts and styles, and `page-assets.test.js` checks it offline. When editing
@@ -47,7 +47,7 @@ site, so a catalog change shows on the next visit. It is not registered on
 Protomaps API's local-development access. To inspect a local store:
 
 ```sh
-pixi run --locked serve --tiles-dir /path/to/catalog-root
+npm run serve -- --tiles-dir /path/to/catalog-root
 # Open http://localhost:8000/?tiles=tiles
 ```
 
@@ -75,9 +75,9 @@ A gitignored `tiles` symlink to the catalog root also works. The root is above
 | `js/controls.js` | The map's controls: compass, 3D, zoom |
 | `js/status.js` | The status line: scale bar and grouped credits, with the terrain and imagery sources in view |
 | `sw.js` | Service worker: stale-while-revalidate for JSON reads |
-| `scripts/serve.py` | Development HTTP server and local catalog mount |
+| `scripts/serve.mjs` | Development HTTP server and local catalog mount |
 | `scripts/stage-libraries.mjs` | Copies the import map's library directories into the Pages site |
-| `scripts/build-tiles.py` | Inventory GeoJSON to vector PMTiles |
+| `scripts/build-tiles.mjs` | Inventory GeoJSON to vector PMTiles |
 | `scripts/colormaps.py` | Writes `js/colormaps.js` (`uv run`) |
 | `data/inventories.json` | Inventory build settings, display metadata, citations and licenses |
 
@@ -349,11 +349,13 @@ the dialog's fields at 16 px or more on touch screens, or iOS zooms into them.
 ## Inventories and the tile grid
 
 Commit inventory GeoJSON and metadata; build `data/*.pmtiles`, which are
-ignored by git. `scripts/build-tiles.py` reads archive names, source-layer names,
+ignored by git. `scripts/build-tiles.mjs` reads archive names, source-layer names,
 and zoom limits from `data/inventories.json`. Update that index with an inventory
 change and retain its citation and license. A wrong `source_layer` can produce
-an empty overlay without an error. Force a full rebuild after a tippecanoe
-upgrade; `--skip-existing` compares only source and index timestamps.
+an empty overlay without an error. The deploy workflow builds tippecanoe from
+source at its `TIPPECANOE_VERSION`, which Dependabot does not move. Force a
+full rebuild after a tippecanoe upgrade; `--skip-existing` compares only
+source and index timestamps.
 
 Inventories and the tile grid load on first activation. `LazyOverlay` adds the
 source once and ends showing the latest tick; MapLibre fetches the tiles. It
@@ -400,13 +402,13 @@ Use the relevant suites when changing behavior:
 | The compass, 3D, zoom and tilting | `controls`, `viewer`, `viewer-3d-restore` |
 | Startup failures, viewport, camera, labels | `viewer-degraded`, `viewer-degraded-bare`, `viewer-no-webgl`, `viewer-narrow`, `viewer-3d-restore`, `viewer-light-flavor` |
 | Static assets, libraries, CSP, preloads, staging | `page-assets`, `stage-libraries` |
-| Server or inventory build | `test_serve.py`, `test_build_tiles.py` |
+| Server or inventory build | `serve`, `build-tiles` |
 
 JavaScript names above refer to `tests/<name>.test.js`. Server traversal tests
 send raw socket requests because HTTP clients normalize paths before sending.
 Keep that coverage when changing `/tiles` containment or range handling.
 
-GitHub Actions runs both suites on pull requests. On pushes to `main`, the
+GitHub Actions runs the tests on pull requests. On pushes to `main`, the
 Pages workflow runs the same checks, builds inventory PMTiles, and stages the
 page, settings, `js/`, `assets/`, archives, inventory index, and, through
 `scripts/stage-libraries.mjs`, each import-map target's directory without

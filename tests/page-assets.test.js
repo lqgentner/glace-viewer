@@ -47,7 +47,7 @@ test("every file the page references is in the repository", () => {
   for (const ref of refs) {
     assert.ok(
       fs.existsSync(path.join(REPO, ref)),
-      `index.html asks for ${ref}, which is missing; run pixi run --locked install`,
+      `index.html asks for ${ref}, which is missing; run npm ci`,
     );
   }
 });

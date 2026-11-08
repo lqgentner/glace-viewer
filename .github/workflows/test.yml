@@ -14,11 +14,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      # Cache the locked environment. Pin setup-pixi to a release while it is pre-1.0;
-      # Dependabot updates the action, and pixi.toml sets the minimum pixi version.
-      - uses: prefix-dev/setup-pixi@v0.11.0
+      # Node's major version comes from .node-version; npm's cache from package-lock.json.
+      - uses: actions/setup-node@v7
         with:
-          cache: true
-      # Run both suites; the JavaScript task installs the page's libraries and jsdom
-      # from the npm lockfile.
-      - run: pixi run --locked test
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      - run: npm test

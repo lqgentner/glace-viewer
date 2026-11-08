@@ -109,7 +109,7 @@ class LazyOverlay {
 
 /* ---------- glacier inventories ---------- */
 
-/* Built from committed GeoJSON by scripts/build-tiles.py. */
+/* Built from committed GeoJSON by scripts/build-tiles.mjs. */
 const inventories = new Map();
 
 /* Drop index entries missing the fields needed to create an overlay. */

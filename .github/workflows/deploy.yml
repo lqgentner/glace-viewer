@@ -16,6 +16,11 @@ concurrency:
   group: pages
   cancel-in-progress: false
 
+# The tippecanoe release that builds the inventory archives. Dependabot does not
+# move it; a new version needs a full rebuild, which every deploy does.
+env:
+  TIPPECANOE_VERSION: "2.79.0"
+
 jobs:
   # Test the exact commit being published.
   test:
@@ -27,17 +32,39 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: prefix-dev/setup-pixi@v0.11.0
+      # Node's major version comes from .node-version; npm's cache from package-lock.json.
+      - uses: actions/setup-node@v7
         with:
-          cache: true
+          node-version-file: .node-version
+          cache: npm
+
+      - name: Install the page's libraries
+        run: npm ci
+
+      # tippecanoe is built from source once per version and runner image, and
+      # cached. ImageOS (ubuntu24, …) is the runner's, which the env context lacks.
+      - id: image
+        run: echo "os=$ImageOS" >> "$GITHUB_OUTPUT"
+
+      - id: tippecanoe
+        uses: actions/cache@v5
+        with:
+          path: ~/.local/bin/tippecanoe
+          key: tippecanoe-${{ env.TIPPECANOE_VERSION }}-${{ steps.image.outputs.os }}-${{ runner.arch }}
+
+      - name: Build tippecanoe
+        if: steps.tippecanoe.outputs.cache-hit != 'true'
+        run: |
+          sudo apt-get install -y --no-install-recommends libsqlite3-dev zlib1g-dev
+          git clone --quiet --depth 1 --branch "$TIPPECANOE_VERSION" \
+            https://github.com/felt/tippecanoe.git "$RUNNER_TEMP/tippecanoe"
+          make -C "$RUNNER_TEMP/tippecanoe" -j"$(nproc)" tippecanoe
+          install -D "$RUNNER_TEMP/tippecanoe/tippecanoe" ~/.local/bin/tippecanoe
 
       - name: Build vector tiles
         run: |
-          pixi run --locked tippecanoe --version
-          pixi run --locked build-tiles
-
-      - name: Install the page's libraries
-        run: pixi run --locked install
+          ~/.local/bin/tippecanoe --version
+          npm run build-tiles -- --tippecanoe ~/.local/bin/tippecanoe
 
       # Publish the runtime files, generated archives and the page's libraries,
       # excluding source GeoJSON.
@@ -47,7 +74,7 @@ jobs:
           cp index.html style.css site-config.js sw.js _site/
           cp -r js assets _site/
           cp data/*.pmtiles data/inventories.json _site/data/
-          pixi run --locked node scripts/stage-libraries.mjs _site
+          node scripts/stage-libraries.mjs _site
           du -sh _site
 
       - uses: actions/upload-pages-artifact@v5

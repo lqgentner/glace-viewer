@@ -40,17 +40,21 @@ STAC items in the browser above.
 
 ## Run locally
 
-Install [pixi](https://pixi.sh), then run these commands from the repository root.
-First, build the glacier inventory tiles from the committed GeoJSON:
+You need the Node version in `.node-version` and, for the glacier
+inventory overlays, [tippecanoe](https://github.com/felt/tippecanoe) on your
+`PATH` (`brew install tippecanoe` on macOS; elsewhere build it from source).
+Run these commands from the repository root. First, install the page's
+libraries and build the glacier inventory tiles from the committed GeoJSON:
 
 ```sh
-pixi run --locked build-tiles
+npm ci
+npm run build-tiles
 ```
 
 Then, serve the website:
 
 ```sh
-pixi run --locked serve
+npm run serve
 ```
 
 Open **http://localhost:8000/**. Use `localhost`: the configured basemap's
@@ -60,7 +64,7 @@ rasters from Source Cooperative by default; you do not need a local copy.
 To view a local catalog, mount its root and select it in the URL:
 
 ```sh
-pixi run --locked serve --tiles-dir /path/to/catalog-root
+npm run serve -- --tiles-dir /path/to/catalog-root
 ```
 
 Then open **http://localhost:8000/?tiles=tiles**. The directory should contain
@@ -78,7 +82,7 @@ supports those requests.
 - `data/`: glacier inventory GeoJSON and its metadata; PMTiles are generated.
 - `scripts/`, `tests/`: local serving, tile generation, and checks.
 
-Run the tests with `pixi run --locked test`. GitHub Actions tests changes and
+Run the tests with `npm test`. GitHub Actions tests changes and
 publishes the site to GitHub Pages on pushes to `main`. See [AGENTS.md](AGENTS.md)
 for architecture, data contracts, and maintenance guidance.
 

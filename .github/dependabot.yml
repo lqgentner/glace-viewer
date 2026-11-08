@@ -1,7 +1,7 @@
 # Moves the action versions in the workflows, and the npm packages (the page's libraries and test tools),
 # monthly and in one pull request each; the seven-day cooldown skips releases
-# too fresh to have had their regressions reported. pixi.lock is not
-# Dependabot's: refresh it with `pixi update`.
+# too fresh to have had their regressions reported. TIPPECANOE_VERSION in
+# deploy.yml is not Dependabot's: move it by hand.
 version: 2
 updates:
   - package-ecosystem: github-actions
