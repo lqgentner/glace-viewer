@@ -288,14 +288,11 @@ const THREE_D_PITCH = 60;
 const THREE_D_DURATION_MS = 600;
 const TERRAIN_EXAGGERATION = 1;
 
-const view = { threeD: false };
-
 /*
  * Set tilt: false when restoring terrain from a pitched hash to preserve its
  * camera; north: true to face north as the camera levels.
  */
 export async function setThreeD(on, { tilt = true, north = false } = {}) {
-  view.threeD = on;
   controls.setThreeD(on);
   await styleReady;
   if (on) {
@@ -313,9 +310,10 @@ export async function setThreeD(on, { tilt = true, north = false } = {}) {
 
 /*
  * A tilt by hand past this many degrees turns 3D on; one that ends below it
- * levels the map and turns 3D off.
+ * levels the map and turns 3D off. A right-drag that turns the map also tilts
+ * it, about 0.5° per pixel, so a little drift stays in 2D.
  */
-const TILT_3D = 5;
+const TILT_3D = 10;
 let tilts = 0;
 
 /*
@@ -338,10 +336,10 @@ map.on("pitchend", (event) => {
 
 function followTilt(pitch) {
   if (pitch >= TILT_3D) {
-    if (!view.threeD) setThreeD(true, { tilt: false });
+    if (!controls.threeD) setThreeD(true, { tilt: false });
     return;
   }
-  if (view.threeD) setThreeD(false, { tilt: false });
+  if (controls.threeD) setThreeD(false, { tilt: false });
   if (pitch > 0) map.easeTo({ pitch: 0, duration: THREE_D_DURATION_MS });
 }
 
@@ -395,5 +393,5 @@ export function setDataBounds(bounds) {
 syncHome();
 map.on("moveend", syncHome);
 
-/* The hash saves pitch but not terrain. */
-if (map.getPitch() > 0) setThreeD(true, { tilt: false });
+/* The hash saves pitch but not terrain: a link tilted as far as a hand tilt must be opens in 3D. */
+if (map.getPitch() >= TILT_3D) setThreeD(true, { tilt: false });

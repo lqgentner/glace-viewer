@@ -363,7 +363,6 @@ export function installBrowser({
   globalThis.maplibregl = {
     addProtocol() {},
     Map: webgl ? FakeMap : NoGpuMap,
-    NavigationControl: class {},
     ScaleControl: class {
       constructor(options = {}) {
         this.options = options;
@@ -410,7 +409,8 @@ export function installBrowser({
       async getBytes() { throw new Error("no network in tests"); }
     },
     PMTiles: class {
-      constructor(source) { this.source = source; }
+      /* As the real one, a URL becomes a FetchSource. */
+      constructor(source) { this.source = typeof source === "string" ? new globalThis.pmtiles.FetchSource(source) : source; }
       async getHeader() { return { minLon: -180, minLat: -85, maxLon: 180, maxLat: 85 }; }
       async getZxy() { return undefined; }
     },

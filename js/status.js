@@ -6,7 +6,6 @@
  */
 
 import { TERRAIN_COVERAGE, WORLD_IMAGERY_ATTRIBUTION } from "./config.js";
-import { uncachedSource } from "./archive.js";
 import { PHONE, h } from "./ui.js";
 
 const EARTH_CIRCUMFERENCE = 40075016.686;
@@ -194,7 +193,7 @@ let coverage = null;
 async function lookUpProducers(bounds, zoom) {
   const tiles = coverageTiles(bounds, zoom);
   if (!tiles.length) return null;
-  coverage ??= new pmtiles.PMTiles(uncachedSource(TERRAIN_COVERAGE));
+  coverage ??= new pmtiles.PMTiles(TERRAIN_COVERAGE);
   const decoder = new TextDecoder();
   const found = await Promise.all(
     tiles.map(async ({ z, x, y }) => {

@@ -269,7 +269,7 @@ export const grid = new LazyOverlay({
   checkbox: () => el("grid"),
   failure: "Error loading the tile grid. Tick it again to retry.",
   add() {
-    registerVector(GRID_ARCHIVE_URL);
+    registerVector(GRID_ARCHIVE_URL, { noStore: true });
     map.addSource(this.sourceId, { type: "vector", url: `pmtiles://${GRID_ARCHIVE_URL}` });
     addStacked("overlay", {
       id: GRID_LAYER,

@@ -88,6 +88,13 @@ test("on phones the controls move to the top right, clear of the sheet", () => {
 const rest = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 test("a tilt by hand turns 3D on, and one that ends nearly flat levels the map in 2D", async () => {
+  map.pitch = 7;
+  map.fire("pitchend", { originalEvent: {} });
+  await rest();
+  await settle();
+  assert.equal(map.getTerrain(), null, "the drift of a right-drag that turns the map stays in 2D");
+  assert.equal(map.pitch, 0);
+
   map.pitch = 40;
   map.fire("pitchend", {});
   await rest();

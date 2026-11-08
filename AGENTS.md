@@ -170,10 +170,13 @@ across archives. MapLibre reloads a `raster-dem` source whenever a layer's
 re-requests their tiles; the cache serves those, and composites reuse the bytes
 MapLibre read. It hands out copies, keeps no failed reads, and lets an aborted
 caller stop waiting without canceling a read others share. The composite source carries the style source's credit
-because it has no TileJSON. Every archive, vector ones through
-`registerVector()`, reads with `cache: "no-store"`: Chrome lets one request
-per URL write a cache entry at a time, so parallel range reads of one archive
-would queue, and the data host's responses are `no-cache` anyway.
+because it has no TileJSON. The catalog's archives, the rasters and the tile
+grid, read with `cache: "no-store"`: Chrome lets one request per URL write a
+cache entry at a time, so parallel range reads of one archive would queue, and
+the catalog host's responses are `no-cache` anyway. The inventories and
+Mapterhorn's coverage index allow caching and keep it. `registerVector()`
+registers a fresh reader on each attempt, because a reader keeps a failed
+header read and a retry would fail again.
 
 ## Map lifecycle and rendering
 
@@ -190,12 +193,13 @@ would queue, and the data host's responses are `no-cache` anyway.
   transparent highlights and black shadows darken the raster without tinting
   its color map. The strength control changes shadow alpha.
 - The 3D button names its next action and changes both terrain and pitch.
-  A tilt by hand (a gesture or key, which carries `originalEvent`) past 5°
+  A tilt by hand (a gesture or key, which carries `originalEvent`) past 10°
   turns 3D on where the camera rests; one ending below levels the map in 2D.
   The compass's arrows turn the map by 45°, and its needle faces north and
   leaves 3D. On phones the compass shows only while the map is turned, tilted
   or in 3D, and there are no zoom buttons. Restore terrain for an incoming
-  pitched URL hash without moving the camera.
+  URL hash pitched past 10° without moving the camera. The controls hold the
+  3D state; `setThreeD()` changes it.
   The initial view is used only without a hash; do not fit to catalog bounds.
 - The "Back to the Alps" button flies to the `overview` setting, whose label it
   shows. It appears over the map, with the status line in `#notices`, only while

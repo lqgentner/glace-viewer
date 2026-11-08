@@ -534,11 +534,11 @@ input[type="range"]:disabled { cursor: default; opacity: 0.4; }
   background: transparent;
   cursor: pointer;
 }
-#map .map-controls button:not(:disabled):active { background-color: rgba(255, 255, 255, 0.13); }
+/* Every button over the map lightens alike on hover and press. */
+#map :is(.map-controls button, .credits-button):not(:disabled):active { background-color: rgba(255, 255, 255, 0.13); }
 @media (hover: hover) {
-  #map .map-controls button:not(:disabled):hover { background-color: rgba(255, 255, 255, 0.13); }
+  #map :is(.map-controls button, .credits-button):not(:disabled):hover { background-color: rgba(255, 255, 255, 0.13); }
 }
-#map .map-controls button:focus { box-shadow: none; }
 #map :is(.map-controls button, .credits-button):focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
@@ -791,8 +791,13 @@ input[type="range"]:disabled { cursor: default; opacity: 0.4; }
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
   cursor: pointer;
 }
+/* Lightened as the map's buttons are, by a layer over its own background; hover also whitens its border. */
+#home:active { background-image: linear-gradient(rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0.13)); }
 @media (hover: hover) {
-  #home:hover { border-color: #fff; }
+  #home:hover {
+    border-color: #fff;
+    background-image: linear-gradient(rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0.13));
+  }
 }
 
 .popover,
@@ -1261,8 +1266,8 @@ input[type="range"]:disabled { cursor: default; opacity: 0.4; }
   position: fixed;
   z-index: 3;
   width: 300px;
-  /* Clear of the map controls: its 316px offset and their 64px column. */
-  max-width: calc(100vw - 316px - 64px);
+  /* Clear of the map controls: its 316px offset, their 12px margin and 54px column, and a 12px gap. */
+  max-width: calc(100vw - 316px - 78px);
   max-height: calc(100dvh - 24px - var(--status-h));
   /* Right of the panel: its 12px margin, 292px width and a 12px gap. */
   inset: 12px auto auto 316px;
@@ -1496,7 +1501,7 @@ input[type="range"]:disabled { cursor: default; opacity: 0.4; }
 @media (max-width: 680px) {
   #scale-editor {
     left: 12px;
-    max-width: calc(100vw - 12px - 64px);
+    max-width: calc(100vw - 12px - 78px);
   }
 }
 
@@ -1536,10 +1541,11 @@ input[type="range"]:disabled { cursor: default; opacity: 0.4; }
     visibility: hidden;
   }
   body:has(#scale-editor[open]) #map .status-line { visibility: hidden; }
-  /* The status line moves to the top. */
+  /* The status line moves to the top, left of the map's controls: their 40px column and 12px margins. */
   body:has(#scale-editor[open]) #notices {
     top: calc(12px + env(safe-area-inset-top));
     bottom: auto;
+    right: 64px;
     transition: none;
   }
   /* Three columns keep the editor low, so more of the map shows below it. */

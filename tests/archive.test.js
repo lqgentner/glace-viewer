@@ -28,13 +28,20 @@ test("one reader per archive, registered with the pmtiles protocol", () => {
 });
 
 /* Chrome lets one request per URL write a cache entry at a time, so the parallel range reads skip the cache. */
-test("archives are read past the HTTP cache", () => {
+test("the catalog's archives are read past the HTTP cache", () => {
   assert.equal(archive("https://x/a.pmtiles").source.source.chromeWindowsNoCache, true);
-  registerVector("https://x/v.pmtiles");
-  const vector = protocol.get("https://x/v.pmtiles");
-  assert.equal(vector.source.chromeWindowsNoCache, true);
-  registerVector("https://x/v.pmtiles");
-  assert.equal(protocol.get("https://x/v.pmtiles"), vector, "registered once");
+  registerVector("https://x/v.pmtiles", { noStore: true });
+  assert.equal(protocol.get("https://x/v.pmtiles").source.chromeWindowsNoCache, true);
+});
+
+/* A pmtiles reader keeps a failed header read, so a retry needs a new reader. */
+test("each vector registration is a fresh reader, cached by the browser unless noStore", () => {
+  registerVector("data/w.pmtiles");
+  const first = protocol.get("data/w.pmtiles");
+  assert.equal(first.source.getKey(), "data/w.pmtiles");
+  assert.notEqual(first.source.chromeWindowsNoCache, true, "the browser may cache it");
+  registerVector("data/w.pmtiles");
+  assert.notEqual(protocol.get("data/w.pmtiles"), first, "a retry reads anew");
 });
 
 test("bytes are read once and handed out as copies", async () => {

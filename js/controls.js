@@ -78,6 +78,7 @@ export class MapControls {
     this.container = h("div", { class: "maplibregl-ctrl map-controls" }, this.compass, threeDGroup, this.zoom);
     /* The bearing the arrows' last turn eases to, while it runs. */
     this.turnTo = null;
+    /* Whether 3D is on: the one record of it, which js/map.js's setThreeD() keeps. */
     this.threeD = false;
     this.setThreeD(false);
     this.onMove = () => this.sync();

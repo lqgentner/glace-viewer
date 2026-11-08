@@ -12,12 +12,12 @@ const MAX_BYTES = 64 * 1024 * 1024;
 export const protocol = new pmtiles.Protocol({ metadata: true });
 
 /*
- * An archive's source, read past the HTTP cache. Every tile is a range request
- * to the same URL, and Chrome lets one request per URL write a cache entry at a
- * time, so a view's tiles would queue behind that lock. The data host marks its
- * responses no-cache, so the cache could at best revalidate a read. pmtiles
- * sets this flag itself only for Chrome on Windows; the lock is not
- * Windows-only. After an ETag mismatch pmtiles reads with cache: "reload".
+ * A catalog archive's source, read past the HTTP cache. Every tile is a range
+ * request to the same URL, and Chrome lets one request per URL write a cache
+ * entry at a time, so a view's tiles would queue behind that lock. The catalog
+ * host marks its responses no-cache, so the cache could at best revalidate a
+ * read. pmtiles sets this flag itself only for Chrome on Windows; the lock is
+ * not Windows-only. After an ETag mismatch pmtiles reads with cache: "reload".
  */
 export function uncachedSource(url) {
   const source = new pmtiles.FetchSource(url);
@@ -25,9 +25,13 @@ export function uncachedSource(url) {
   return source;
 }
 
-/** Register a vector archive with the protocol, read past the HTTP cache. */
-export function registerVector(url) {
-  if (!protocol.get(url)) protocol.add(new pmtiles.PMTiles(uncachedSource(url)));
+/**
+ * Register a fresh reader of a vector archive with the protocol, past the HTTP
+ * cache with `noStore`. Fresh on every call: a reader keeps a failed header
+ * read, so a retry needs a new one.
+ */
+export function registerVector(url, { noStore = false } = {}) {
+  protocol.add(new pmtiles.PMTiles(noStore ? uncachedSource(url) : url));
 }
 
 const aborted = () => new DOMException("aborted", "AbortError");

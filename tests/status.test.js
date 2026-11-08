@@ -36,11 +36,11 @@ const CONTRIBUTORS = [
 const asked = [];
 let answer = () => ({});
 globalThis.pmtiles.PMTiles = class {
-  constructor(source) {
-    this.source = source;
+  constructor(url) {
+    this.url = url;
   }
   async getZxy(z, x, y) {
-    asked.push({ url: this.source.getKey(), noStore: this.source.chromeWindowsNoCache, z, x, y });
+    asked.push({ url: this.url, z, x, y });
     const sources = await answer({ z, x, y });
     return sources && { data: new TextEncoder().encode(JSON.stringify(sources)) };
   }
@@ -249,7 +249,7 @@ test("with hillshade or 3D, the terrain credits Mapterhorn, then the elevation s
   map.fire("sourcedata", { sourceId: "terrain", sourceDataType: "metadata" });
   await settle();
   assert.equal(terrain(), "Terrain: © Mapterhorn, © swisstopo, © Copernicus");
-  assert.ok(asked.length > 0 && asked.every(({ url, noStore, z }) => url === "https://download.mapterhorn.com/coverage-index.pmtiles" && noStore && z === 11));
+  assert.ok(asked.length > 0 && asked.every(({ url, z }) => url === "https://download.mapterhorn.com/coverage-index.pmtiles" && z === 11));
 
   /* A slow answer for one view arrives after the answer for the next. */
   let release;
