@@ -121,7 +121,7 @@ test("the credits name what the map draws, in groups, and MapLibre last", () => 
   show("glace-coh12_vv-2023");
   show("inv-line-agi5");
   assert.deepEqual(groups(), [
-    "Inventories: Hartig et al., 2026",
+    "Glaciers: Hartig et al., 2026",
     "Basemap: © OpenStreetMap contributors, Protomaps",
     "MapLibre",
   ], "an archive whose metadata has not arrived credits nothing yet");

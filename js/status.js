@@ -37,7 +37,7 @@ const MAX_TERRAIN_SOURCES = 15;
 const MAX_IMAGERY_CONTRIBUTORS = 15;
 
 /* The credit groups in reading order. */
-const GROUPS = ["Layers", "Inventories", "Basemap", "Imagery", "Terrain"];
+const GROUPS = ["Layers", "Glaciers", "Basemap", "Imagery", "Terrain"];
 const BASEMAP_SOURCE = "protomaps";
 const IMAGERY_SOURCE = "world-imagery";
 const TERRAIN_SOURCE = "terrain";
@@ -47,7 +47,7 @@ function groupOf(id) {
   if (id === BASEMAP_SOURCE) return "Basemap";
   if (id === IMAGERY_SOURCE) return "Imagery";
   if (id === TERRAIN_SOURCE) return "Terrain";
-  return id.startsWith("inv-") ? "Inventories" : "Layers";
+  return id.startsWith("inv-") ? "Glaciers" : "Layers";
 }
 
 /** Ground meters per screen pixel at a latitude in degrees (clamped to the map's) and a zoom level. */

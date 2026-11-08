@@ -1170,7 +1170,7 @@ function noRasters(reason) {
   console.warn("rasters:", reason);
   setStatus(
     STATUS_KEY,
-    "Error loading the GLACE layers. The basemap, terrain and inventories still work.",
+    "Error loading the GLACE layers. The basemap, terrain and glacier inventories still work.",
     "error",
   );
 }

@@ -205,7 +205,7 @@ would queue, and the data host's responses are `no-cache` anyway.
   Labels have their own visibility toggle, including over World Imagery.
 - `js/status.js` credits each source a visible layer or the terrain draws,
   from its `attribution` once its metadata arrives, grouped by source ID:
-  Layers, Inventories, Basemap, Imagery, Terrain, then MapLibre's credit,
+  Layers, Glaciers (the inventories), Basemap, Imagery, Terrain, then MapLibre's credit,
   which depends on no source. Source attribution replaces TileJSON
   attribution; it does not append to it. An inventory's archive has no credit,
   so its source names the one in `inventories.json`. Attribution HTML is
@@ -267,7 +267,7 @@ or Escape closes it. A click waits 250 ms for a second one, so a double-click
 zooms without opening a popup. The map shows the arrow cursor, and the move cursor while
 pressed.
 
-The panel is a band over three tabs (Layers, Inventories, Map) and an About
+The panel is a band over three tabs (Layers, Glaciers, Map) and an About
 button. The band holds the wordmark, the legend and, on phones, the handle; it
 stays visible when the content is hidden. Phones are `PHONE` in `js/ui.js`, a
 coarse pointer at most 640 px wide, which `js/rasters.js` and `js/sheet.js`
