@@ -169,7 +169,10 @@ across archives. MapLibre reloads a `raster-dem` source whenever a layer's
 re-requests their tiles; the cache serves those, and composites reuse the bytes
 MapLibre read. It hands out copies, keeps no failed reads, and lets an aborted
 caller stop waiting without canceling a read others share. The composite source carries the style source's credit
-because it has no TileJSON.
+because it has no TileJSON. Every archive, vector ones through
+`registerVector()`, reads with `cache: "no-store"`: Chrome lets one request
+per URL write a cache entry at a time, so parallel range reads of one archive
+would queue, and the data host's responses are `no-cache` anyway.
 
 ## Map lifecycle and rendering
 

@@ -3,6 +3,7 @@
  * layers and source so the control can retry.
  */
 
+import { registerVector } from "./archive.js";
 import { GRID_ARCHIVE_URL, INVENTORY_BASE, INVENTORY_INDEX_URL } from "./config.js";
 import { addStacked, map, styleReady } from "./map.js";
 import { isNonEmptyString } from "./store.js";
@@ -137,6 +138,7 @@ function inventoryOverlay(entry) {
     checkbox: () => el(`inv-${entry.id}`),
     failure: `Error loading ${entry.title}. Tick it again to retry.`,
     add() {
+      registerVector(`${INVENTORY_BASE}/${entry.url}`);
       map.addSource(this.sourceId, {
         type: "vector",
         url: `pmtiles://${INVENTORY_BASE}/${entry.url}`,
@@ -267,6 +269,7 @@ export const grid = new LazyOverlay({
   checkbox: () => el("grid"),
   failure: "Error loading the tile grid. Tick it again to retry.",
   add() {
+    registerVector(GRID_ARCHIVE_URL);
     map.addSource(this.sourceId, { type: "vector", url: `pmtiles://${GRID_ARCHIVE_URL}` });
     addStacked("overlay", {
       id: GRID_LAYER,

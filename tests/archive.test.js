@@ -18,13 +18,23 @@ globalThis.pmtiles.FetchSource = class {
     return serve(this.url, offset, length, etag);
   }
 };
-const { archive, protocol } = await load("js/archive.js");
+const { archive, protocol, registerVector } = await load("js/archive.js");
 const count = (key) => fetches.filter((entry) => entry === key).length;
 
 test("one reader per archive, registered with the pmtiles protocol", () => {
   const reader = archive("https://x/a.pmtiles");
   assert.equal(archive("https://x/a.pmtiles"), reader);
   assert.equal(protocol.get("https://x/a.pmtiles"), reader, "MapLibre's reads go through it too");
+});
+
+/* Chrome lets one request per URL write a cache entry at a time, so the parallel range reads skip the cache. */
+test("archives are read past the HTTP cache", () => {
+  assert.equal(archive("https://x/a.pmtiles").source.source.chromeWindowsNoCache, true);
+  registerVector("https://x/v.pmtiles");
+  const vector = protocol.get("https://x/v.pmtiles");
+  assert.equal(vector.source.chromeWindowsNoCache, true);
+  registerVector("https://x/v.pmtiles");
+  assert.equal(protocol.get("https://x/v.pmtiles"), vector, "registered once");
 });
 
 test("bytes are read once and handed out as copies", async () => {
