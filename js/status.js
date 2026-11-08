@@ -5,6 +5,7 @@
  * into an info button and draw no scale bar.
  */
 
+import { forgetfulCache } from "./archive.js";
 import { TERRAIN_COVERAGE, WORLD_IMAGERY_ATTRIBUTION } from "./config.js";
 import { PHONE, h } from "./ui.js";
 
@@ -193,7 +194,7 @@ let coverage = null;
 async function lookUpProducers(bounds, zoom) {
   const tiles = coverageTiles(bounds, zoom);
   if (!tiles.length) return null;
-  coverage ??= new pmtiles.PMTiles(TERRAIN_COVERAGE);
+  coverage ??= new pmtiles.PMTiles(TERRAIN_COVERAGE, forgetfulCache());
   const decoder = new TextDecoder();
   const found = await Promise.all(
     tiles.map(async ({ z, x, y }) => {

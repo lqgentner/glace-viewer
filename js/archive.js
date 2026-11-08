@@ -17,21 +17,83 @@ export const protocol = new pmtiles.Protocol({ metadata: true });
  * entry at a time, so a view's tiles would queue behind that lock. The catalog
  * host marks its responses no-cache, so the cache could at best revalidate a
  * read. pmtiles sets this flag itself only for Chrome on Windows; the lock is
- * not Windows-only. After an ETag mismatch pmtiles reads with cache: "reload".
+ * not Windows-only. After an ETag mismatch pmtiles sets mustReload for good, to
+ * read with cache: "reload", which writes the cache and so takes the lock;
+ * no-store already reads past the cache, so the flag stays off.
  */
 export function uncachedSource(url) {
   const source = new pmtiles.FetchSource(url);
   source.chromeWindowsNoCache = true;
+  Object.defineProperty(source, "mustReload", { get: () => false, set() {} });
   return source;
 }
 
+/*
+ * pmtiles' SharedPromiseCache keeps the promise of each header and directory
+ * read, a rejected one too, for the life of its reader: one network blip on an
+ * archive's first read would fail every later read until a reload. This one
+ * forgets a failed read, so the next read asks the archive again.
+ */
+class ForgetfulCache extends pmtiles.SharedPromiseCache {
+  getHeader(source) {
+    return this.#forgetOnFailure(() => super.getHeader(source));
+  }
+
+  getDirectory(source, offset, length, header, signal) {
+    return this.#forgetOnFailure(() => super.getDirectory(source, offset, length, header, signal));
+  }
+
+  /*
+   * After an ETag mismatch pmtiles drops the header and reads it again, and
+   * keeps that read to share with other callers; a failed one would be
+   * returned on every later mismatch, and the stale header never dropped.
+   */
+  invalidate(source) {
+    const key = source.getKey();
+    const done = super.invalidate(source);
+    const pending = this.invalidations.get(key);
+    pending?.catch(() => {
+      if (this.invalidations.get(key) === pending) this.invalidations.delete(key);
+    });
+    return done;
+  }
+
+  /*
+   * A miss adds its entry before the read's first await, as the newest in the
+   * map; a hit adds none. If the read fails and the entry is still the same
+   * one, it goes.
+   */
+  #forgetOnFailure(read) {
+    const size = this.cache.size;
+    const promise = read();
+    if (this.cache.size > size) {
+      let key;
+      for (const newest of this.cache.keys()) key = newest;
+      const entry = this.cache.get(key);
+      promise.catch(() => {
+        if (this.cache.get(key) === entry) this.cache.delete(key);
+      });
+    }
+    return promise;
+  }
+}
+
+/** A pmtiles cache that forgets a failed header or directory read. */
+export const forgetfulCache = () => new ForgetfulCache();
+
+const vectors = new Map();
+
 /**
- * Register a fresh reader of a vector archive with the protocol, past the HTTP
- * cache with `noStore`. Fresh on every call: a reader keeps a failed header
- * read, so a retry needs a new one.
+ * Register the reader of a vector archive with the protocol, past the HTTP
+ * cache with `noStore`. A retry keeps the reader: its cache forgot the failure.
  */
 export function registerVector(url, { noStore = false } = {}) {
-  protocol.add(new pmtiles.PMTiles(noStore ? uncachedSource(url) : url));
+  let reader = vectors.get(url);
+  if (!reader) {
+    reader = new pmtiles.PMTiles(noStore ? uncachedSource(url) : url, forgetfulCache());
+    vectors.set(url, reader);
+  }
+  protocol.add(reader);
 }
 
 const aborted = () => new DOMException("aborted", "AbortError");
@@ -62,11 +124,10 @@ function evict() {
   }
 }
 
-/* A pmtiles source that keeps what it reads; failures are not kept, and call `onFailure`. */
+/* A pmtiles source that keeps what it reads; failures are not kept. */
 class CachedSource {
-  constructor(url, onFailure) {
+  constructor(url) {
     this.source = uncachedSource(url);
-    this.onFailure = onFailure;
   }
 
   getKey() {
@@ -102,7 +163,6 @@ class CachedSource {
           if (ranges.get(key) === entry) ranges.delete(key);
           // The archive changed: PMTiles rereads its header, so drop the old one.
           if (error instanceof pmtiles.EtagMismatch) this.forget();
-          this.onFailure();
         },
       );
     }
@@ -116,23 +176,13 @@ class CachedSource {
 
 const readers = new Map();
 
-/*
- * A reader keeps a failed header or directory read for good, which would
- * leave its part of the map blank, so a failed read replaces the reader. The
- * new one reads what the old one had from the byte cache.
- */
-function register(url) {
-  const reader = new pmtiles.PMTiles(
-    new CachedSource(url, () => {
-      if (readers.get(url) === reader) register(url);
-    }),
-  );
-  readers.set(url, reader);
-  protocol.add(reader);
-  return reader;
-}
-
 /** The shared reader of one archive, registered with the protocol on first use. */
 export function archive(url) {
-  return readers.get(url) ?? register(url);
+  let reader = readers.get(url);
+  if (!reader) {
+    reader = new pmtiles.PMTiles(new CachedSource(url), forgetfulCache());
+    readers.set(url, reader);
+    protocol.add(reader);
+  }
+  return reader;
 }

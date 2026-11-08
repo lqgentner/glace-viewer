@@ -408,9 +408,15 @@ export function installBrowser({
       getKey() { return this.url; }
       async getBytes() { throw new Error("no network in tests"); }
     },
+    SharedPromiseCache: class {
+      cache = new Map();
+    },
     PMTiles: class {
       /* As the real one, a URL becomes a FetchSource. */
-      constructor(source) { this.source = typeof source === "string" ? new globalThis.pmtiles.FetchSource(source) : source; }
+      constructor(source, cache) {
+        this.source = typeof source === "string" ? new globalThis.pmtiles.FetchSource(source) : source;
+        this.cache = cache;
+      }
       async getHeader() { return { minLon: -180, minLat: -85, maxLon: 180, maxLat: 85 }; }
       async getZxy() { return undefined; }
     },

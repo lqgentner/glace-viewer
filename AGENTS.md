@@ -168,17 +168,21 @@ the `pmtiles://` protocol before its source is added, over a byte cache bounded
 across archives. MapLibre reloads a `raster-dem` source whenever a layer's
 `visibility` changes (only `raster` sources are exempt), so switching layers
 re-requests their tiles; the cache serves those, and composites reuse the bytes
-MapLibre read. It hands out copies, keeps no failed reads, replaces a reader
-after a failed read (pmtiles keeps a failed header or directory read in the
-reader, which would leave that part of the map blank), and lets an aborted
-caller stop waiting without canceling a read others share. The composite source carries the style source's credit
-because it has no TileJSON. The catalog's archives, the rasters and the tile
-grid, read with `cache: "no-store"`: Chrome lets one request per URL write a
-cache entry at a time, so parallel range reads of one archive would queue, and
-the catalog host's responses are `no-cache` anyway. The inventories and
-Mapterhorn's coverage index allow caching and keep it. `registerVector()`
-registers a fresh reader on each attempt, because a reader keeps a failed
-header read and a retry would fail again.
+MapLibre read. It hands out copies, keeps no failed reads, and lets an aborted
+caller stop waiting without canceling a read others share. Every pmtiles reader
+the page makes, the rasters, the vector overlays and the coverage index, uses
+`forgetfulCache()`: pmtiles' own cache keeps a failed header or directory read
+for the reader's life, which would leave that part of the map blank, and this
+one drops it so the next read asks again, as it does a failed header re-read
+after an ETag mismatch. `archive-cache.test.js` checks that against the real
+pmtiles, and fails once pmtiles forgets on its own. The composite source
+carries the style source's credit because it has no TileJSON. The catalog's
+archives, the rasters and the tile grid, read with `cache: "no-store"`: Chrome
+lets one request per URL write a cache entry at a time, so parallel range reads
+of one archive would queue, and the catalog host's responses are `no-cache`
+anyway. After an ETag mismatch pmtiles would read with `cache: "reload"`, which
+writes the cache, so `uncachedSource()` keeps its `mustReload` off. The
+inventories and Mapterhorn's coverage index allow caching and keep it.
 
 ## Map lifecycle and rendering
 
@@ -395,7 +399,7 @@ Use the relevant suites when changing behavior:
 | Change | Tests |
 | --- | --- |
 | Settings, catalog joins, selection and legends | `config`, `store`, `layers`, `store-catalog`, `store-local`, `legend`, `legend-narrow`, `viewer`, `stale-state` |
-| False color, tile decoding and caching | `composite`, `encoded`, `archive`, `histogram` |
+| False color, tile decoding and caching | `composite`, `encoded`, `archive`, `archive-cache`, `histogram` |
 | Overlay loading, retries, popups, the value under a click | `viewer`, `tile-grid`, `ui`, `stale-state`, `readout`, `readout-narrow` |
 | Choices in the URL | `url-state`, `url-state-invalid` |
 | The sheet and tabs | `sheet`, `legend-narrow` |

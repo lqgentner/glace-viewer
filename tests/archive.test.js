@@ -30,18 +30,22 @@ test("one reader per archive, registered with the pmtiles protocol", () => {
 /* Chrome lets one request per URL write a cache entry at a time, so the parallel range reads skip the cache. */
 test("the catalog's archives are read past the HTTP cache", () => {
   assert.equal(archive("https://x/a.pmtiles").source.source.chromeWindowsNoCache, true);
+  const source = archive("https://x/a.pmtiles").source.source;
+  source.mustReload = true; // as pmtiles sets it after an ETag mismatch
+  assert.equal(source.mustReload, false, "cache: reload would take Chrome's lock; no-store reads fresh anyway");
   registerVector("https://x/v.pmtiles", { noStore: true });
   assert.equal(protocol.get("https://x/v.pmtiles").source.chromeWindowsNoCache, true);
 });
 
-/* A pmtiles reader keeps a failed header read, so a retry needs a new reader. */
-test("each vector registration is a fresh reader, cached by the browser unless noStore", () => {
+test("a vector archive is cached by the browser unless noStore, and a retry keeps its reader", () => {
   registerVector("data/w.pmtiles");
-  const first = protocol.get("data/w.pmtiles");
-  assert.equal(first.source.getKey(), "data/w.pmtiles");
-  assert.notEqual(first.source.chromeWindowsNoCache, true, "the browser may cache it");
+  const reader = protocol.get("data/w.pmtiles");
+  assert.equal(reader.source.getKey(), "data/w.pmtiles");
+  assert.notEqual(reader.source.chromeWindowsNoCache, true, "the browser may cache it");
+  assert.ok(reader.cache instanceof pmtiles.SharedPromiseCache, "a forgetful cache");
+  protocol.tiles.delete("data/w.pmtiles");
   registerVector("data/w.pmtiles");
-  assert.notEqual(protocol.get("data/w.pmtiles"), first, "a retry reads anew");
+  assert.equal(protocol.get("data/w.pmtiles"), reader, "its cache forgot any failure, and keeps the rest");
 });
 
 test("bytes are read once and handed out as copies", async () => {
@@ -64,23 +68,18 @@ test("a failed read is not cached", async () => {
   assert.equal(count("https://x/c.pmtiles|0|3"), 2);
 });
 
-/* pmtiles keeps a failed header or directory read in its reader, which would leave that part of the map blank. */
-test("a failed read replaces the reader, and the new one reads the old one's bytes from memory", async () => {
+/* tests/archive-cache.test.js checks, with the real pmtiles, that the reader's cache forgets the failure. */
+test("a failed byte read keeps the reader", async () => {
   const url = "https://x/r.pmtiles";
-  const first = archive(url);
-  await first.source.getBytes(0, 4);
+  const reader = archive(url);
+  assert.ok(reader.cache instanceof pmtiles.SharedPromiseCache, "a forgetful cache");
   const previous = serve;
   serve = async () => { throw new Error("network"); };
-  await assert.rejects(() => first.source.getBytes(8, 4), /network/);
+  await assert.rejects(() => reader.source.getBytes(8, 4), /network/);
   serve = previous;
   await settle();
-
-  const second = archive(url);
-  assert.notEqual(second, first, "a fresh reader");
-  assert.equal(protocol.get(url), second, "MapLibre's reads use it too");
-  await second.source.getBytes(0, 4);
-  assert.equal(count(`${url}|0|4`), 1, "the header is not read again");
-  assert.equal(archive(url), second, "a success keeps it");
+  assert.equal(archive(url), reader);
+  assert.equal(protocol.get(url), reader, "MapLibre's reads keep using it");
 });
 
 test("an aborted caller stops waiting while the shared read completes", async () => {
