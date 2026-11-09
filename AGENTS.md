@@ -201,7 +201,7 @@ inventories and Mapterhorn's coverage index allow caching and keep it.
 - Hillshade and 3D share one lazily created DEM source. Keep hillshade neutral:
   transparent highlights and black shadows darken the raster without tinting
   its color map. The strength control changes shadow alpha.
-- The 3D button names its next action and changes both terrain and pitch.
+- The 3D button is a toggle (`aria-pressed`) and changes both terrain and pitch.
   A tilt by hand (a gesture or key, which carries `originalEvent`) past 10°
   turns 3D on where the camera rests; one ending below levels the map in 2D.
   The compass's arrows turn the map by 45°, and its needle faces north and

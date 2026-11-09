@@ -409,21 +409,23 @@ test("the viewer", async (t) => {
 
   await t.test("3D tilts the camera and drapes the map over the shared DEM", async () => {
     const threeD = page.control(".three-d");
-    assert.equal(threeD.textContent, "3D", "the button names what the next press does");
+    assert.equal(threeD.textContent, "3D", "a toggle keeps its name");
+    assert.equal(threeD.getAttribute("aria-label"), "3D terrain");
+    assert.equal(threeD.getAttribute("aria-pressed"), "false");
     assert.equal(map.getTerrain(), null);
 
     threeD.click();
     await settle();
     assert.deepEqual(map.getTerrain(), { source: "terrain", exaggeration: 1 });
     assert.equal(map.pitch, 60, "enabling 3D slants the view");
-    assert.equal(threeD.textContent, "2D");
+    assert.equal(threeD.textContent, "3D");
     assert.equal(threeD.getAttribute("aria-pressed"), "true");
 
     threeD.click();
     await settle();
     assert.equal(map.getTerrain(), null);
     assert.equal(map.pitch, 0, "disabling reverts to the overhead view");
-    assert.equal(threeD.textContent, "3D");
+    assert.equal(threeD.getAttribute("aria-pressed"), "false");
     assert.ok(map.getSource("terrain"), "the DEM stays for the hillshade");
   });
 

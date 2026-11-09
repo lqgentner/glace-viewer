@@ -65,7 +65,7 @@ export class MapControls {
       button("compass-turn compass-right", "Rotate right", () => this.rotate(-ROTATE_STEP)),
       arrows,
     );
-    this.threeDButton = button("three-d", "", () => onThreeD(!this.threeD));
+    this.threeDButton = button("three-d", "3D terrain", () => onThreeD(!this.threeD), "3D");
     /* The glass is the group's, so the button's own background stays clear for hover. */
     const threeDGroup = h("div", { class: "three-d-group map-surface" }, this.threeDButton);
     this.zoom = h(
@@ -110,13 +110,9 @@ export class MapControls {
     this.map.easeTo({ bearing: this.turnTo });
   }
 
-  /** The 3D button names its next action. */
+  /** The 3D button is a toggle: it reads "3D" and stays pressed while 3D is on. */
   setThreeD(on) {
     this.threeD = on;
-    const action = on ? "Disable 3D terrain" : "Enable 3D terrain";
-    this.threeDButton.textContent = on ? "2D" : "3D";
-    this.threeDButton.title = action;
-    this.threeDButton.setAttribute("aria-label", action);
     this.threeDButton.setAttribute("aria-pressed", String(on));
     this.sync();
   }

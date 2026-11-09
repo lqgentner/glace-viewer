@@ -64,7 +64,7 @@ test("the needle faces north and leaves 3D", async () => {
   await settle();
   map.easeTo = ease;
   assert.equal(map.getTerrain(), null);
-  assert.equal(page.control(".three-d").textContent, "3D");
+  assert.equal(page.control(".three-d").getAttribute("aria-pressed"), "false");
   assert.deepEqual(eased.map(({ pitch, bearing }) => ({ pitch, bearing })), [{ pitch: 0, bearing: 0 }]);
 });
 
@@ -105,7 +105,7 @@ test("a tilt by hand turns 3D on, and one that ends nearly flat levels the map i
   await settle();
   assert.ok(map.getTerrain(), "3D after the tilt");
   assert.equal(map.pitch, 40, "the camera stays where the reader put it");
-  assert.equal(page.control(".three-d").textContent, "2D");
+  assert.equal(page.control(".three-d").getAttribute("aria-pressed"), "true");
 
   map.pitch = 3;
   map.fire("pitchend", { originalEvent: {} });
@@ -113,5 +113,5 @@ test("a tilt by hand turns 3D on, and one that ends nearly flat levels the map i
   await settle();
   assert.equal(map.getTerrain(), null);
   assert.equal(map.pitch, 0, "levelled");
-  assert.equal(page.control(".three-d").textContent, "3D");
+  assert.equal(page.control(".three-d").getAttribute("aria-pressed"), "false");
 });
