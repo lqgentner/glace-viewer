@@ -1,8 +1,8 @@
 /*
- * Copy what the import map in index.html loads from node_modules/ into a site
- * directory. Each target's whole directory goes, so files a library fetches
- * beside its module come along; source maps, development builds and type
- * declarations stay behind.
+ * Copy what the page loads from node_modules/ into a site directory. Each
+ * import-map target's whole directory goes, so files a library fetches beside
+ * its module come along; source maps, development builds and type declarations
+ * stay behind. The fonts style.css names go too.
  *
  * Usage: node scripts/stage-libraries.mjs <site-dir>
  */
@@ -20,7 +20,13 @@ export function importMap() {
   return JSON.parse(/<script type="importmap">([\s\S]*?)<\/script>/.exec(html)[1]).imports;
 }
 
-/** Copy every import-map target's directory under siteDir, keeping its path. */
+/** The font files style.css names under node_modules/, as repository paths. */
+export function fontFiles() {
+  const css = fs.readFileSync(path.join(REPO, "style.css"), "utf8");
+  return [...css.matchAll(/url\(["']?(node_modules\/[^"')]+\.woff2)["']?\)/g)].map((m) => m[1]);
+}
+
+/** Copy every import-map target's directory and every named font under siteDir, keeping paths. */
 export function stageLibraries(siteDir) {
   const dirs = new Set();
   for (const [name, target] of Object.entries(importMap())) {
@@ -32,6 +38,10 @@ export function stageLibraries(siteDir) {
       recursive: true,
       filter: (source) => !SKIP.test(source),
     });
+  }
+  for (const file of fontFiles()) {
+    fs.mkdirSync(path.dirname(path.join(siteDir, file)), { recursive: true });
+    fs.copyFileSync(path.join(REPO, file), path.join(siteDir, file));
   }
 }
 

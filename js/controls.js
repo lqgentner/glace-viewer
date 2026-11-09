@@ -25,11 +25,12 @@ function svg(tag, attributes, ...children) {
 /*
  * The arrows in the capsule's 54 x 40 px box. Each arc shares the center of
  * the capsule's round end, 7 px in from its edge; each head is isosceles, its
- * base along the radius where the stroke ends.
+ * base along the radius where the stroke ends. The top of the stroke is as far
+ * above the middle as the tip is below it.
  */
 const ARROWS = [
-  { d: "M13.25 8.89 A13 13 0 0 0 9.1 27.08", head: "6.08 29.04 12.37 32.11 12.12 25.12" },
-  { d: "M40.75 8.89 A13 13 0 0 1 44.9 27.08", head: "47.92 29.04 41.63 32.11 41.88 25.12" },
+  { d: "M12.69 9.25 A13 13 0 0 0 9.1 27.08", head: "6.35 28.86 12.08 31.66 11.85 25.30" },
+  { d: "M41.31 9.25 A13 13 0 0 1 44.9 27.08", head: "47.65 28.86 41.92 31.66 42.15 25.30" },
 ];
 
 export class MapControls {

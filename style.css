@@ -21,6 +21,54 @@
   --surface-radius: 16px;
   /* The map controls' corners; the touch block raises them to the panel's. */
   --ctrl-radius: 10px;
+  --font: "Noto Sans", system-ui, sans-serif;
+}
+
+/*
+ * Noto Sans, the basemap labels' typeface, so the page reads the same on every
+ * system. Latin Extended loads only for a name that needs it.
+ */
+@font-face {
+  font-family: "Noto Sans";
+  font-weight: 400;
+  font-display: swap;
+  src: url("node_modules/@fontsource/noto-sans/files/noto-sans-latin-400-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Noto Sans";
+  font-weight: 400;
+  font-display: swap;
+  src: url("node_modules/@fontsource/noto-sans/files/noto-sans-latin-ext-400-normal.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Noto Sans";
+  font-weight: 500;
+  font-display: swap;
+  src: url("node_modules/@fontsource/noto-sans/files/noto-sans-latin-500-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Noto Sans";
+  font-weight: 500;
+  font-display: swap;
+  src: url("node_modules/@fontsource/noto-sans/files/noto-sans-latin-ext-500-normal.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Noto Sans";
+  font-weight: 600;
+  font-display: swap;
+  src: url("node_modules/@fontsource/noto-sans/files/noto-sans-latin-600-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Noto Sans";
+  font-weight: 600;
+  font-display: swap;
+  src: url("node_modules/@fontsource/noto-sans/files/noto-sans-latin-ext-600-normal.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
 * { box-sizing: border-box; }
@@ -30,7 +78,7 @@ html, body {
   color-scheme: dark;
   margin: 0;
   height: 100%;
-  font: calc(14px * var(--text-scale))/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font: calc(14px * var(--text-scale))/1.45 var(--font);
   color: var(--text);
   background: var(--bg);
 }
@@ -551,10 +599,11 @@ input[type="range"]:disabled { cursor: default; opacity: 0.4; }
 #map :is(.three-d, .zoom button) {
   width: 36px;
   height: 36px;
-  font: 600 calc(12px * var(--text-scale))/1 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font: 600 calc(14px * var(--text-scale))/1 var(--font);
   letter-spacing: 0.04em;
 }
-#map .zoom button { font-size: calc(18px * var(--text-scale)); letter-spacing: 0; }
+/* At 20 px the bars of + and − match the stem of "3D". */
+#map .zoom button { font-size: calc(20px * var(--text-scale)); letter-spacing: 0; }
 /* 3D while on, like a chosen segmented button. */
 #map .three-d[aria-pressed="true"] { background-color: #fff; color: var(--accent-ink); }
 
@@ -594,10 +643,11 @@ input[type="range"]:disabled { cursor: default; opacity: 0.4; }
   inset: 0;
   pointer-events: none;
 }
+/* The stem of "3D": Noto Sans SemiBold's 130 units per 1000 at 14 px. */
 .compass-arc {
   fill: none;
   stroke: currentColor;
-  stroke-width: 2;
+  stroke-width: 1.82;
   stroke-linecap: round;
 }
 .compass-head { fill: currentColor; }

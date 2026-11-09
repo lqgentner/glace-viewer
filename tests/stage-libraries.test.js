@@ -13,7 +13,7 @@ import { after, test } from "node:test";
 
 import { init, parse } from "es-module-lexer";
 
-import { importMap, stageLibraries } from "../scripts/stage-libraries.mjs";
+import { fontFiles, importMap, stageLibraries } from "../scripts/stage-libraries.mjs";
 import { REPO } from "./helpers/browser.js";
 
 const site = fs.mkdtempSync(path.join(os.tmpdir(), "glace-site-"));
@@ -69,6 +69,14 @@ test("the page's stylesheet and preloads from node_modules are staged", () => {
   const refs = [...html.matchAll(/href="(node_modules\/[^"]+)"/g)].map((m) => m[1]);
   assert.ok(refs.length >= 2, "MapLibre's stylesheet and fflate's preload");
   for (const ref of refs) assert.ok(fs.existsSync(staged(ref)), `${ref} is not staged`);
+});
+
+test("every font style.css names is staged, and no other font file", () => {
+  const fonts = fontFiles();
+  assert.ok(fonts.length > 0, "style.css names its fonts");
+  for (const font of fonts) assert.ok(fs.existsSync(staged(font)), `${font} is not staged`);
+  const stagedFonts = fs.readdirSync(site, { recursive: true }).filter((file) => /\.woff2?$/.test(file));
+  assert.deepEqual(stagedFonts.sort(), [...fonts].sort());
 });
 
 test("source maps, development builds and type declarations stay out", () => {

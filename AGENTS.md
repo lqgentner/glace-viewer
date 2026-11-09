@@ -31,7 +31,12 @@ through the import map in `index.html`; `npm ci` puts them there. Dependabot
 moves them with the test dependencies in one monthly PR. A library the page
 loads must be a direct dependency, so npm installs it where the import map
 looks, and needs its license in `assets/third-party-licenses.txt`. Import-map
-addresses must start with `./`, or browsers ignore them.
+addresses must start with `./`, or browsers ignore them. The page's typeface is
+Noto Sans, the basemap labels' own, from `@fontsource/noto-sans`, so it reads
+the same on every system; `style.css` names its WOFF2 files, which count as
+libraries for those rules. The compass arcs and the zoom buttons' + and − take
+the stroke of the 3D button's "3D", so a font change means measuring them
+again.
 
 `index.html` carries a Content-Security-Policy that allows only same-origin
 scripts and styles, and `page-assets.test.js` checks it offline. When editing
@@ -79,7 +84,7 @@ A gitignored `tiles` symlink to the catalog root also works. The root is above
 | `js/status.js` | The status line: scale bar and grouped credits, with the terrain and imagery sources in view |
 | `sw.js` | Service worker: stale-while-revalidate for JSON reads |
 | `scripts/serve.mjs` | Development HTTP server and local catalog mount |
-| `scripts/stage-libraries.mjs` | Copies the import map's library directories into the Pages site |
+| `scripts/stage-libraries.mjs` | Copies the import map's library directories and the stylesheet's fonts into the Pages site |
 | `scripts/build-tiles.mjs` | Inventory GeoJSON to vector PMTiles |
 | `scripts/colormaps.py` | Writes `js/colormaps.js` (`uv run`) |
 | `data/inventories.json` | Inventory build settings, display metadata, citations and licenses |
@@ -419,7 +424,7 @@ GitHub Actions runs the tests on pull requests. On pushes to `main`, the
 Pages workflow runs the same checks, builds inventory PMTiles, and stages the
 page, settings, `js/`, `assets/`, archives, inventory index, and, through
 `scripts/stage-libraries.mjs`, each import-map target's directory without
-source maps or development builds. It excludes GeoJSON. New runtime files must
+source maps or development builds, and the font files `style.css` names. It excludes GeoJSON. New runtime files must
 be included in that staging step. Keep asset URLs relative so the site works
 under a Pages project subpath. Pages must use **GitHub Actions** as its source;
 branch publishing skips tile generation.

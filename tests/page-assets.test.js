@@ -14,6 +14,7 @@ import vm from "node:vm";
 
 import { JSDOM } from "jsdom";
 
+import { fontFiles } from "../scripts/stage-libraries.mjs";
 import { REPO } from "./helpers/browser.js";
 
 const page = () =>
@@ -36,7 +37,8 @@ function localReferences() {
   return [...new Set(local.map((value) => value.replace(/^\.\//, "")))];
 }
 
-const libraries = () => localReferences().filter((ref) => ref.startsWith("node_modules/"));
+/* What the page loads from node_modules/, the fonts style.css names among it. */
+const libraries = () => [...localReferences(), ...fontFiles()].filter((ref) => ref.startsWith("node_modules/"));
 const packageName = (ref) => /^node_modules\/((?:@[^/]+\/)?[^/]+)\//.exec(ref)[1];
 
 test("every file the page references is in the repository", () => {
@@ -65,7 +67,7 @@ test("every import-map address is a relative URL", () => {
 test("every library the page loads is a runtime dependency in package.json", () => {
   const manifest = JSON.parse(fs.readFileSync(path.join(REPO, "package.json"), "utf8"));
   const names = [...new Set(libraries().map(packageName))].sort();
-  assert.deepEqual(names, ["@protomaps/basemaps", "fflate", "maplibre-gl", "pmtiles"]);
+  assert.deepEqual(names, ["@fontsource/noto-sans", "@protomaps/basemaps", "fflate", "maplibre-gl", "pmtiles"]);
   for (const name of names) {
     assert.ok(manifest.dependencies?.[name], `package.json does not depend on ${name}`);
   }
