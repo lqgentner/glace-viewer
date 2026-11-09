@@ -110,6 +110,8 @@ function createMap() {
       maxZoom: INITIAL_VIEW.maxZoom,
       // The view lives in the URL, so a hash overrides the opening view above.
       hash: true,
+      // Turn and tilt around the point under the pointer, not the center.
+      dragRotate: { around: "pointer" },
       attributionControl: false,
     });
   } catch (error) {
