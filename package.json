@@ -10,6 +10,7 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
+    "prepare": "git config core.hooksPath .githooks",
     "serve": "node scripts/serve.mjs",
     "build-tiles": "node scripts/build-tiles.mjs",
     "test": "node --test"

@@ -1,0 +1,9 @@
+#!/bin/sh
+# Reinstall when a pull, checkout or rebase brought a package-lock.json newer
+# than the last install: git rewrites the file only when it changes, and npm
+# writes node_modules/.package-lock.json on every install. A clone without
+# node_modules is left for its first `npm ci`.
+[ -f package-lock.json ] && [ -f node_modules/.package-lock.json ] || exit 0
+[ package-lock.json -nt node_modules/.package-lock.json ] || exit 0
+echo "package-lock.json changed: running npm ci" >&2
+npm ci --no-audit --no-fund >&2 || echo "npm ci failed; run it by hand" >&2

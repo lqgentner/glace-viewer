@@ -11,8 +11,11 @@ URLs and verbatim third-party citations.
 ## Development and validation
 
 Work from the repository root with the Node version in `.node-version`, after
-`npm ci`. npm locks the page's libraries and the test dependencies. Building
-the inventory overlays also needs tippecanoe on `PATH`; nothing else does.
+`npm ci`. npm locks the page's libraries and the test dependencies. Its
+`prepare` script points git at `.githooks/`, which reruns `npm ci` after a
+pull, checkout or rebase that changes `package-lock.json`, so a merged
+Dependabot PR reaches `node_modules` too. Building the inventory overlays also
+needs tippecanoe on `PATH`; nothing else does.
 
 ```sh
 npm run build-tiles  # required for local inventory overlays
